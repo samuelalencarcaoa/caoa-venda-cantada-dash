@@ -423,12 +423,12 @@ export default function DashboardV2Page() {
           </div>
         )}
         <section className="mt-3 min-w-0 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 desktop:grid-cols-5">
             {brandGauges.map((gauge) => (
               <Gauge key={gauge.brand} {...gauge} />
             ))}
           </div>
-          <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-5">
+          <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5">
             {brandModelData.map(({ brand, data }) => (
               <RankingCard
                 key={brand}
@@ -437,13 +437,13 @@ export default function DashboardV2Page() {
                 description={brand}
               />
             ))}
-            <RankingCard
-              title="Propostas x Bandeira"
-              data={flagData}
-              description="Distribuição por bandeira"
-            />
-          </div>
-          <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-5">
+              <RankingCard
+                title="Propostas x Bandeira"
+                data={flagData}
+                description="Distribuição por bandeira"
+              />
+            </div>
+          <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5">
             {vehicleBrands.map((brand) => (
               <RankingCard
                 key={brand}
