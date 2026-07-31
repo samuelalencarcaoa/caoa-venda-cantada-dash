@@ -18,10 +18,10 @@ const periodOptions = [
 
 const brands = [
   "CAOA CHERY",
+  "CAOA CHANGAN",
   "HYUNDAI",
   "FORD",
-  "CAOA CHANGAN",
-  "SEMINOVOS",
+  "SEMINOVOS"
 ];
 const vehicleBrands = brands.filter((brand) => brand !== "SEMINOVOS");
 type PeriodType = (typeof periodOptions)[number]["key"];
