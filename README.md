@@ -227,6 +227,25 @@ pnpm start
 
 O comando carrega `.env.production`, compila backend e frontend, aplica as migrations e sobe a API (`4000`) antes do frontend (`3003`). Use `Ctrl+C` para encerrar ambos.
 
+### Manter ativo no Windows sem abrir o VS Code
+
+Instale a aplicacao no Agendador de Tarefas do Windows e inicie-a em segundo plano:
+
+```powershell
+pnpm service:install
+```
+
+A tarefa inicia automaticamente a cada logon, sem abrir uma janela, e tenta reiniciar a aplicacao se o processo falhar. O Windows precisa estar ligado e o usuario precisa ter feito logon. Comandos de administracao:
+
+```powershell
+pnpm service:status
+pnpm service:stop
+pnpm service:start
+pnpm service:uninstall
+```
+
+Os logs ficam em `logs/production.log`. Depois de alterar o codigo, pare e inicie a tarefa para que o build seja refeito.
+
 Quando alterar `backend/prisma/schema.prisma`, gere manualmente o client antes do prÃ³ximo build:
 
 ```bash

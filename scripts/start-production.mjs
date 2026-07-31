@@ -147,6 +147,15 @@ try {
     }
   });
 
+  const apiWatchdog = setInterval(async () => {
+    if (!(await isApiAvailable())) {
+      console.error('A API deixou de responder na porta 4000; reiniciando a aplicacao.');
+      clearInterval(apiWatchdog);
+      stop(1);
+    }
+  }, 10_000);
+  apiWatchdog.unref();
+
   console.log('Aplicacao em producao: frontend em http://localhost:3003 e API em http://localhost:4000.');
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);

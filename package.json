@@ -19,6 +19,11 @@
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "docker:prod:up": "docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build",
-    "docker:prod:down": "docker compose -f docker-compose.prod.yml --env-file .env.production down"
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml --env-file .env.production down",
+    "service:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/install-production-task.ps1 -StartNow",
+    "service:start": "powershell -NoProfile -Command \"Start-ScheduledTask -TaskName 'CAOA Venda Cantada Dashboard'\"",
+    "service:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/stop-production-task.ps1",
+    "service:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/show-production-status.ps1",
+    "service:uninstall": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/uninstall-production-task.ps1"
   }
 }
