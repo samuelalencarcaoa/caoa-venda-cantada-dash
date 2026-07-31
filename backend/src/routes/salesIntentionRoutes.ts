@@ -6,6 +6,7 @@ const router = Router();
 const controller = new SalesIntentionController();
 
 router.get('/', asyncHandler(controller.list.bind(controller)));
+router.get('/search', asyncHandler(controller.search.bind(controller)));
 router.get('/:id', asyncHandler(controller.getById.bind(controller)));
 router.post('/', asyncHandler(controller.create.bind(controller)));
 router.put('/:id', asyncHandler(controller.update.bind(controller)));

@@ -1,11 +1,18 @@
 import { SalesIntentionPayload } from '../entities/SalesIntention';
-import { SalesIntentionRepository } from '../repositories/SalesIntentionRepository';
+import {
+  SalesIntentionRepository,
+  type SalesIntentionSearchFilters
+} from '../repositories/SalesIntentionRepository';
 
 export class SalesIntentionService {
   private repository = new SalesIntentionRepository();
 
   public async listAll(dateRange?: { gte: Date; lt: Date }, tipoVenda?: string) {
     return this.repository.findAll(dateRange, tipoVenda);
+  }
+
+  public async search(filters: SalesIntentionSearchFilters) {
+    return this.repository.search(filters);
   }
 
   public async getById(id: number) {

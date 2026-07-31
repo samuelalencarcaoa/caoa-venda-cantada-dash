@@ -186,12 +186,19 @@ O certificado e sua chave privada ficam fora do Git em `deploy/certs/`.
 ### Endpoints principais
 
 - `GET /health`
-- `GET /sales-intentions`
+- `GET /sales-intentions` - lista o mês corrente e aceita filtros via querystring
+- `GET /sales-intentions/search` - busca registros por querystring
 - `GET /sales-intentions/:id`
 - `POST /sales-intentions`
 - `PUT /sales-intentions/:id`
 - `DELETE /sales-intentions/:id`
 - `GET /sales-intention-catalogs`
+
+Exemplo de busca:
+
+```bash
+GET /sales-intentions/search?proprietario=hermano&tipoVenda=NOVOS&startDate=2025-06-01&endDate=2025-06-30
+```
 
 ### Swagger
 
