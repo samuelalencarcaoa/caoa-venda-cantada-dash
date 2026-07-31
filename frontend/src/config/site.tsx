@@ -20,8 +20,8 @@ export const navigations: Navigation[] = [
   },
   {
     icon: LayoutDashboard,
-    name: "Dashboard v2",
-    href: "/dashboard-v2",
+    name: "Dashboard",
+    href: "/dashboard",
   },
   {
     icon: Tag,

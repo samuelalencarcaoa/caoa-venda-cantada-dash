@@ -89,7 +89,7 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
       >
         <div>
           <div className="border-b border-border p-3">
-            <Link href="/dashboard-v2" className="block">
+            <Link href="/dashboard" className="block">
               <BrandLogo className="mx-auto max-w-[180px]" />
             </Link>
           </div>

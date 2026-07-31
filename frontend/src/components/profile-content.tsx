@@ -151,7 +151,7 @@ export default function ProfileContent() {
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <Button asChild variant="outline">
-            <Link href="/dashboard-v2">
+            <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
               Voltar
             </Link>

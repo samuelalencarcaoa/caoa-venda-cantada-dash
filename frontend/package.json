@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "clean:next": "node -e \"const fs=require('fs'); fs.rmSync('.next', { recursive: true, force: true });\"",
-    "dev": "next dev -p 3003",
-    "dev:web": "next dev -p 3003",
+    "dev": "next dev -p 3000",
+    "dev:web": "next dev -p 3000",
     "build": "next build",
     "start": "node server.mjs",
     "lint": "next lint"
