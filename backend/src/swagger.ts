@@ -386,17 +386,14 @@ export const openApiSpec = {
     '/sales-intention-catalogs': {
       get: {
         tags: ['Sales Intention Catalogs'],
-        summary: 'Lista os catálogos usados no formulário de intenção',
+        summary: 'Lista as fontes segregadas do formulário de intenção',
         responses: {
           '200': {
-            description: 'Lista de opções de catálogo',
+            description: 'Fontes segregadas e combinações disponíveis para o formulário',
             content: {
               'application/json': {
                 schema: {
-                  type: 'array',
-                  items: {
-                    $ref: '#/components/schemas/SalesIntentionCatalog'
-                  }
+                  $ref: '#/components/schemas/SalesIntentionCatalogResponse'
                 }
               }
             }
@@ -407,50 +404,107 @@ export const openApiSpec = {
   },
   components: {
     schemas: {
-      SalesIntentionCatalog: {
+      SalesIntentionCatalogCombination: {
         type: 'object',
         properties: {
-          id: {
-            type: 'integer',
-            example: 1
-          },
-          Tipo_Venda: {
+          tipoVenda: {
             type: 'string',
             example: 'NOVOS'
           },
-          Bandeira: {
+          bandeira: {
             type: 'string',
             example: 'CAOA Chery'
           },
-          Regional: {
+          regional: {
             type: 'string',
             example: 'CY1'
           },
-          Loja_Venda: {
+          lojaVenda: {
             type: 'string',
             example: 'D21-0713-RIBEIRAO PRETO'
           },
-          Marca_Veiculo: {
+          marcaVeiculo: {
             type: 'string',
             example: 'CAOA Chery'
           },
-          Versao: {
+          versao: {
             type: 'string',
             example: 'TIGGO 5X SPORT'
           },
-          Classificacao: {
+          classificacao: {
             type: 'string',
             example: 'Varejo'
-          },
-          Criado: {
+          }
+        }
+      },
+      SalesIntentionCatalogHierarchyRecord: {
+        type: 'object',
+        properties: {
+          bandeira: {
             type: 'string',
-            format: 'date-time',
-            example: '2025-06-04T18:06:00.000Z'
+            example: 'CAOA Chery'
           },
-          Atualizado: {
+          regional: {
             type: 'string',
-            format: 'date-time',
-            example: '2025-06-04T18:06:00.000Z'
+            example: 'CY1'
+          },
+          lojaVenda: {
+            type: 'string',
+            example: 'D21-0713-RIBEIRAO PRETO'
+          }
+        }
+      },
+      SalesIntentionCatalogSources: {
+        type: 'object',
+        properties: {
+          tipoVenda: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['NOVOS', 'SEMINOVOS']
+          },
+          bandeira: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['CAOA Chery', 'HYUNDAI']
+          },
+          regional: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['CY1', 'CY2', 'CY3']
+          },
+          lojaVenda: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['D21-0713-RIBEIRAO PRETO', 'D21-7300-JOAO PESSOA']
+          },
+          classificacao: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['PCD', 'Varejo']
+          }
+        }
+      },
+      SalesIntentionCatalogResponse: {
+        type: 'object',
+        properties: {
+          version: {
+            type: 'integer',
+            example: 3
+          },
+          sources: {
+            $ref: '#/components/schemas/SalesIntentionCatalogSources'
+          },
+          hierarchy: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/SalesIntentionCatalogHierarchyRecord'
+            }
+          },
+          combinations: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/SalesIntentionCatalogCombination'
+            }
           }
         }
       },

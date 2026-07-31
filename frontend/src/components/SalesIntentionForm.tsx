@@ -8,14 +8,24 @@ import useCurrentUser from '@/hooks/useCurrentUser';
 import {
   createSalesIntention,
   fetchSalesIntentionCatalogs,
-  type SalesIntentionCatalogRecord
+  formatSalesIntentionApiError,
+  type SalesIntentionCatalogResponse,
+  type SalesIntentionCatalogSources
 } from '@/lib/salesIntentionApi';
 import type { SalesIntentionPayload } from '@/types/types';
 
-const typeVendaOptions = [
-  { value: 'NOVOS', label: 'Novos' },
-  { value: 'SEMINOVOS', label: 'Seminovos' }
-];
+const emptyCatalogSources: SalesIntentionCatalogSources = {
+  tipoVenda: [],
+  bandeira: [],
+  regional: [],
+  lojaVenda: [],
+  classificacao: []
+};
+
+const tipoVendaLabels: Record<string, string> = {
+  NOVOS: 'Novos',
+  SEMINOVOS: 'Seminovos'
+};
 
 const initialValues: SalesIntentionPayload = {
   proprietario: '',
@@ -54,8 +64,31 @@ const defaultNotification: NotificationState = {
   description: ''
 };
 
+const MAX_NOTIFICATION_DESCRIPTION_LENGTH = 160;
+
 function normalizeValue(value: string) {
   return value.trim().toUpperCase();
+}
+
+function formatTipoVendaLabel(value: string) {
+  return tipoVendaLabels[normalizeValue(value)] ?? value;
+}
+
+function clampNotificationDescription(value: string) {
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (normalized.length <= MAX_NOTIFICATION_DESCRIPTION_LENGTH) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, MAX_NOTIFICATION_DESCRIPTION_LENGTH - 3).trimEnd()}...`;
+}
+
+function getNotificationDescription(error: unknown) {
+  return clampNotificationDescription(formatSalesIntentionApiError(error));
+}
+
+function isTipoVenda(value: string, expected: 'NOVOS' | 'SEMINOVOS') {
+  return normalizeValue(value) === expected;
 }
 
 function getCurrentDateValue() {
@@ -68,52 +101,52 @@ function getCurrentDateValue() {
 function buildFormSchema(currentOwner: string) {
   return z
     .object({
-    proprietario: z
-      .string()
-      .trim()
-      .min(1, 'O proprietário é preenchido automaticamente com o usuário logado')
-      .refine((value) => normalizeValue(value) === normalizeValue(currentOwner), {
-        message: 'O proprietário precisa ser o usuário logado'
-      }),
-    tipoVenda: z.string().trim().min(1, 'Selecione o tipo de venda'),
-    bandeira: z.string().trim().min(1, 'Selecione a bandeira'),
-    lojaVenda: z.string().trim().min(1, 'Selecione a loja de venda'),
-    marcaVeiculo: z.string().trim().min(1, 'Selecione a marca do veículo'),
-    versao: z.string().trim().min(1, 'Selecione a versão'),
-    classificacao: z.string().trim().min(1, 'Selecione a classificação'),
-    quantidade: z.number().int('Quantidade deve ser um número inteiro').min(1, 'Quantidade mínima é 1'),
-    dataSolicitacao: z
-      .string()
-      .trim()
-      .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Informe a data no formato DD/MM/AAAA'),
-    placa: z.string().trim().min(1, 'Informe a placa'),
-    regional: z.string().trim().min(1, 'Selecione a regional'),
-    ano: z.string().trim(),
-    modelo: z.string().trim()
+      proprietario: z
+        .string()
+        .trim()
+        .min(1, 'O usuário logado será preenchido automaticamente neste campo.')
+        .refine((value) => normalizeValue(value) === normalizeValue(currentOwner), {
+          message: 'Confirme se o usuário logado foi carregado corretamente.'
+        }),
+      tipoVenda: z.string().trim().min(1, 'Escolha o tipo de venda.'),
+      bandeira: z.string().trim().min(1, 'Escolha a bandeira.'),
+      lojaVenda: z.string().trim().min(1, 'Escolha a loja de venda.'),
+      marcaVeiculo: z.string().trim().min(1, 'Escolha a marca do veículo.'),
+      versao: z.string().trim().min(1, 'Escolha a versão.'),
+      classificacao: z.string().trim().min(1, 'Escolha a classificação.'),
+      quantidade: z.number().int('Informe uma quantidade inteira.').min(1, 'A quantidade precisa ser de pelo menos 1.'),
+      dataSolicitacao: z
+        .string()
+        .trim()
+        .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use a data no formato DD/MM/AAAA.'),
+      placa: z.string().trim().min(1, 'Informe a placa do veículo.'),
+      regional: z.string().trim().min(1, 'Escolha a regional.'),
+      ano: z.string().trim(),
+      modelo: z.string().trim()
     })
     .superRefine((data, ctx) => {
-      if (data.tipoVenda === 'NOVOS' && data.placa !== '-') {
+      if (isTipoVenda(data.tipoVenda, 'NOVOS') && data.placa !== '-') {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['placa'],
-          message: 'Para veículos novos, a placa deve ser preenchida com -'
+          message: 'Para veículos novos, preencha a placa com -.'
         });
       }
 
-      if (data.tipoVenda === 'SEMINOVOS' && !isBrazilPlate(data.placa)) {
+      if (isTipoVenda(data.tipoVenda, 'SEMINOVOS') && !isBrazilPlate(data.placa)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['placa'],
-          message: 'Informe a placa no padrão brasileiro: AAA-1234'
+          message: 'Para seminovos, informe a placa no formato AAA-1234.'
         });
       }
 
-      if (data.tipoVenda === 'SEMINOVOS') {
+      if (isTipoVenda(data.tipoVenda, 'SEMINOVOS')) {
         if (!data.ano) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['ano'],
-            message: 'Selecione o ano do veículo'
+            message: 'Escolha o ano do veículo.'
           });
         }
 
@@ -121,7 +154,7 @@ function buildFormSchema(currentOwner: string) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['modelo'],
-            message: 'Selecione o modelo do veículo'
+            message: 'Escolha o modelo do veículo.'
           });
         }
       }
@@ -131,7 +164,7 @@ function buildFormSchema(currentOwner: string) {
 function getFilteredOptions(
   sourceKey: string,
   filters: Record<string, string>,
-  sourceRows: SalesIntentionCatalogRecord[]
+  sourceRows: Array<Record<string, string>>
 ) {
   return Array.from(
     new Set(
@@ -139,10 +172,10 @@ function getFilteredOptions(
         .filter((item) =>
           Object.entries(filters).every(([key, value]) => {
             if (!value) return true;
-            return normalizeValue(String(item[key as keyof typeof item] ?? '')) === normalizeValue(value);
+            return normalizeValue(String(item[key] ?? '')) === normalizeValue(value);
           })
         )
-        .map((item) => String(item[sourceKey as keyof typeof item] ?? '').trim())
+        .map((item) => String(item[sourceKey] ?? '').trim())
         .filter(Boolean)
     )
   ).sort();
@@ -213,6 +246,7 @@ const notificationFooterClasses =
   'flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:justify-end dark:border-white/10 dark:bg-white/5';
 
 const MIN_FEEDBACK_LOADING_MS = 1000;
+const REFRESH_INTERVAL_MS = 60000;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -228,34 +262,57 @@ export default function SalesIntentionForm() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [catalogRows, setCatalogRows] = useState<SalesIntentionCatalogRecord[]>([]);
+  const [catalogData, setCatalogData] = useState<SalesIntentionCatalogResponse | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [notification, setNotification] = useState<NotificationState>(defaultNotification);
   const yearOptions = useMemo(() => getYearOptions(), []);
 
   useEffect(() => {
     let active = true;
 
-    async function loadCatalogRows() {
+    async function loadCatalogRows(options?: { silent?: boolean }) {
+      const silent = options?.silent ?? false;
+
+      if (!silent) {
+        setIsCatalogLoading(true);
+      }
+
       try {
         const rows = await fetchSalesIntentionCatalogs();
         if (!active) return;
-        setCatalogRows(rows);
+        setCatalogData(rows);
       } catch (error) {
         if (!active) return;
-        setCatalogError(error instanceof Error ? error.message : 'Erro ao carregar opções do formulário.');
+        if (!silent) {
+      openNotification(
+        'error',
+        'Não conseguimos carregar os campos',
+        getNotificationDescription(error)
+      );
+        }
       } finally {
-        if (active) {
+        if (active && !silent) {
           setIsCatalogLoading(false);
         }
       }
     }
 
-    loadCatalogRows();
+    void loadCatalogRows();
+
+    const refreshInterval = window.setInterval(() => {
+      void loadCatalogRows({ silent: true });
+    }, REFRESH_INTERVAL_MS);
+
+    const handleFocus = () => {
+      void loadCatalogRows({ silent: true });
+    };
+
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       active = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -277,8 +334,8 @@ export default function SalesIntentionForm() {
   useEffect(() => {
     if (!currentOwner) return;
 
-      setFormData((current) =>
-        current.proprietario === currentOwner ? current : { ...current, proprietario: currentOwner }
+    setFormData((current) =>
+      current.proprietario === currentOwner ? current : { ...current, proprietario: currentOwner }
     );
   }, [currentOwner]);
 
@@ -295,11 +352,11 @@ export default function SalesIntentionForm() {
 
   useEffect(() => {
     setFormData((current) => {
-      if (current.tipoVenda === 'NOVOS' && current.placa !== '-') {
+      if (isTipoVenda(current.tipoVenda, 'NOVOS') && current.placa !== '-') {
         return { ...current, placa: '-', ano: '', modelo: '' };
       }
 
-      if (current.tipoVenda === 'SEMINOVOS' && current.placa === '-') {
+      if (isTipoVenda(current.tipoVenda, 'SEMINOVOS') && current.placa === '-') {
         return { ...current, placa: '' };
       }
 
@@ -307,50 +364,40 @@ export default function SalesIntentionForm() {
     });
   }, [formData.tipoVenda]);
 
+  const catalogSources = catalogData?.sources ?? emptyCatalogSources;
+  const catalogHierarchy = catalogData?.hierarchy ?? [];
+  const catalogRows = catalogData?.combinations ?? [];
+
   const filteredOptions = useMemo(
     () => ({
-      tipoVenda: typeVendaOptions,
-      bandeira: getFilteredOptions('Bandeira', { Tipo_Venda: formData.tipoVenda }, catalogRows),
-      regional: getFilteredOptions('Regional', {}, catalogRows),
+      tipoVenda: catalogSources.tipoVenda.map((value) => ({
+        value,
+        label: formatTipoVendaLabel(value)
+      })),
+      bandeira: catalogSources.bandeira,
+      regional: getFilteredOptions('regional', { bandeira: formData.bandeira }, catalogHierarchy),
       lojaVenda: getFilteredOptions(
-        'Loja_Venda',
+        'lojaVenda',
         {
-          Tipo_Venda: formData.tipoVenda,
-          Bandeira: formData.bandeira,
-          Regional: formData.regional
+          bandeira: formData.bandeira,
+          regional: formData.regional
         },
-        catalogRows
+        catalogHierarchy
       ),
-      marcaVeiculo: getFilteredOptions(
-        'Marca_Veiculo',
-        {},
-        catalogRows
-      ),
-      versao: getFilteredOptions(
-        'Versao',
-        { Marca_Veiculo: formData.marcaVeiculo },
-        catalogRows
-      ),
-      classificacao: getFilteredOptions('Classificacao', {}, catalogRows)
+      marcaVeiculo: getFilteredOptions('Marca_Veiculo', {}, catalogRows),
+      versao: getFilteredOptions('Versao', { Marca_Veiculo: formData.marcaVeiculo }, catalogRows),
+      classificacao: catalogSources.classificacao
     }),
-    [
-      catalogRows,
-      formData.bandeira,
-      formData.lojaVenda,
-      formData.marcaVeiculo,
-      formData.regional,
-      formData.tipoVenda,
-      formData.versao
-    ]
+    [catalogHierarchy, catalogRows, catalogSources, formData.bandeira, formData.marcaVeiculo, formData.regional]
   );
 
   const vehicleHelpText =
-    formData.tipoVenda === 'NOVOS'
+    isTipoVenda(formData.tipoVenda, 'NOVOS')
       ? 'Mostrando apenas veículos zero quilômetro.'
-      : formData.tipoVenda === 'SEMINOVOS'
+      : isTipoVenda(formData.tipoVenda, 'SEMINOVOS')
         ? 'Mostrando apenas veículos seminovos.'
         : 'Escolha o tipo de venda para liberar os veículos.';
-  const showSeminovosFields = formData.tipoVenda === 'SEMINOVOS';
+  const showSeminovosFields = isTipoVenda(formData.tipoVenda, 'SEMINOVOS');
   const closeNotification = () => setNotification(defaultNotification);
   const isOptionsLoading = isCatalogLoading;
 
@@ -359,7 +406,7 @@ export default function SalesIntentionForm() {
       open: true,
       variant,
       title,
-      description
+      description: clampNotificationDescription(description)
     });
   };
 
@@ -379,27 +426,9 @@ export default function SalesIntentionForm() {
       const nextFormData = {
         ...current,
         [name]: nextValue,
-        ...(name === 'tipoVenda'
-          ? {
-              bandeira: '',
-              regional: '',
-              lojaVenda: '',
-              marcaVeiculo: '',
-              versao: '',
-              classificacao: '',
-              ano: '',
-              modelo: ''
-            }
-          : {}),
-        ...(name === 'bandeira'
-          ? { regional: '', lojaVenda: '', marcaVeiculo: '', versao: '', classificacao: '' }
-          : {}),
-        ...(name === 'regional'
-          ? { lojaVenda: '', marcaVeiculo: '', versao: '', classificacao: '' }
-          : {}),
-        ...(name === 'lojaVenda' ? { marcaVeiculo: '', versao: '', classificacao: '' } : {}),
-        ...(name === 'marcaVeiculo' ? { versao: '', classificacao: '' } : {}),
-        ...(name === 'versao' ? { classificacao: '' } : {})
+        ...(name === 'marcaVeiculo' ? { versao: '' } : {}),
+        ...(name === 'bandeira' ? { regional: '', lojaVenda: '' } : {}),
+        ...(name === 'regional' ? { lojaVenda: '' } : {})
       };
 
       if (name === 'ano') {
@@ -422,8 +451,12 @@ export default function SalesIntentionForm() {
     setErrors((current) => ({
       ...current,
       [name]: undefined,
+      ...(name === 'tipoVenda' ? { placa: undefined, ano: undefined, modelo: undefined } : {}),
+      ...(name === 'bandeira' ? { regional: undefined, lojaVenda: undefined } : {}),
+      ...(name === 'regional' ? { lojaVenda: undefined } : {}),
       ...(name === 'ano' ? { modelo: undefined } : {}),
-      ...(name === 'modelo' ? { ano: undefined } : {})
+      ...(name === 'modelo' ? { ano: undefined } : {}),
+      ...(name === 'marcaVeiculo' ? { versao: undefined } : {})
     }));
   };
 
@@ -443,8 +476,8 @@ export default function SalesIntentionForm() {
       setErrors(fieldErrors);
       openNotification(
         'warning',
-        'Revise os campos',
-        'Ainda faltam informações obrigatórias. Veja os campos marcados antes de enviar novamente.'
+        'Revise os campos destacados',
+        'Há informações obrigatórias que ainda precisam ser preenchidas.'
       );
       return;
     }
@@ -453,8 +486,8 @@ export default function SalesIntentionForm() {
     setIsLoading(true);
     openNotification(
       'loading',
-      'Enviando intenção',
-      'Estamos registrando sua solicitação. Aguarde um instante antes do retorno final.'
+      'Salvando sua solicitação',
+      'Estamos registrando sua intenção. Aguarde um instante.'
     );
 
     try {
@@ -479,8 +512,8 @@ export default function SalesIntentionForm() {
       });
       openNotification(
         'success',
-        'Intenção enviada',
-        'Sua intenção foi registrada com sucesso. Você pode cadastrar outra em seguida.'
+        'Intenção registrada',
+        'Sua solicitação foi enviada com sucesso.'
       );
     } catch (error) {
       const elapsed = Date.now() - submitStartedAt;
@@ -490,8 +523,8 @@ export default function SalesIntentionForm() {
 
       openNotification(
         'error',
-        'Não foi possível enviar',
-        error instanceof Error ? error.message : 'Erro desconhecido ao enviar.'
+        'Não conseguimos enviar',
+        getNotificationDescription(error)
       );
     } finally {
       setIsLoading(false);
@@ -527,6 +560,14 @@ export default function SalesIntentionForm() {
             iconClass: 'text-rose-600 dark:text-rose-400'
           };
   const NotificationIcon = notificationTone.icon;
+  const notificationEyebrow =
+    notification.variant === 'success'
+      ? 'Tudo certo'
+      : notification.variant === 'warning'
+        ? 'Atenção'
+        : notification.variant === 'loading'
+          ? 'Salvando'
+          : 'Ops';
 
   return (
     <section className={pageCardClasses}>
@@ -537,12 +578,6 @@ export default function SalesIntentionForm() {
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Venda Cantada</h1>
 
       </div>
-
-      {catalogError ? (
-        <div className="border-b border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          Não foi possível carregar os catálogos do formulário. {catalogError}
-        </div>
-      ) : null}
 
       <form
         onSubmit={handleSubmit}
@@ -592,7 +627,7 @@ export default function SalesIntentionForm() {
               value={formData.bandeira}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.tipoVenda}
+              disabled={isLoading || isOptionsLoading}
             >
               <option value="">Escolha a bandeira</option>
               {filteredOptions.bandeira.map((value) => (
@@ -613,15 +648,20 @@ export default function SalesIntentionForm() {
               value={formData.regional}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading}
+              disabled={isLoading || isOptionsLoading || !formData.bandeira}
             >
-              <option value="">Escolha a regional</option>
+              <option value="">{formData.bandeira ? 'Escolha a regional' : 'Escolha a bandeira primeiro'}</option>
               {filteredOptions.regional.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
               ))}
             </select>
+            <span className={helperTextClasses}>
+              {formData.bandeira
+                ? 'As regionais são filtradas pela bandeira selecionada.'
+                : 'Escolha a bandeira para liberar as regionais.'}
+            </span>
             {errors.regional ? <span className={errorTextClasses}>{errors.regional}</span> : null}
           </label>
         </div>
@@ -634,15 +674,28 @@ export default function SalesIntentionForm() {
               value={formData.lojaVenda}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.regional}
+              disabled={isLoading || isOptionsLoading || !formData.bandeira || !formData.regional}
             >
-              <option value="">Escolha a loja</option>
+              <option value="">
+                {formData.bandeira
+                  ? formData.regional
+                    ? 'Escolha a loja'
+                    : 'Escolha a regional primeiro'
+                  : 'Escolha a bandeira primeiro'}
+              </option>
               {filteredOptions.lojaVenda.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
               ))}
             </select>
+            <span className={helperTextClasses}>
+              {formData.bandeira && formData.regional
+                ? 'As lojas são filtradas pela regional selecionada.'
+                : formData.bandeira
+                  ? 'Escolha a regional para liberar as lojas.'
+                  : 'Escolha a bandeira para liberar as lojas.'}
+            </span>
             {errors.lojaVenda ? <span className={errorTextClasses}>{errors.lojaVenda}</span> : null}
           </label>
         </div>
@@ -657,7 +710,7 @@ export default function SalesIntentionForm() {
                 value={formData.placa}
                 onChange={handleChange}
                 className={fieldClasses}
-                disabled={isLoading || isOptionsLoading}
+                disabled={isLoading}
                 placeholder="AAA-1234"
                 maxLength={8}
                 inputMode="text"
@@ -884,7 +937,9 @@ export default function SalesIntentionForm() {
                 <NotificationIcon className={`h-6 w-6 ${notificationTone.iconClass}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] opacity-70">Status do envio</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] opacity-70">
+                  {notificationEyebrow}
+                </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight">{notification.title}</h2>
                 <p className="mt-2 text-sm leading-6 opacity-90">{notification.description}</p>
               </div>
@@ -903,7 +958,7 @@ export default function SalesIntentionForm() {
                 onClick={closeNotification}
                 className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 sm:w-auto"
               >
-                Entendi
+                Fechar
               </button>
             </div>
           </div>

@@ -192,7 +192,7 @@ O certificado e sua chave privada ficam fora do Git em `deploy/certs/`.
 - `POST /sales-intentions`
 - `PUT /sales-intentions/:id`
 - `DELETE /sales-intentions/:id`
-- `GET /sales-intention-catalogs`
+- `GET /sales-intention-catalogs` - fontes segregadas para o formulário
 
 Exemplo de busca:
 

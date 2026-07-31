@@ -17,3 +17,24 @@ export type SalesIntentionCatalogRecord = {
   versao: string;
   classificacao: string;
 };
+
+export type SalesIntentionCatalogHierarchyRecord = {
+  bandeira: string;
+  regional: string;
+  lojaVenda: string;
+};
+
+export type SalesIntentionCatalogSources = {
+  tipoVenda: string[];
+  bandeira: string[];
+  regional: string[];
+  lojaVenda: string[];
+  classificacao: string[];
+};
+
+export type SalesIntentionCatalogBundle = {
+  version: 3;
+  sources: SalesIntentionCatalogSources;
+  hierarchy: SalesIntentionCatalogHierarchyRecord[];
+  combinations: SalesIntentionCatalogRecord[];
+};

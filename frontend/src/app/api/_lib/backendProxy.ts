@@ -90,9 +90,7 @@ export async function proxyBackendRequest(
 
   return NextResponse.json(
     {
-      message: `${messages.unavailable} Verifique se o backend está rodando em ${baseUrls.join(
-        ', '
-      )}.`
+      message: messages.unavailable
     },
     { status: 503 }
   );

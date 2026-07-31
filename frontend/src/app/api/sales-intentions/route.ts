@@ -3,16 +3,16 @@ import { proxyBackendRequest } from '../_lib/backendProxy';
 
 export async function GET(request: NextRequest) {
   return proxyBackendRequest(request, `/sales-intentions${request.nextUrl.search}`, {
-    notFound: 'O backend não encontrou a rota /sales-intentions. Reinicie a API com o código atualizado.',
-    responseError: 'Não foi possível acessar as intenções de venda.',
-    unavailable: 'Não foi possível acessar a API de intenções de venda.'
+    notFound: 'Não foi possível localizar os registros de intenção no momento.',
+    responseError: 'Não foi possível carregar os registros de intenção no momento.',
+    unavailable: 'Não conseguimos acessar os registros de intenção no momento.'
   });
 }
 
 export async function POST(request: NextRequest) {
   return proxyBackendRequest(request, '/sales-intentions', {
-    notFound: 'O backend não encontrou a rota /sales-intentions. Reinicie a API com o código atualizado.',
-    responseError: 'Não foi possível acessar as intenções de venda.',
-    unavailable: 'Não foi possível acessar a API de intenções de venda.'
+    notFound: 'Não foi possível localizar o serviço de envio no momento.',
+    responseError: 'Não foi possível enviar a intenção no momento.',
+    unavailable: 'Não conseguimos acessar o serviço de envio no momento.'
   });
 }

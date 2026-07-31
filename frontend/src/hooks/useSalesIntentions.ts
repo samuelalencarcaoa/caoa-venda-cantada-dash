@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchSalesIntentions,
+  formatSalesIntentionApiError,
   type SalesIntentionDateRange,
   type SalesIntentionReportRow,
 } from "@/lib/salesIntentionApi";
@@ -28,7 +29,7 @@ export function useSalesIntentions(dateRange?: SalesIntentionDateRange) {
       const data = await fetchSalesIntentions(dateRange);
       setItems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatSalesIntentionApiError(err));
     } finally {
       if (silent) {
         setIsRefreshing(false);

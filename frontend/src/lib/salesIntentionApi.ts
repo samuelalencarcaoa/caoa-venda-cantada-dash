@@ -44,11 +44,61 @@ export type SalesIntentionCatalogRecord = {
   Classificacao: string;
 };
 
-type CompactSalesIntentionCatalog = {
-  version: 1;
-  dictionaries: string[][];
-  combinations: number[][];
+export type SalesIntentionCatalogHierarchyRecord = {
+  bandeira: string;
+  regional: string;
+  lojaVenda: string;
 };
+
+export type SalesIntentionCatalogSources = {
+  tipoVenda: string[];
+  bandeira: string[];
+  regional: string[];
+  lojaVenda: string[];
+  classificacao: string[];
+};
+
+export type SalesIntentionCatalogResponse = {
+  version: 3;
+  sources: SalesIntentionCatalogSources;
+  hierarchy: SalesIntentionCatalogHierarchyRecord[];
+  combinations: SalesIntentionCatalogRecord[];
+};
+
+const SALES_INTENTION_API_ERROR_PREFIX = 'Ops, ocorreu um erro';
+
+function buildSalesIntentionApiErrorMessage(status: number | null) {
+  const statusLabel = typeof status === 'number' && Number.isFinite(status) && status > 0
+    ? String(status)
+    : 'desconhecido';
+
+  return `${SALES_INTENTION_API_ERROR_PREFIX}: status ${statusLabel}. Tente novamente mais tarde ou entre em contato com o administrador do sistema.`;
+}
+
+export class SalesIntentionApiError extends Error {
+  status: number | null;
+  details?: string;
+
+  constructor(status: number | null, details?: string) {
+    super(buildSalesIntentionApiErrorMessage(status));
+    this.name = 'SalesIntentionApiError';
+    this.status = status;
+    this.details = details?.trim() || undefined;
+  }
+}
+
+export function formatSalesIntentionApiError(error: unknown) {
+  if (error instanceof SalesIntentionApiError) {
+    return error.message;
+  }
+
+  const status =
+    error && typeof error === 'object' && 'status' in error && typeof (error as { status?: unknown }).status === 'number'
+      ? (error as { status: number }).status
+      : null;
+
+  return buildSalesIntentionApiErrorMessage(status);
+}
 
 function toDate(value: string | Date): Date | null {
   if (!value) {
@@ -110,7 +160,7 @@ async function fetchApi<T>(path: string, options?: RequestInit) {
   const response = await fetch(path, options);
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || `Request failed with status ${response.status}`);
+    throw new SalesIntentionApiError(response.status, body);
   }
   return response.json() as Promise<T>;
 }
@@ -133,20 +183,10 @@ export async function fetchSalesIntentions(
   return data.map(transformApiRecord);
 }
 
-export async function fetchSalesIntentionCatalogs(): Promise<SalesIntentionCatalogRecord[]> {
-  const catalog = await fetchApi<CompactSalesIntentionCatalog>('/api/sales-intention-catalogs');
-  const [tipoVenda, bandeira, regional, lojaVenda, marcaVeiculo, versao, classificacao] =
-    catalog.dictionaries;
-
-  return catalog.combinations.map((combination) => ({
-    Tipo_Venda: tipoVenda[combination[0]],
-    Bandeira: bandeira[combination[1]],
-    Regional: regional[combination[2]],
-    Loja_Venda: lojaVenda[combination[3]],
-    Marca_Veiculo: marcaVeiculo[combination[4]],
-    Versao: versao[combination[5]],
-    Classificacao: classificacao[combination[6]]
-  }));
+export async function fetchSalesIntentionCatalogs(): Promise<SalesIntentionCatalogResponse> {
+  return fetchApi<SalesIntentionCatalogResponse>('/api/sales-intention-catalogs', {
+    cache: 'no-store'
+  });
 }
 
 export async function createSalesIntention(payload: SalesIntentionPayload): Promise<SalesIntentionApiRecord> {
