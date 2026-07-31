@@ -121,61 +121,29 @@ function Panel({
   );
 }
 
-function Gauge({
+function BrandTotalCard({
   value,
-  target,
   brand,
 }: {
   value: number;
-  target: number;
   brand: string;
 }) {
-  const percentage = target ? Math.round((value / target) * 100) : 0;
-  const progress = Math.min(100, percentage);
-  const circumference = Math.PI * 44;
-  const dashOffset = circumference - (progress / 100) * circumference;
   return (
-    <Panel>
-      <p className="text-center text-base font-bold uppercase tracking-wide text-white desktop:text-sm">
-        {brand}
-      </p>
-      <h2 className="mt-1 text-center text-base font-semibold text-white desktop:mt-0.5 desktop:text-sm">
-        Meta Diária x Propostas
-      </h2>
-      <div className="relative mx-auto mt-3 h-24 max-w-[190px] overflow-hidden desktop:mt-2 desktop:h-20 desktop:max-w-[170px]">
-        <svg
-          viewBox="0 0 120 64"
-          className="h-full w-full"
-          aria-label={`${percentage}% da meta`}
-        >
-          <path
-            d="M 16 58 A 44 44 0 0 1 104 58"
-            fill="none"
-            stroke="#f1f5f9"
-            strokeWidth="12"
-          />
-          <path
-            d="M 16 58 A 44 44 0 0 1 104 58"
-            fill="none"
-            stroke="#e40046"
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-          />
-        </svg>
-        <div className="absolute inset-x-0 bottom-0 text-center">
-          <p className="text-2xl font-bold tracking-tight text-white desktop:text-xl">
-            {percentage}%
-          </p>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-200 desktop:text-[9px]">
-            da meta diária
+    <Panel className="min-h-[172px] desktop:min-h-[160px]">
+      <div className="flex h-full flex-col justify-between gap-2.5">
+        <div className="space-y-1 text-center">
+          <p className="text-lg font-bold uppercase tracking-[0.14em] text-emerald-200/90 desktop:text-base">
+            {brand}
           </p>
         </div>
-      </div>
-      <div className="mt-1 flex items-center justify-between text-xs text-white/85 desktop:mt-0.5 desktop:text-[11px]">
-        <span>{value.toLocaleString("pt-BR")} propostas</span>
-        <span>meta {target.toLocaleString("pt-BR")}</span>
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-6xl font-light leading-none tracking-[-0.05em] text-white desktop:text-5xl">
+            {value.toLocaleString("pt-BR")}
+          </p>
+        </div>
+        <p className="text-center text-xs font-medium uppercase tracking-[0.18em] text-emerald-200/90 desktop:text-[10px]">
+          Total de propostas
+        </p>
       </div>
     </Panel>
   );
@@ -275,14 +243,13 @@ export default function DashboardV2Page() {
     (sum, item) => sum + (Number(item.Quantidade) || 0),
     0,
   );
-  const dailyTarget = Math.ceil(totalProposals * 0.33);
-  const brandGauges = useMemo(
+  const brandTotals = useMemo(
     () =>
       brands.map((brand) => {
         const value = filteredSales
           .filter((item) => matchesBrand(item, brand))
           .reduce((sum, item) => sum + (Number(item.Quantidade) || 0), 0);
-        return { brand, value, target: Math.ceil(value * 0.33) };
+        return { brand, value };
       }),
     [filteredSales],
   );
@@ -424,8 +391,8 @@ export default function DashboardV2Page() {
         )}
         <section className="mt-3 min-w-0 space-y-3 desktop:space-y-2.5">
           <div className="grid gap-3 sm:grid-cols-2 desktop:grid-cols-5 desktop:gap-2">
-            {brandGauges.map((gauge) => (
-              <Gauge key={gauge.brand} {...gauge} />
+            {brandTotals.map((brand) => (
+              <BrandTotalCard key={brand.brand} {...brand} />
             ))}
           </div>
           <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5 desktop:gap-2">
@@ -472,9 +439,6 @@ export default function DashboardV2Page() {
           <div className="flex flex-wrap items-center justify-between gap-3 px-2 pb-2 text-sm text-white/85">
             <span>
               {totalProposals.toLocaleString("pt-BR")} propostas registradas
-            </span>
-            <span>
-              Meta diária: {dailyTarget.toLocaleString("pt-BR")} propostas (33%)
             </span>
           </div>
         </section>
