@@ -246,7 +246,6 @@ const notificationFooterClasses =
   'flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:justify-end dark:border-white/10 dark:bg-white/5';
 
 const MIN_FEEDBACK_LOADING_MS = 1000;
-const REFRESH_INTERVAL_MS = 60000;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -270,28 +269,21 @@ export default function SalesIntentionForm() {
   useEffect(() => {
     let active = true;
 
-    async function loadCatalogRows(options?: { silent?: boolean }) {
-      const silent = options?.silent ?? false;
-
-      if (!silent) {
-        setIsCatalogLoading(true);
-      }
-
+    async function loadCatalogRows() {
+      setIsCatalogLoading(true);
       try {
         const rows = await fetchSalesIntentionCatalogs();
         if (!active) return;
         setCatalogData(rows);
       } catch (error) {
         if (!active) return;
-        if (!silent) {
-      openNotification(
-        'error',
-        'Não conseguimos carregar os campos',
-        getNotificationDescription(error)
-      );
-        }
+        openNotification(
+          'error',
+          'Não conseguimos carregar os campos',
+          getNotificationDescription(error)
+        );
       } finally {
-        if (active && !silent) {
+        if (active) {
           setIsCatalogLoading(false);
         }
       }
@@ -299,20 +291,8 @@ export default function SalesIntentionForm() {
 
     void loadCatalogRows();
 
-    const refreshInterval = window.setInterval(() => {
-      void loadCatalogRows({ silent: true });
-    }, REFRESH_INTERVAL_MS);
-
-    const handleFocus = () => {
-      void loadCatalogRows({ silent: true });
-    };
-
-    window.addEventListener('focus', handleFocus);
-
     return () => {
       active = false;
-      window.clearInterval(refreshInterval);
-      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 

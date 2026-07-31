@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { RefreshCw } from "lucide-react";
 import { VChart } from "@visactor/react-vchart";
@@ -255,12 +255,9 @@ export default function DashboardV2Page() {
     isLoading,
     isRefreshing,
     error,
+    lastUpdatedAt,
     refresh,
   } = useSalesIntentions(requestedDateRange);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  useEffect(() => {
-    if (!isLoading) setLastUpdated(new Date());
-  }, [isLoading, sales.length]);
 
   const range = useMemo(
     () => getRange(period, startDate, endDate),
@@ -388,8 +385,8 @@ export default function DashboardV2Page() {
             </div>
             <div className="text-left xl:text-right">
               <p className="text-lg font-bold italic">
-                {lastUpdated
-                  ? format(lastUpdated, "dd/MM/yyyy HH:mm:ss")
+                {lastUpdatedAt
+                  ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss")
                   : "--/--/---- --:--:--"}
               </p>
               <p className="mt-1 text-xs font-semibold italic">
