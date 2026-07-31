@@ -114,7 +114,7 @@ function Panel({
 }) {
   return (
     <article
-      className={`rounded-2xl border-2 border-emerald-300/70 bg-[#365888]/95 p-4 shadow-lg shadow-slate-950/20 ${className}`}
+      className={`rounded-2xl border-2 border-emerald-300/70 bg-[#365888]/95 p-4 shadow-lg shadow-slate-950/20 desktop:p-3 ${className}`}
     >
       {children}
     </article>
@@ -136,13 +136,13 @@ function Gauge({
   const dashOffset = circumference - (progress / 100) * circumference;
   return (
     <Panel>
-      <p className="text-center text-base font-bold uppercase tracking-wide text-white">
+      <p className="text-center text-base font-bold uppercase tracking-wide text-white desktop:text-sm">
         {brand}
       </p>
-      <h2 className="mt-1 text-center text-base font-semibold text-white">
+      <h2 className="mt-1 text-center text-base font-semibold text-white desktop:mt-0.5 desktop:text-sm">
         Meta Diária x Propostas
       </h2>
-      <div className="relative mx-auto mt-3 h-24 max-w-[190px] overflow-hidden">
+      <div className="relative mx-auto mt-3 h-24 max-w-[190px] overflow-hidden desktop:mt-2 desktop:h-20 desktop:max-w-[170px]">
         <svg
           viewBox="0 0 120 64"
           className="h-full w-full"
@@ -165,15 +165,15 @@ function Gauge({
           />
         </svg>
         <div className="absolute inset-x-0 bottom-0 text-center">
-          <p className="text-2xl font-bold tracking-tight text-white">
+          <p className="text-2xl font-bold tracking-tight text-white desktop:text-xl">
             {percentage}%
           </p>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-200">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-200 desktop:text-[9px]">
             da meta diária
           </p>
         </div>
       </div>
-      <div className="mt-1 flex items-center justify-between text-xs text-white/85">
+      <div className="mt-1 flex items-center justify-between text-xs text-white/85 desktop:mt-0.5 desktop:text-[11px]">
         <span>{value.toLocaleString("pt-BR")} propostas</span>
         <span>meta {target.toLocaleString("pt-BR")}</span>
       </div>
@@ -192,25 +192,25 @@ function RankingCard({
 }) {
   const max = data[0]?.value || 1;
   return (
-    <Panel className="min-h-[280px]">
-      <h2 className="text-center text-base font-bold text-white">{title}</h2>
-      <p className="mb-4 text-center text-xs text-white/65">{description}</p>
-      <div className="max-h-[210px] space-y-3 overflow-y-auto pr-1">
+    <Panel className="min-h-[280px] desktop:min-h-[240px]">
+      <h2 className="text-center text-base font-bold text-white desktop:text-sm">{title}</h2>
+      <p className="mb-4 text-center text-xs text-white/65 desktop:mb-3 desktop:text-[11px]">{description}</p>
+      <div className="max-h-[210px] space-y-3 overflow-y-auto pr-1 desktop:max-h-[170px] desktop:space-y-2">
         {data.length ? (
           data.map((item) => (
             <div key={item.label}>
-              <div className="mb-1 flex justify-between gap-3 text-xs">
+              <div className="mb-1 flex justify-between gap-3 text-xs desktop:mb-0.5 desktop:gap-2 desktop:text-[11px]">
                 <span
                   className="truncate font-medium text-white"
                   title={item.label}
                 >
                   {item.label}
                 </span>
-                <span className="rounded-md bg-slate-950/25 px-2 py-0.5 font-semibold text-white">
+                <span className="rounded-md bg-slate-950/25 px-2 py-0.5 font-semibold text-white desktop:px-1.5 desktop:py-0">
                   {item.value.toLocaleString("pt-BR")}
                 </span>
               </div>
-              <div className="h-3 overflow-hidden rounded-sm bg-slate-950/25">
+              <div className="h-3 overflow-hidden rounded-sm bg-slate-950/25 desktop:h-2.5">
                 <div
                   className="h-full bg-slate-300"
                   style={{ width: `${Math.max(5, (item.value / max) * 100)}%` }}
@@ -356,12 +356,12 @@ export default function DashboardV2Page() {
   return (
     <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_35%_10%,#15568b_0%,#06345e_38%,#031d43_100%)] p-3 text-white sm:p-5">
       <div className="mx-auto max-w-[1800px]">
-        <header className="px-2 py-2 text-white sm:px-4">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <header className="px-2 py-2 text-white sm:px-4 desktop:px-2">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between desktop:gap-4">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl desktop:text-3xl">
               INTENÇÃO DE VENDAS
             </h1>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 desktop:gap-1.5">
               {periodOptions.map((option) => (
                 <button
                   type="button"
@@ -383,13 +383,13 @@ export default function DashboardV2Page() {
                 <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
               </Button>
             </div>
-            <div className="text-left xl:text-right">
-              <p className="text-lg font-bold italic">
+            <div className="text-left xl:text-right desktop:shrink-0">
+              <p className="text-lg font-bold italic desktop:text-base">
                 {lastUpdatedAt
                   ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss")
                   : "--/--/---- --:--:--"}
               </p>
-              <p className="mt-1 text-xs font-semibold italic">
+              <p className="mt-1 text-xs font-semibold italic desktop:mt-0.5">
                 Última Atualização
               </p>
             </div>
@@ -422,13 +422,13 @@ export default function DashboardV2Page() {
             Não foi possível carregar os dados: {error}
           </div>
         )}
-        <section className="mt-3 min-w-0 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 desktop:grid-cols-5">
+        <section className="mt-3 min-w-0 space-y-3 desktop:space-y-2.5">
+          <div className="grid gap-3 sm:grid-cols-2 desktop:grid-cols-5 desktop:gap-2">
             {brandGauges.map((gauge) => (
               <Gauge key={gauge.brand} {...gauge} />
             ))}
           </div>
-          <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5">
+          <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5 desktop:gap-2">
             {brandModelData.map(({ brand, data }) => (
               <RankingCard
                 key={brand}
@@ -437,13 +437,13 @@ export default function DashboardV2Page() {
                 description={brand}
               />
             ))}
-              <RankingCard
-                title="Propostas x Bandeira"
-                data={flagData}
-                description="Distribuição por bandeira"
-              />
-            </div>
-          <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5">
+            <RankingCard
+              title="Propostas x Bandeira"
+              data={flagData}
+              description="Distribuição por bandeira"
+            />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2 desktop:grid-cols-5 desktop:gap-2">
             {vehicleBrands.map((brand) => (
               <RankingCard
                 key={brand}
@@ -457,14 +457,14 @@ export default function DashboardV2Page() {
                 description={brand}
               />
             ))}
-            <Panel className="min-h-[280px]">
-              <h2 className="text-center text-base font-bold text-white">
+            <Panel className="min-h-[280px] desktop:min-h-[240px]">
+              <h2 className="text-center text-base font-bold text-white desktop:text-sm">
                 Propostas x Regional de Vendas
               </h2>
-              <p className="text-center text-xs text-white/65">
+              <p className="text-center text-xs text-white/65 desktop:mb-2 desktop:text-[11px]">
                 Visão consolidada do período
               </p>
-              <div className="h-[220px] pt-3">
+              <div className="h-[220px] pt-3 desktop:h-[180px] desktop:pt-2">
                 <VChart spec={barSpec} />
               </div>
             </Panel>
