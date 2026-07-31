@@ -51,8 +51,32 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
     window.location.href = "/login";
   }
 
+  function closeMobileDrawer() {
+    setIsOpen(false);
+  }
+
+  function collapseDesktopDrawer() {
+    onToggleCollapse?.();
+  }
+
   return (
     <>
+      {isOpen ? (
+        <button
+          type="button"
+          aria-label="Fechar menu lateral"
+          className="fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-sm tablet:hidden"
+          onClick={closeMobileDrawer}
+        />
+      ) : null}
+      {!isCollapsed ? (
+        <button
+          type="button"
+          aria-label="Fechar menu lateral"
+          className="fixed inset-y-0 left-56 right-0 z-30 hidden bg-slate-950/35 backdrop-blur-[2px] tablet:block"
+          onClick={collapseDesktopDrawer}
+        />
+      ) : null}
       <button
         type="button"
         className={cn(
@@ -79,12 +103,13 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
       ) : null}
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-0 z-40 flex h-[100dvh] w-56 shrink-0 flex-col justify-between border-r border-border bg-slate-100 dark:bg-slate-900 tablet:sticky tablet:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-[100dvh] w-56 shrink-0 flex-col justify-between border-r border-border bg-slate-100 shadow-xl shadow-slate-950/10 dark:bg-slate-900 dark:shadow-slate-950/30",
           "transition-all duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "-translate-x-full",
+          isOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0",
+          isOpen ? "pointer-events-auto" : "pointer-events-none",
           isCollapsed
-            ? "tablet:w-0 tablet:min-w-0 tablet:overflow-hidden tablet:border-r-0 tablet:px-0 tablet:opacity-0 tablet:pointer-events-none"
-            : "tablet:w-56",
+            ? "tablet:-translate-x-full tablet:opacity-0 tablet:pointer-events-none"
+            : "tablet:translate-x-0 tablet:opacity-100 tablet:pointer-events-auto",
         )}
       >
         <div>
