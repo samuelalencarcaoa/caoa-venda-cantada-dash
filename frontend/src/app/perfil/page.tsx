@@ -71,7 +71,7 @@ export default async function PerfilPage() {
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link
-            href="/dashboard-v2"
+            href="/dashboard"
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-200 hover:text-sky-700"
           >
             <ArrowLeft className="h-4 w-4" />
