@@ -168,6 +168,10 @@ export const openApiSpec = {
     {
       name: 'Sales Intention Catalogs',
       description: 'Catálogos de opções usados no formulário'
+    },
+    {
+      name: 'Sales Intention Modelos Dealer',
+      description: 'Combinações de tipo de venda, marca, modelo e versão para o formulário'
     }
   ],
   paths: {
@@ -400,6 +404,24 @@ export const openApiSpec = {
           }
         }
       }
+    },
+    '/sales-intention-modelos-dealer': {
+      get: {
+        tags: ['Sales Intention Modelos Dealer'],
+        summary: 'Lista as combinações de tipo de venda, marca, modelo e versão da view VW_IntencaoVendas_ModelosDealer',
+        responses: {
+          '200': {
+            description: 'Fontes segregadas e combinações disponíveis para o formulário de veículos',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/SalesIntentionModelosDealerResponse'
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   components: {
@@ -504,6 +526,70 @@ export const openApiSpec = {
             type: 'array',
             items: {
               $ref: '#/components/schemas/SalesIntentionCatalogCombination'
+            }
+          }
+        }
+      },
+      SalesIntentionModelosDealerRecord: {
+        type: 'object',
+        properties: {
+          tipoVenda: {
+            type: 'string',
+            example: 'NOVOS'
+          },
+          marca: {
+            type: 'string',
+            example: 'FORD'
+          },
+          modelo: {
+            type: 'string',
+            example: 'RANGER'
+          },
+          versaoModelo: {
+            type: 'string',
+            example: '2BC - RANGER CB DUPLA 4X2'
+          }
+        }
+      },
+      SalesIntentionModelosDealerSources: {
+        type: 'object',
+        properties: {
+          tipoVenda: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['NOVOS', 'SEMINOVOS']
+          },
+          marca: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['FORD', 'HYUNDAI']
+          },
+          modelo: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['RANGER', 'HB20']
+          },
+          versaoModelo: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['2BC - RANGER CB DUPLA 4X2', 'HBH NAO USAR']
+          }
+        }
+      },
+      SalesIntentionModelosDealerResponse: {
+        type: 'object',
+        properties: {
+          version: {
+            type: 'integer',
+            example: 1
+          },
+          sources: {
+            $ref: '#/components/schemas/SalesIntentionModelosDealerSources'
+          },
+          combinations: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/SalesIntentionModelosDealerRecord'
             }
           }
         }

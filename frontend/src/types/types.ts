@@ -16,6 +16,7 @@ export type SalesIntentionPayload = {
   bandeira: string;
   lojaVenda: string;
   marcaVeiculo: string;
+  modelo?: string;
   versao: string;
   classificacao: string;
   quantidade: number;

@@ -1,4 +1,4 @@
-{
+ {
   "name": "caoa-venda-cantada-api",
   "version": "0.1.0",
   "private": true,
@@ -7,7 +7,7 @@
     "predev": "pnpm prisma:generate && pnpm prisma:migrate:deploy",
     "build": "tsc -p tsconfig.json",
     "prestart": "pnpm prisma:migrate:deploy",
-    "start": "node dist/server.js",
+    "start": "node dist/server.js", 
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",

@@ -65,6 +65,26 @@ export type SalesIntentionCatalogResponse = {
   combinations: SalesIntentionCatalogRecord[];
 };
 
+export type SalesIntentionModelosDealerRecord = {
+  tipoVenda: string;
+  marca: string;
+  modelo: string;
+  versaoModelo: string;
+};
+
+export type SalesIntentionModelosDealerSources = {
+  tipoVenda: string[];
+  marca: string[];
+  modelo: string[];
+  versaoModelo: string[];
+};
+
+export type SalesIntentionModelosDealerResponse = {
+  version: 1;
+  sources: SalesIntentionModelosDealerSources;
+  combinations: SalesIntentionModelosDealerRecord[];
+};
+
 const SALES_INTENTION_API_ERROR_PREFIX = 'Ops, ocorreu um erro';
 
 function buildSalesIntentionApiErrorMessage(status: number | null) {
@@ -185,6 +205,12 @@ export async function fetchSalesIntentions(
 
 export async function fetchSalesIntentionCatalogs(): Promise<SalesIntentionCatalogResponse> {
   return fetchApi<SalesIntentionCatalogResponse>('/api/sales-intention-catalogs', {
+    cache: 'no-store'
+  });
+}
+
+export async function fetchSalesIntentionModelosDealer(): Promise<SalesIntentionModelosDealerResponse> {
+  return fetchApi<SalesIntentionModelosDealerResponse>('/api/sales-intention-modelos-dealer', {
     cache: 'no-store'
   });
 }

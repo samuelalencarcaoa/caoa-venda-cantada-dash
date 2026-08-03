@@ -8,9 +8,14 @@ import useCurrentUser from '@/hooks/useCurrentUser';
 import {
   createSalesIntention,
   fetchSalesIntentionCatalogs,
+  fetchSalesIntentionModelosDealer,
   formatSalesIntentionApiError,
   type SalesIntentionCatalogResponse,
-  type SalesIntentionCatalogSources
+  type SalesIntentionCatalogHierarchyRecord,
+  type SalesIntentionCatalogSources,
+  type SalesIntentionModelosDealerResponse,
+  type SalesIntentionModelosDealerRecord,
+  type SalesIntentionModelosDealerSources
 } from '@/lib/salesIntentionApi';
 import type { SalesIntentionPayload } from '@/types/types';
 
@@ -21,6 +26,17 @@ const emptyCatalogSources: SalesIntentionCatalogSources = {
   lojaVenda: [],
   classificacao: []
 };
+
+const emptyCatalogHierarchy: SalesIntentionCatalogHierarchyRecord[] = [];
+
+const emptyModelosDealerSources: SalesIntentionModelosDealerSources = {
+  tipoVenda: [],
+  marca: [],
+  modelo: [],
+  versaoModelo: []
+};
+
+const emptyVehicleCatalogRows: SalesIntentionModelosDealerRecord[] = [];
 
 const tipoVendaLabels: Record<string, string> = {
   NOVOS: 'Novos',
@@ -122,7 +138,7 @@ function buildFormSchema(currentOwner: string) {
       placa: z.string().trim().min(1, 'Informe a placa do veículo.'),
       regional: z.string().trim().min(1, 'Escolha a regional.'),
       ano: z.string().trim(),
-      modelo: z.string().trim()
+      modelo: z.string().trim().min(1, 'Escolha o modelo do veículo.')
     })
     .superRefine((data, ctx) => {
       if (isTipoVenda(data.tipoVenda, 'NOVOS') && data.placa !== '-') {
@@ -141,22 +157,12 @@ function buildFormSchema(currentOwner: string) {
         });
       }
 
-      if (isTipoVenda(data.tipoVenda, 'SEMINOVOS')) {
-        if (!data.ano) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['ano'],
-            message: 'Escolha o ano do veículo.'
-          });
-        }
-
-        if (!data.modelo) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['modelo'],
-            message: 'Escolha o modelo do veículo.'
-          });
-        }
+      if (isTipoVenda(data.tipoVenda, 'SEMINOVOS') && !data.ano) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ano'],
+          message: 'Escolha o ano do veículo.'
+        });
       }
     });
 }
@@ -199,20 +205,6 @@ function getYearOptions() {
   return Array.from({ length: currentYear - firstYear + 2 }, (_, index) =>
     String(currentYear + 1 - index)
   );
-}
-
-function getAdjacentYearOptions(selectedYear: string, allYears: string[]) {
-  if (!selectedYear) {
-    return allYears;
-  }
-
-  const yearNumber = Number(selectedYear);
-  if (Number.isNaN(yearNumber)) {
-    return allYears;
-  }
-
-  const allowedYears = new Set([yearNumber - 1, yearNumber, yearNumber + 1].map(String));
-  return allYears.filter((year) => allowedYears.has(year));
 }
 
 function formatBrazilPlateInput(value: string) {
@@ -287,29 +279,52 @@ export default function SalesIntentionForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [catalogData, setCatalogData] = useState<SalesIntentionCatalogResponse | null>(null);
+  const [vehicleCatalogData, setVehicleCatalogData] = useState<SalesIntentionModelosDealerResponse | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState>(defaultNotification);
   const yearOptions = useMemo(() => getYearOptions(), []);
+
+  const openNotification = (variant: NotificationVariant, title: string, description: string) => {
+    setNotification({
+      open: true,
+      variant,
+      title,
+      description: clampNotificationDescription(description)
+    });
+  };
 
   useEffect(() => {
     let active = true;
 
     async function loadCatalogRows() {
       setIsCatalogLoading(true);
+      setIsVehicleCatalogLoading(true);
       try {
-        const rows = await fetchSalesIntentionCatalogs();
+        const [rows, vehicleRows] = await Promise.allSettled([
+          fetchSalesIntentionCatalogs(),
+          fetchSalesIntentionModelosDealer()
+        ]);
         if (!active) return;
-        setCatalogData(rows);
-      } catch (error) {
-        if (!active) return;
-        openNotification(
-          'error',
-          'Não conseguimos carregar os campos',
-          getNotificationDescription(error)
-        );
+        if (rows.status === 'fulfilled') {
+          setCatalogData(rows.value);
+        }
+
+        if (vehicleRows.status === 'fulfilled') {
+          setVehicleCatalogData(vehicleRows.value);
+        }
+
+        if (rows.status === 'rejected' || vehicleRows.status === 'rejected') {
+          openNotification(
+            'error',
+            'Não conseguimos carregar os campos',
+            'Não conseguimos carregar os campos do formulário no momento.'
+          );
+        }
       } finally {
         if (active) {
           setIsCatalogLoading(false);
+          setIsVehicleCatalogLoading(false);
         }
       }
     }
@@ -321,14 +336,7 @@ export default function SalesIntentionForm() {
     };
   }, []);
 
-  const anoOptions = useMemo(
-    () => getAdjacentYearOptions(formData.modelo, yearOptions),
-    [formData.modelo, yearOptions]
-  );
-  const modeloOptions = useMemo(
-    () => getAdjacentYearOptions(formData.ano, yearOptions),
-    [formData.ano, yearOptions]
-  );
+  const anoOptions = yearOptions;
 
   const currentOwner = useMemo(() => {
     const userEmail = user?.email?.trim() ?? '';
@@ -358,11 +366,11 @@ export default function SalesIntentionForm() {
   useEffect(() => {
     setFormData((current) => {
       if (isTipoVenda(current.tipoVenda, 'NOVOS') && current.placa !== '-') {
-        return { ...current, placa: '-', ano: '', modelo: '' };
+        return { ...current, placa: '-', ano: '', marcaVeiculo: '', modelo: '', versao: '' };
       }
 
       if (isTipoVenda(current.tipoVenda, 'SEMINOVOS') && current.placa === '-') {
-        return { ...current, placa: '' };
+        return { ...current, placa: '', marcaVeiculo: '', modelo: '', versao: '' };
       }
 
       return current;
@@ -370,12 +378,16 @@ export default function SalesIntentionForm() {
   }, [formData.tipoVenda]);
 
   const catalogSources = catalogData?.sources ?? emptyCatalogSources;
-  const catalogHierarchy = catalogData?.hierarchy ?? [];
-  const catalogRows = catalogData?.combinations ?? [];
+  const vehicleCatalogSources = vehicleCatalogData?.sources ?? emptyModelosDealerSources;
+  const catalogHierarchy = catalogData?.hierarchy ?? emptyCatalogHierarchy;
+  const vehicleCatalogRows = vehicleCatalogData?.combinations ?? emptyVehicleCatalogRows;
 
   const filteredOptions = useMemo(
     () => ({
-      tipoVenda: catalogSources.tipoVenda.map((value) => ({
+      tipoVenda: (vehicleCatalogSources.tipoVenda.length > 0
+        ? vehicleCatalogSources.tipoVenda
+        : catalogSources.tipoVenda
+      ).map((value) => ({
         value,
         label: formatTipoVendaLabel(value)
       })),
@@ -389,11 +401,49 @@ export default function SalesIntentionForm() {
         },
         catalogHierarchy
       ),
-      marcaVeiculo: getFilteredOptions('Marca_Veiculo', {}, catalogRows),
-      versao: getFilteredOptions('Versao', { Marca_Veiculo: formData.marcaVeiculo }, catalogRows),
+      marcaVeiculo: formData.tipoVenda
+        ? getFilteredOptions(
+            'marca',
+            {
+              tipoVenda: formData.tipoVenda
+            },
+            vehicleCatalogRows
+          )
+        : [],
+      modelo: formData.marcaVeiculo
+        ? getFilteredOptions(
+            'modelo',
+            {
+              tipoVenda: formData.tipoVenda,
+              marca: formData.marcaVeiculo
+            },
+            vehicleCatalogRows
+          )
+        : [],
+      versao: formData.marcaVeiculo && formData.modelo
+        ? getFilteredOptions(
+            'versaoModelo',
+            {
+              tipoVenda: formData.tipoVenda,
+              marca: formData.marcaVeiculo,
+              modelo: formData.modelo
+            },
+            vehicleCatalogRows
+          )
+        : [],
       classificacao: catalogSources.classificacao
     }),
-    [catalogHierarchy, catalogRows, catalogSources, formData.bandeira, formData.marcaVeiculo, formData.regional]
+    [
+      catalogHierarchy,
+      catalogSources,
+      formData.bandeira,
+      formData.marcaVeiculo,
+      formData.modelo,
+      formData.regional,
+      formData.tipoVenda,
+      vehicleCatalogRows,
+      vehicleCatalogSources
+    ]
   );
 
   const regionalTooltipText = formData.bandeira
@@ -409,18 +459,15 @@ export default function SalesIntentionForm() {
     : isTipoVenda(formData.tipoVenda, 'SEMINOVOS')
       ? 'Mostrando apenas veículos seminovos.'
       : 'Escolha o tipo de venda para liberar os veículos.';
+  const modelTooltipText = formData.marcaVeiculo
+    ? 'Os modelos são filtrados pela marca selecionada.'
+    : 'Escolha a marca para liberar os modelos.';
+  const versionTooltipText = formData.modelo
+    ? 'As versões são filtradas pelo modelo selecionado.'
+    : 'Escolha o modelo para liberar as versões.';
   const showSeminovosFields = isTipoVenda(formData.tipoVenda, 'SEMINOVOS');
   const closeNotification = () => setNotification(defaultNotification);
-  const isOptionsLoading = isCatalogLoading;
-
-  const openNotification = (variant: NotificationVariant, title: string, description: string) => {
-    setNotification({
-      open: true,
-      variant,
-      title,
-      description: clampNotificationDescription(description)
-    });
-  };
+  const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = event.target;
@@ -438,24 +485,16 @@ export default function SalesIntentionForm() {
       const nextFormData = {
         ...current,
         [name]: nextValue,
-        ...(name === 'marcaVeiculo' ? { versao: '' } : {}),
+        ...(name === 'tipoVenda'
+          ? isTipoVenda(String(nextValue), 'NOVOS')
+            ? { placa: '-', ano: '', marcaVeiculo: '', modelo: '', versao: '' }
+            : { placa: '', ano: '', marcaVeiculo: '', modelo: '', versao: '' }
+          : {}),
+        ...(name === 'marcaVeiculo' ? { modelo: '', versao: '' } : {}),
+        ...(name === 'modelo' ? { versao: '' } : {}),
         ...(name === 'bandeira' ? { regional: '', lojaVenda: '' } : {}),
         ...(name === 'regional' ? { lojaVenda: '' } : {})
       };
-
-      if (name === 'ano') {
-        const allowedModelos = getAdjacentYearOptions(String(nextValue), yearOptions);
-        if (nextFormData.modelo && !allowedModelos.includes(nextFormData.modelo)) {
-          nextFormData.modelo = '';
-        }
-      }
-
-      if (name === 'modelo') {
-        const allowedAnos = getAdjacentYearOptions(String(nextValue), yearOptions);
-        if (nextFormData.ano && !allowedAnos.includes(nextFormData.ano)) {
-          nextFormData.ano = '';
-        }
-      }
 
       return nextFormData;
     });
@@ -463,12 +502,13 @@ export default function SalesIntentionForm() {
     setErrors((current) => ({
       ...current,
       [name]: undefined,
-      ...(name === 'tipoVenda' ? { placa: undefined, ano: undefined, modelo: undefined } : {}),
+      ...(name === 'tipoVenda'
+        ? { placa: undefined, ano: undefined, marcaVeiculo: undefined, modelo: undefined, versao: undefined }
+        : {}),
       ...(name === 'bandeira' ? { regional: undefined, lojaVenda: undefined } : {}),
       ...(name === 'regional' ? { lojaVenda: undefined } : {}),
-      ...(name === 'ano' ? { modelo: undefined } : {}),
-      ...(name === 'modelo' ? { ano: undefined } : {}),
-      ...(name === 'marcaVeiculo' ? { versao: undefined } : {})
+      ...(name === 'marcaVeiculo' ? { modelo: undefined, versao: undefined } : {}),
+      ...(name === 'modelo' ? { versao: undefined } : {})
     }));
   };
 
@@ -506,8 +546,9 @@ export default function SalesIntentionForm() {
       const { ano, modelo, ...payload } = result.data;
       await createSalesIntention({
         ...payload,
+        modelo,
         ano_fabricacao: ano ? Number(ano) : null,
-        ano_modelo: modelo ? Number(modelo) : null
+        ano_modelo: ano ? Number(ano) : null
       });
 
       const elapsed = Date.now() - submitStartedAt;
@@ -652,7 +693,7 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-3">
+        <div className="grid gap-4 xl:col-span-6">
           <label className={labelClasses}>
             <FieldLabelWithTooltip label="Regional" tooltip={regionalTooltipText} />
             <select
@@ -673,7 +714,7 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-5">
+        <div className="grid gap-4 xl:col-span-2">
           <label className={labelClasses}>
             <FieldLabelWithTooltip label="Loja de venda" tooltip={lojaTooltipText} />
             <select
@@ -733,9 +774,9 @@ export default function SalesIntentionForm() {
               value={formData.marcaVeiculo}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading}
+              disabled={isLoading || isOptionsLoading || !formData.tipoVenda}
             >
-              <option value="">Escolha a marca</option>
+              <option value="">{formData.tipoVenda ? 'Escolha a marca' : 'Escolha o tipo de venda primeiro'}</option>
               {filteredOptions.marcaVeiculo.map((value) => (
                 <option key={value} value={value}>
                   {value}
@@ -752,16 +793,18 @@ export default function SalesIntentionForm() {
                 : `${labelClasses} md:col-span-1 xl:col-span-8`
             }
           >
-            Modelo
+            <FieldLabelWithTooltip label="Modelo" tooltip={modelTooltipText} />
             <select
               name="modelo"
               value={formData.modelo}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading}
+              disabled={isLoading || isOptionsLoading || !formData.marcaVeiculo}
             >
-              <option value="">Selecione o modelo</option>
-              {modeloOptions.map((value) => (
+              <option value="">
+                {formData.marcaVeiculo ? 'Selecione o modelo' : 'Escolha a marca primeiro'}
+              </option>
+              {filteredOptions.modelo.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
@@ -773,15 +816,21 @@ export default function SalesIntentionForm() {
 
         <div className="grid gap-4 md:col-span-2 xl:col-span-12">
           <label className={labelClasses}>
-            <FieldLabelWithTooltip label="Versão" tooltip={vehicleTooltipText} />
+            <FieldLabelWithTooltip label="Versão" tooltip={versionTooltipText} />
             <select
               name="versao"
               value={formData.versao}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.marcaVeiculo}
+              disabled={isLoading || isOptionsLoading || !formData.marcaVeiculo || !formData.modelo}
             >
-              <option value="">Escolha a versão</option>
+              <option value="">
+                {formData.marcaVeiculo
+                  ? formData.modelo
+                    ? 'Escolha a versão'
+                    : 'Escolha o modelo primeiro'
+                  : 'Escolha a marca primeiro'}
+              </option>
               {filteredOptions.versao.map((value) => (
                 <option key={value} value={value}>
                   {value}
