@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { AlertCircle, CheckCircle2, LoaderCircle, TriangleAlert, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, TriangleAlert, X } from 'lucide-react';
 import { z } from 'zod';
 
 import useCurrentUser from '@/hooks/useCurrentUser';
@@ -228,11 +228,36 @@ function isBrazilPlate(value: string) {
   return /^[A-Z0-9]{3}-[A-Z0-9]{4}$/.test(value.trim().toUpperCase());
 }
 
+function FieldTooltip({ text }: { text: string }) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      <button
+        type="button"
+        aria-label={text}
+        className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-slate-500 dark:hover:text-cyan-300"
+      >
+        <CircleHelp className="h-4 w-4" />
+        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-white opacity-0 shadow-xl transition duration-150 group-hover:opacity-100 group-focus:opacity-100 dark:border-white/10 dark:bg-slate-900">
+          {text}
+        </span>
+      </button>
+    </span>
+  );
+}
+
+function FieldLabelWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span>{label}</span>
+      <FieldTooltip text={tooltip} />
+    </span>
+  );
+}
+
 const fieldClasses =
   'min-h-12 w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 outline-none ring-1 ring-transparent transition duration-150 focus:border-sky-500 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-80 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10 dark:disabled:bg-slate-900/80 sm:min-h-14 sm:rounded-3xl sm:py-3 sm:text-base';
 
 const labelClasses = 'flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300';
-const helperTextClasses = 'text-xs text-slate-500 dark:text-slate-400';
 const errorTextClasses = 'text-xs text-rose-600 dark:text-rose-300';
 const pageCardClasses =
   'mx-auto w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg ring-1 ring-slate-200/70 sm:rounded-[32px] sm:shadow-xl dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)] dark:ring-white/5';
@@ -371,12 +396,19 @@ export default function SalesIntentionForm() {
     [catalogHierarchy, catalogRows, catalogSources, formData.bandeira, formData.marcaVeiculo, formData.regional]
   );
 
-  const vehicleHelpText =
-    isTipoVenda(formData.tipoVenda, 'NOVOS')
-      ? 'Mostrando apenas veículos zero quilômetro.'
-      : isTipoVenda(formData.tipoVenda, 'SEMINOVOS')
-        ? 'Mostrando apenas veículos seminovos.'
-        : 'Escolha o tipo de venda para liberar os veículos.';
+  const regionalTooltipText = formData.bandeira
+    ? 'As regionais são filtradas pela bandeira selecionada.'
+    : 'Escolha a bandeira para liberar as regionais.';
+  const lojaTooltipText = formData.bandeira
+    ? formData.regional
+      ? 'As lojas são filtradas pela regional selecionada.'
+      : 'Escolha a regional para liberar as lojas.'
+    : 'Escolha a bandeira para liberar as lojas.';
+  const vehicleTooltipText = isTipoVenda(formData.tipoVenda, 'NOVOS')
+    ? 'Mostrando apenas veículos zero quilômetro.'
+    : isTipoVenda(formData.tipoVenda, 'SEMINOVOS')
+      ? 'Mostrando apenas veículos seminovos.'
+      : 'Escolha o tipo de venda para liberar os veículos.';
   const showSeminovosFields = isTipoVenda(formData.tipoVenda, 'SEMINOVOS');
   const closeNotification = () => setNotification(defaultNotification);
   const isOptionsLoading = isCatalogLoading;
@@ -622,7 +654,7 @@ export default function SalesIntentionForm() {
 
         <div className="grid gap-4 xl:col-span-3">
           <label className={labelClasses}>
-            Regional
+            <FieldLabelWithTooltip label="Regional" tooltip={regionalTooltipText} />
             <select
               name="regional"
               value={formData.regional}
@@ -637,18 +669,13 @@ export default function SalesIntentionForm() {
                 </option>
               ))}
             </select>
-            <span className={helperTextClasses}>
-              {formData.bandeira
-                ? 'As regionais são filtradas pela bandeira selecionada.'
-                : 'Escolha a bandeira para liberar as regionais.'}
-            </span>
             {errors.regional ? <span className={errorTextClasses}>{errors.regional}</span> : null}
           </label>
         </div>
 
         <div className="grid gap-4 xl:col-span-5">
           <label className={labelClasses}>
-            Loja de venda
+            <FieldLabelWithTooltip label="Loja de venda" tooltip={lojaTooltipText} />
             <select
               name="lojaVenda"
               value={formData.lojaVenda}
@@ -669,20 +696,19 @@ export default function SalesIntentionForm() {
                 </option>
               ))}
             </select>
-            <span className={helperTextClasses}>
-              {formData.bandeira && formData.regional
-                ? 'As lojas são filtradas pela regional selecionada.'
-                : formData.bandeira
-                  ? 'Escolha a regional para liberar as lojas.'
-                  : 'Escolha a bandeira para liberar as lojas.'}
-            </span>
             {errors.lojaVenda ? <span className={errorTextClasses}>{errors.lojaVenda}</span> : null}
           </label>
         </div>
 
-        {showSeminovosFields ? (
-          <div className="grid gap-4 md:col-span-2 xl:col-span-2">
-            <label className={labelClasses}>
+        <div
+          className={
+            showSeminovosFields
+              ? 'grid gap-4 md:col-span-2 md:grid-cols-3 xl:col-span-12 xl:grid-cols-12'
+              : 'grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12'
+          }
+        >
+          {showSeminovosFields ? (
+            <label className={`${labelClasses} md:col-span-1 xl:col-span-2`}>
               Placa
               <input
                 type="text"
@@ -698,14 +724,10 @@ export default function SalesIntentionForm() {
               />
               {errors.placa ? <span className={errorTextClasses}>{errors.placa}</span> : null}
             </label>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div
-          className="grid gap-4 md:col-span-2 xl:col-span-4"
-        >
-          <label className={labelClasses}>
-            Marca veículo
+          <label className={`${labelClasses} md:col-span-1 xl:col-span-4`}>
+            <FieldLabelWithTooltip label="Marca veículo" tooltip={vehicleTooltipText} />
             <select
               name="marcaVeiculo"
               value={formData.marcaVeiculo}
@@ -720,20 +742,38 @@ export default function SalesIntentionForm() {
                 </option>
               ))}
             </select>
-            <span className={helperTextClasses}>{vehicleHelpText}</span>
             {errors.marcaVeiculo ? <span className={errorTextClasses}>{errors.marcaVeiculo}</span> : null}
+          </label>
+
+          <label
+            className={
+              showSeminovosFields
+                ? `${labelClasses} md:col-span-1 xl:col-span-6`
+                : `${labelClasses} md:col-span-1 xl:col-span-8`
+            }
+          >
+            Modelo
+            <select
+              name="modelo"
+              value={formData.modelo}
+              onChange={handleChange}
+              className={fieldClasses}
+              disabled={isLoading || isOptionsLoading}
+            >
+              <option value="">Selecione o modelo</option>
+              {modeloOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            {errors.modelo ? <span className={errorTextClasses}>{errors.modelo}</span> : null}
           </label>
         </div>
 
-        <div
-          className={
-            showSeminovosFields
-              ? 'grid gap-4 md:col-span-2 xl:col-span-6'
-              : 'grid gap-4 md:col-span-2 xl:col-span-8'
-          }
-        >
+        <div className="grid gap-4 md:col-span-2 xl:col-span-12">
           <label className={labelClasses}>
-            Versão
+            <FieldLabelWithTooltip label="Versão" tooltip={vehicleTooltipText} />
             <select
               name="versao"
               value={formData.versao}
@@ -748,15 +788,14 @@ export default function SalesIntentionForm() {
                 </option>
               ))}
             </select>
-            <span className={helperTextClasses}>{vehicleHelpText}</span>
             {errors.versao ? <span className={errorTextClasses}>{errors.versao}</span> : null}
           </label>
         </div>
 
         {showSeminovosFields ? (
           <>
-            <div className="grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-6">
-              <label className={labelClasses}>
+            <div className="grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12">
+              <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
                 Ano
                 <select
                   name="ano"
@@ -774,29 +813,7 @@ export default function SalesIntentionForm() {
                 </select>
                 {errors.ano ? <span className={errorTextClasses}>{errors.ano}</span> : null}
               </label>
-
-              <label className={labelClasses}>
-                Modelo
-                <select
-                  name="modelo"
-                  value={formData.modelo}
-                  onChange={handleChange}
-                  className={fieldClasses}
-                  disabled={isLoading || isOptionsLoading}
-                >
-                  <option value="">Selecione o modelo</option>
-                  {modeloOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-                {errors.modelo ? <span className={errorTextClasses}>{errors.modelo}</span> : null}
-              </label>
-            </div>
-
-            <div className="grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12">
-              <label className={`${labelClasses} xl:col-span-8`}>
+              <label className={`${labelClasses} md:col-span-1 xl:col-span-4`}>
                 Classificação
                 <select
                   name="classificacao"
@@ -815,7 +832,7 @@ export default function SalesIntentionForm() {
                 {errors.classificacao ? <span className={errorTextClasses}>{errors.classificacao}</span> : null}
               </label>
 
-              <label className={`${labelClasses} xl:col-span-4`}>
+              <label className={`${labelClasses} md:col-span-1 xl:col-span-2`}>
                 Quantidade
                 <input
                   type="number"
@@ -828,10 +845,8 @@ export default function SalesIntentionForm() {
                 />
                 {errors.quantidade ? <span className={errorTextClasses}>{errors.quantidade}</span> : null}
               </label>
-            </div>
 
-            <div className="grid gap-4 md:col-span-2 xl:col-span-4">
-              <label className={labelClasses}>
+              <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
                 Data de solicitação
                 <input
                   type="date"
