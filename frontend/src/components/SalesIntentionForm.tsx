@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, TriangleAlert, X } from 'lucide-react';
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, Search, TriangleAlert, X } from 'lucide-react';
 import { z } from 'zod';
 
 import useCurrentUser from '@/hooks/useCurrentUser';
@@ -85,6 +85,14 @@ const MAX_NOTIFICATION_DESCRIPTION_LENGTH = 160;
 
 function normalizeValue(value: string) {
   return value.trim().toUpperCase();
+}
+
+function normalizeSearchValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 function formatTipoVendaLabel(value: string) {
@@ -275,6 +283,135 @@ function FieldLabelWithTooltip({
       <span>{label}</span>
       <FieldTooltip text={tooltip} placement={tooltipPlacement} />
     </span>
+  );
+}
+
+const DEFAULT_SEARCH_MIN_CHARS = 3;
+
+function SearchableField({
+  label,
+  tooltip,
+  tooltipPlacement = 'top',
+  minChars = DEFAULT_SEARCH_MIN_CHARS,
+  value,
+  options,
+  placeholder,
+  disabled = false,
+  error,
+  onSelect
+}: {
+  label: string;
+  tooltip: string;
+  tooltipPlacement?: 'top' | 'right';
+  minChars?: number;
+  value: string;
+  options: string[];
+  placeholder: string;
+  disabled?: boolean;
+  error?: string;
+  onSelect: (value: string) => void;
+}) {
+  const inputId = useId();
+  const listboxId = `${inputId}-listbox`;
+  const [query, setQuery] = useState(value);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(value);
+    setIsOpen(false);
+  }, [value]);
+
+  const normalizedQuery = normalizeSearchValue(query);
+  const filteredOptions = useMemo(() => {
+    if (normalizedQuery.length < minChars) {
+      return [];
+    }
+
+    return options.filter((option) => normalizeSearchValue(option).includes(normalizedQuery));
+  }, [minChars, normalizedQuery, options]);
+
+  const showDropdown = !disabled && normalizedQuery.length >= minChars && isOpen;
+
+  const selectOption = (option: string) => {
+    setQuery(option);
+    setIsOpen(false);
+    onSelect(option);
+  };
+
+  return (
+    <label className={labelClasses}>
+      <FieldLabelWithTooltip label={label} tooltip={tooltip} tooltipPlacement={tooltipPlacement} />
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+        <input
+          id={inputId}
+          type="text"
+          value={query}
+          onChange={(event) => {
+            const nextQuery = event.target.value;
+            setQuery(nextQuery);
+            setIsOpen(normalizeSearchValue(nextQuery).length >= minChars);
+          }}
+          onBlur={() => {
+            setIsOpen(false);
+            setQuery(value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              setIsOpen(false);
+              setQuery(value);
+              return;
+            }
+
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              if (filteredOptions.length === 1) {
+                selectOption(filteredOptions[0]);
+              }
+            }
+          }}
+          placeholder={placeholder}
+          className={`${fieldClasses} pl-11`}
+          disabled={disabled}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showDropdown}
+          aria-controls={showDropdown ? listboxId : undefined}
+          autoComplete="off"
+        />
+
+        {showDropdown ? (
+          <div
+            id={listboxId}
+            role="listbox"
+            className="absolute z-30 mt-2 max-h-60 w-full overflow-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-xl ring-1 ring-slate-200/70 dark:border-white/10 dark:bg-slate-950 dark:ring-white/10"
+          >
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="option"
+                  className="flex w-full rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-sky-50 hover:text-sky-700 focus-visible:bg-sky-50 focus-visible:text-sky-700 focus-visible:outline-none dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-cyan-300 dark:focus-visible:bg-white/5 dark:focus-visible:text-cyan-300"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    selectOption(option);
+                  }}
+                >
+                  {option}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                Nenhuma opção encontrada.
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
+      {error ? <span className={errorTextClasses}>{error}</span> : null}
+    </label>
   );
 }
 
@@ -566,17 +703,15 @@ export default function SalesIntentionForm() {
   const closeNotification = () => setNotification(defaultNotification);
   const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = event.target;
-
+  const updateFormField = (name: keyof SalesIntentionFormData, rawValue: string, type?: string) => {
     const nextValue =
       name === 'quantidade'
-        ? Number(value)
+        ? Number(rawValue)
         : name === 'dataSolicitacao' && type === 'date'
-          ? formatDateInput(value)
+          ? formatDateInput(rawValue)
           : name === 'placa'
-            ? formatBrazilPlateInput(value)
-          : value;
+            ? formatBrazilPlateInput(rawValue)
+            : rawValue;
 
     setFormData((current) => {
       const nextFormData = {
@@ -607,6 +742,11 @@ export default function SalesIntentionForm() {
       ...(name === 'marcaVeiculo' ? { modelo: undefined, versao: undefined } : {}),
       ...(name === 'modelo' ? { versao: undefined } : {})
     }));
+  };
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = event.target;
+    updateFormField(name as keyof SalesIntentionFormData, value, type);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -791,24 +931,17 @@ export default function SalesIntentionForm() {
         </div>
 
         <div className="grid gap-4 xl:col-span-5">
-          <label className={labelClasses}>
-            <FieldLabelWithTooltip label="Regional" tooltip={regionalTooltipText} />
-            <select
-              name="regional"
-              value={formData.regional}
-              onChange={handleChange}
-              className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.bandeira}
-            >
-              <option value="">{formData.bandeira ? 'Escolha a regional' : 'Escolha a bandeira primeiro'}</option>
-              {filteredOptions.regional.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-            {errors.regional ? <span className={errorTextClasses}>{errors.regional}</span> : null}
-          </label>
+          <SearchableField
+            label="Regional"
+            tooltip={regionalTooltipText}
+            minChars={1}
+            value={formData.regional}
+            options={filteredOptions.regional}
+            placeholder={formData.bandeira ? 'Digite 1 caractere para buscar' : 'Escolha a bandeira primeiro'}
+            disabled={isLoading || isOptionsLoading || !formData.bandeira}
+            error={errors.regional}
+            onSelect={(nextValue) => updateFormField('regional', nextValue)}
+          />
         </div>
 
         <div className="grid gap-4 xl:col-span-3">
@@ -864,78 +997,60 @@ export default function SalesIntentionForm() {
             </label>
           ) : null}
 
-          <label className={`${labelClasses} md:col-span-1 xl:col-span-4`}>
-            <FieldLabelWithTooltip label="Marca veículo" tooltip={vehicleTooltipText} />
-            <select
-              name="marcaVeiculo"
-              value={formData.marcaVeiculo}
-              onChange={handleChange}
-              className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.tipoVenda}
-            >
-              <option value="">{formData.tipoVenda ? 'Escolha a marca' : 'Escolha o tipo de venda primeiro'}</option>
-              {filteredOptions.marcaVeiculo.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-            {errors.marcaVeiculo ? <span className={errorTextClasses}>{errors.marcaVeiculo}</span> : null}
-          </label>
+          <div className="grid gap-4 md:col-span-1 xl:col-span-4">
+          <SearchableField
+            label="Marca veículo"
+            tooltip={vehicleTooltipText}
+            minChars={1}
+            value={formData.marcaVeiculo}
+            options={filteredOptions.marcaVeiculo}
+            placeholder={formData.tipoVenda ? 'Digite 1 caractere para buscar' : 'Escolha o tipo de venda primeiro'}
+            disabled={isLoading || isOptionsLoading || !formData.tipoVenda}
+            error={errors.marcaVeiculo}
+            onSelect={(nextValue) => updateFormField('marcaVeiculo', nextValue)}
+          />
+          </div>
 
-          <label
+          <div
             className={
               showSeminovosFields
-                ? `${labelClasses} md:col-span-1 xl:col-span-6`
-                : `${labelClasses} md:col-span-1 xl:col-span-8`
+                ? 'grid gap-4 md:col-span-1 xl:col-span-6'
+                : 'grid gap-4 md:col-span-1 xl:col-span-8'
             }
           >
-            <FieldLabelWithTooltip label="Modelo" tooltip={modelTooltipText} />
-            <select
-              name="modelo"
+            <SearchableField
+              label="Modelo"
+              tooltip={modelTooltipText}
+              minChars={1}
               value={formData.modelo}
-              onChange={handleChange}
-              className={fieldClasses}
+              options={filteredOptions.modelo}
+              placeholder={formData.marcaVeiculo ? 'Digite 1 caractere para buscar' : 'Escolha a marca primeiro'}
               disabled={isLoading || isOptionsLoading || !formData.marcaVeiculo}
-            >
-              <option value="">
-                {formData.marcaVeiculo ? 'Selecione o modelo' : 'Escolha a marca primeiro'}
-              </option>
-              {filteredOptions.modelo.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-            {errors.modelo ? <span className={errorTextClasses}>{errors.modelo}</span> : null}
-          </label>
+              error={errors.modelo}
+              onSelect={(nextValue) => updateFormField('modelo', nextValue)}
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 md:col-span-2 xl:col-span-12">
-          <label className={labelClasses}>
-            <FieldLabelWithTooltip label="Versão" tooltip={versionTooltipText} tooltipPlacement="right" />
-            <select
-              name="versao"
-              value={formData.versao}
-              onChange={handleChange}
-              className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.marcaVeiculo || !formData.modelo}
-            >
-              <option value="">
-                {formData.marcaVeiculo
-                  ? formData.modelo
-                    ? 'Escolha a versão'
-                    : 'Escolha o modelo primeiro'
-                  : 'Escolha a marca primeiro'}
-              </option>
-              {filteredOptions.versao.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-            {errors.versao ? <span className={errorTextClasses}>{errors.versao}</span> : null}
-          </label>
+          <SearchableField
+            label="Versão"
+            tooltip={versionTooltipText}
+            tooltipPlacement="right"
+            minChars={1}
+            value={formData.versao}
+            options={filteredOptions.versao}
+            placeholder={
+              formData.marcaVeiculo
+                ? formData.modelo
+                  ? 'Digite 1 caractere para buscar'
+                  : 'Escolha o modelo primeiro'
+                : 'Escolha a marca primeiro'
+            }
+            disabled={isLoading || isOptionsLoading || !formData.marcaVeiculo || !formData.modelo}
+            error={errors.versao}
+            onSelect={(nextValue) => updateFormField('versao', nextValue)}
+          />
         </div>
 
         {showSeminovosFields ? (
