@@ -225,16 +225,35 @@ function isBrazilPlate(value: string) {
   return /^[A-Z0-9]{3}-[A-Z0-9]{4}$/.test(value.trim().toUpperCase());
 }
 
-function FieldTooltip({ text }: { text: string }) {
+function FieldTooltip({
+  text,
+  placement = 'top'
+}: {
+  text: string;
+  placement?: 'top' | 'right';
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const tooltipPositionClasses =
+    placement === 'right'
+      ? 'left-full top-0 ml-2 -translate-x-0'
+      : 'bottom-full left-1/2 mb-2 -translate-x-1/2';
+
   return (
     <span className="relative inline-flex shrink-0">
       <button
         type="button"
         aria-label={text}
+        aria-expanded={isOpen}
         className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-slate-500 dark:hover:text-cyan-300"
+        onClick={() => setIsOpen((current) => !current)}
+        onBlur={() => setIsOpen(false)}
       >
         <CircleHelp className="h-4 w-4" />
-        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-white opacity-0 shadow-xl transition duration-150 group-hover:opacity-100 group-focus:opacity-100 dark:border-white/10 dark:bg-slate-900">
+        <span
+          className={`pointer-events-none absolute z-20 w-64 max-w-[calc(100vw-2rem)] whitespace-pre-line rounded-2xl border border-slate-200 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-white shadow-xl transition duration-150 dark:border-white/10 dark:bg-slate-900 ${
+            isOpen ? 'opacity-100' : 'opacity-0'
+          } ${tooltipPositionClasses}`}
+        >
           {text}
         </span>
       </button>
@@ -242,11 +261,19 @@ function FieldTooltip({ text }: { text: string }) {
   );
 }
 
-function FieldLabelWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
+function FieldLabelWithTooltip({
+  label,
+  tooltip,
+  tooltipPlacement = 'top'
+}: {
+  label: string;
+  tooltip: string;
+  tooltipPlacement?: 'top' | 'right';
+}) {
   return (
     <span className="inline-flex items-center gap-2">
       <span>{label}</span>
-      <FieldTooltip text={tooltip} />
+      <FieldTooltip text={tooltip} placement={tooltipPlacement} />
     </span>
   );
 }
@@ -470,7 +497,7 @@ export default function SalesIntentionForm() {
     : 'Escolha a marca para liberar os modelos.';
   const versionTooltipText = formData.modelo
     ? 'As versões são filtradas pelo modelo selecionado.'
-    : 'Escolha o modelo para liberar as versões.';
+    : 'Escolha o modelo\npara liberar as versões.';
   const showSeminovosFields = isTipoVenda(formData.tipoVenda, 'SEMINOVOS');
 
   useEffect(() => {
@@ -763,7 +790,7 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-6">
+        <div className="grid gap-4 xl:col-span-5">
           <label className={labelClasses}>
             <FieldLabelWithTooltip label="Regional" tooltip={regionalTooltipText} />
             <select
@@ -784,7 +811,7 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-2">
+        <div className="grid gap-4 xl:col-span-3">
           <label className={labelClasses}>
             <FieldLabelWithTooltip label="Loja de venda" tooltip={lojaTooltipText} />
             <select
@@ -886,7 +913,7 @@ export default function SalesIntentionForm() {
 
         <div className="grid gap-4 md:col-span-2 xl:col-span-12">
           <label className={labelClasses}>
-            <FieldLabelWithTooltip label="Versão" tooltip={versionTooltipText} />
+            <FieldLabelWithTooltip label="Versão" tooltip={versionTooltipText} tooltipPlacement="right" />
             <select
               name="versao"
               value={formData.versao}
