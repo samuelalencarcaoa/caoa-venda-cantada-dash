@@ -85,6 +85,18 @@ export type SalesIntentionModelosDealerResponse = {
   combinations: SalesIntentionModelosDealerRecord[];
 };
 
+export type SalesIntentionModelosDealerLookupRecord = {
+  marcaVeiculo: string | null;
+  modelo: string | null;
+  versao: string | null;
+  ano: string | number | null;
+};
+
+export type SalesIntentionModelosDealerLookupResponse = {
+  found: boolean;
+  record: SalesIntentionModelosDealerLookupRecord | null;
+};
+
 const SALES_INTENTION_API_ERROR_PREFIX = 'Ops, ocorreu um erro';
 
 function buildSalesIntentionApiErrorMessage(status: number | null) {
@@ -213,6 +225,22 @@ export async function fetchSalesIntentionModelosDealer(): Promise<SalesIntention
   return fetchApi<SalesIntentionModelosDealerResponse>('/api/sales-intention-modelos-dealer', {
     cache: 'no-store'
   });
+}
+
+export async function lookupSalesIntentionModelosDealerByPlate(
+  placa: string
+): Promise<SalesIntentionModelosDealerLookupRecord | null> {
+  const searchParams = new URLSearchParams();
+  searchParams.set('placa', placa.trim());
+
+  const response = await fetchApi<SalesIntentionModelosDealerLookupResponse>(
+    `/api/sales-intention-modelos-dealer?${searchParams.toString()}`,
+    {
+      cache: 'no-store'
+    }
+  );
+
+  return response.found && response.record ? response.record : null;
 }
 
 export async function createSalesIntention(payload: SalesIntentionPayload): Promise<SalesIntentionApiRecord> {

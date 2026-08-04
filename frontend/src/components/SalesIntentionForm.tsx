@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, TriangleAlert, X } from 'lucide-react';
 import { z } from 'zod';
 
@@ -9,6 +9,7 @@ import {
   createSalesIntention,
   fetchSalesIntentionCatalogs,
   fetchSalesIntentionModelosDealer,
+  lookupSalesIntentionModelosDealerByPlate,
   formatSalesIntentionApiError,
   type SalesIntentionCatalogResponse,
   type SalesIntentionCatalogHierarchyRecord,
@@ -216,6 +217,10 @@ function formatBrazilPlateInput(value: string) {
   return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
 }
 
+function normalizePlateLookupValue(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 function isBrazilPlate(value: string) {
   return /^[A-Z0-9]{3}-[A-Z0-9]{4}$/.test(value.trim().toUpperCase());
 }
@@ -284,6 +289,7 @@ export default function SalesIntentionForm() {
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState>(defaultNotification);
   const yearOptions = useMemo(() => getYearOptions(), []);
+  const lastPlateLookupRef = useRef('');
 
   const openNotification = (variant: NotificationVariant, title: string, description: string) => {
     setNotification({
@@ -466,6 +472,70 @@ export default function SalesIntentionForm() {
     ? 'As versões são filtradas pelo modelo selecionado.'
     : 'Escolha o modelo para liberar as versões.';
   const showSeminovosFields = isTipoVenda(formData.tipoVenda, 'SEMINOVOS');
+
+  useEffect(() => {
+    if (!showSeminovosFields) {
+      lastPlateLookupRef.current = '';
+      return;
+    }
+
+    const currentPlate = formData.placa.trim();
+    if (!isBrazilPlate(currentPlate)) {
+      lastPlateLookupRef.current = '';
+      return;
+    }
+
+    const normalizedPlate = normalizePlateLookupValue(currentPlate);
+    if (!normalizedPlate || lastPlateLookupRef.current === normalizedPlate) {
+      return;
+    }
+
+    lastPlateLookupRef.current = normalizedPlate;
+    let active = true;
+
+    void (async () => {
+      try {
+        const match = await lookupSalesIntentionModelosDealerByPlate(currentPlate);
+        if (!active || !match) {
+          return;
+        }
+
+        const hasMarcaVeiculo = Boolean(match.marcaVeiculo?.trim());
+        const hasModelo = Boolean(match.modelo?.trim());
+        const hasVersao = Boolean(match.versao?.trim());
+        const hasAno = Boolean(String(match.ano ?? '').trim());
+
+        setFormData((current) => {
+          if (normalizePlateLookupValue(current.placa) !== normalizedPlate) {
+            return current;
+          }
+
+          return {
+            ...current,
+            marcaVeiculo: hasMarcaVeiculo ? match.marcaVeiculo?.trim() ?? current.marcaVeiculo : current.marcaVeiculo,
+            modelo: hasModelo ? match.modelo?.trim() ?? current.modelo : current.modelo,
+            versao: hasVersao ? match.versao?.trim() ?? current.versao : current.versao,
+            ano: hasAno ? String(match.ano) : current.ano
+          };
+        });
+
+        setErrors((current) => ({
+          ...current,
+          ...(hasMarcaVeiculo ? { marcaVeiculo: undefined } : {}),
+          ...(hasModelo ? { modelo: undefined } : {}),
+          ...(hasVersao ? { versao: undefined } : {}),
+          ...(hasAno ? { ano: undefined } : {})
+        }));
+      } catch {
+        // Keep the form usable even if the lookup endpoint is unavailable.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.placa, showSeminovosFields]);
+
   const closeNotification = () => setNotification(defaultNotification);
   const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
 

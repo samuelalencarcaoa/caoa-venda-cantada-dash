@@ -1,6 +1,8 @@
 import prisma from '../lib/prisma';
 import {
   type SalesIntentionModelosDealerBundle,
+  type SalesIntentionModelosDealerLookupRecord,
+  type SalesIntentionModelosDealerLookupRow,
   type SalesIntentionModelosDealerRecord,
   type SalesIntentionModelosDealerRow
 } from '../entities/SalesIntentionModelosDealer';
@@ -20,6 +22,32 @@ const MODELOS_DEALER_SQL = `
   ORDER BY [Tipo_Venda], [Marca], [Modelo], [Versao_Modelo]
 `;
 
+function normalizeLookupKey(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizeLookupText(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value).trim() || null : null;
+  }
+
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+function normalizePlateForSearch(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 function compare(a: string, b: string): number {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
 }
@@ -35,6 +63,36 @@ function normalizeDistinctValues<T extends Record<string, string>>(
         .filter((value): value is string => Boolean(value))
     )
   ).sort(compare);
+}
+
+function pickLookupValue(row: SalesIntentionModelosDealerLookupRow, candidates: string[]) {
+  const normalizedEntries = new Map(
+    Object.entries(row).map(([key, value]) => [normalizeLookupKey(key), value])
+  );
+
+  for (const candidate of candidates) {
+    const normalizedCandidate = normalizeLookupKey(candidate);
+    const text = normalizeLookupText(normalizedEntries.get(normalizedCandidate));
+    if (text) {
+      return text;
+    }
+  }
+
+  return null;
+}
+
+function extractAno(row: SalesIntentionModelosDealerLookupRow) {
+  const preferredAno = pickLookupValue(row, ['Ano_Modelo', 'Ano_Fabricacao', 'Ano']);
+  if (preferredAno) {
+    return preferredAno;
+  }
+
+  const anoKey = Object.keys(row).find((key) => normalizeLookupKey(key).includes('ANO'));
+  if (!anoKey) {
+    return null;
+  }
+
+  return normalizeLookupText(row[anoKey]);
 }
 
 function normalizeRows(rows: SalesIntentionModelosDealerRow[]): SalesIntentionModelosDealerRecord[] {
@@ -72,6 +130,32 @@ export class SalesIntentionModelosDealerRepository {
         versaoModelo: normalizeDistinctValues(combinations, 'versaoModelo')
       },
       combinations
+    };
+  }
+
+  public async findByPlaca(placa: string): Promise<SalesIntentionModelosDealerLookupRecord | null> {
+    const normalizedPlate = normalizePlateForSearch(placa);
+    if (!normalizedPlate) {
+      return null;
+    }
+
+    const rows = await prisma.$queryRaw<SalesIntentionModelosDealerLookupRow[]>`
+      SELECT TOP (1) *
+      FROM [salesdb].[dbo].[VW_IntencaoVendas_ModelosDealer]
+      WHERE REPLACE(REPLACE(UPPER(LTRIM(RTRIM(CAST([Placa] AS NVARCHAR(50))))), '-', ''), ' ', '') = ${normalizedPlate}
+      ORDER BY [Tipo_Venda], [Marca], [Modelo], [Versao_Modelo]
+    `;
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return {
+      marcaVeiculo: pickLookupValue(row, ['Marca', 'Marca_Veiculo', 'MarcaVeiculo']),
+      modelo: pickLookupValue(row, ['Modelo']),
+      versao: pickLookupValue(row, ['Versao_Modelo', 'Versao', 'VersaoModelo']),
+      ano: extractAno(row)
     };
   }
 }

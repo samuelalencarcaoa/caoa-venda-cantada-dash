@@ -143,6 +143,19 @@ const salesIntentionQueryParameters = [
   }
 ] as const;
 
+const salesIntentionModelosDealerLookupParameters = [
+  {
+    name: 'placa',
+    in: 'query',
+    required: true,
+    description: 'Placa completa para localizar a combinação na view.',
+    schema: {
+      type: 'string',
+      example: 'AAA-1234'
+    }
+  }
+] as const;
+
 export const openApiSpec = {
   openapi: '3.0.3',
   info: {
@@ -422,6 +435,25 @@ export const openApiSpec = {
           }
         }
       }
+    },
+    '/sales-intention-modelos-dealer/by-placa': {
+      get: {
+        tags: ['Sales Intention Modelos Dealer'],
+        summary: 'Busca uma combinação da view VW_IntencaoVendas_ModelosDealer pela placa',
+        parameters: salesIntentionModelosDealerLookupParameters,
+        responses: {
+          '200': {
+            description: 'Resultado da busca por placa',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/SalesIntentionModelosDealerLookupResponse'
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   components: {
@@ -591,6 +623,44 @@ export const openApiSpec = {
             items: {
               $ref: '#/components/schemas/SalesIntentionModelosDealerRecord'
             }
+          }
+        }
+      },
+      SalesIntentionModelosDealerLookupRecord: {
+        type: 'object',
+        properties: {
+          marcaVeiculo: {
+            type: 'string',
+            nullable: true,
+            example: 'FORD'
+          },
+          modelo: {
+            type: 'string',
+            nullable: true,
+            example: 'RANGER'
+          },
+          versao: {
+            type: 'string',
+            nullable: true,
+            example: '2BC - RANGER CB DUPLA 4X2'
+          },
+          ano: {
+            type: 'string',
+            nullable: true,
+            example: '2025'
+          }
+        }
+      },
+      SalesIntentionModelosDealerLookupResponse: {
+        type: 'object',
+        properties: {
+          found: {
+            type: 'boolean',
+            example: true
+          },
+          record: {
+            nullable: true,
+            $ref: '#/components/schemas/SalesIntentionModelosDealerLookupRecord'
           }
         }
       },

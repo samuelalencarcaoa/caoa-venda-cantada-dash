@@ -6,4 +6,8 @@ export class SalesIntentionModelosDealerService {
   public async listAll() {
     return this.repository.findAll();
   }
+
+  public async findByPlaca(placa: string) {
+    return this.repository.findByPlaca(placa);
+  }
 }
