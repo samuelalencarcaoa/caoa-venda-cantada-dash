@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, Search, TriangleAlert, X } from 'lucide-react';
 import { z } from 'zod';
 
@@ -272,27 +272,86 @@ function FieldTooltip({
 function FieldLabelWithTooltip({
   label,
   tooltip,
-  tooltipPlacement = 'top'
+  tooltipPlacement = 'top',
+  badge,
+  badgeTone = 'neutral'
 }: {
   label: string;
   tooltip: string;
   tooltipPlacement?: 'top' | 'right';
+  badge?: ReactNode;
+  badgeTone?: FieldBadgeTone;
 }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <span>{label}</span>
+    <span className={fieldLabelRowClasses}>
+      <FieldLabelContent label={label} badge={badge} badgeTone={badgeTone} />
       <FieldTooltip text={tooltip} placement={tooltipPlacement} />
     </span>
   );
 }
 
-const DEFAULT_SEARCH_MIN_CHARS = 3;
+const fieldLabelRowClasses = 'inline-flex flex-wrap items-center gap-x-1.5 gap-y-1';
+const fieldBadgeBaseClasses =
+  'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] leading-none sm:text-[10px]';
+const fieldBadgeToneClasses = {
+  auto: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-200',
+  dependency:
+    'border-sky-200 bg-sky-50 text-sky-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-100',
+  required:
+    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-100',
+  neutral: 'border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300'
+} as const;
+type FieldBadgeTone = keyof typeof fieldBadgeToneClasses;
+
+function FieldBadge({
+  children,
+  tone = 'neutral'
+}: {
+  children: ReactNode;
+  tone?: FieldBadgeTone;
+}) {
+  return <span className={`${fieldBadgeBaseClasses} ${fieldBadgeToneClasses[tone]}`}>{children}</span>;
+}
+
+function FieldLabelContent({
+  label,
+  badge,
+  badgeTone = 'neutral'
+}: {
+  label: string;
+  badge?: ReactNode;
+  badgeTone?: FieldBadgeTone;
+}) {
+  return (
+    <>
+      <span className="min-w-0">{label}</span>
+      {badge ? <FieldBadge tone={badgeTone}>{badge}</FieldBadge> : null}
+    </>
+  );
+}
+
+function FieldLabel({
+  label,
+  badge,
+  badgeTone = 'neutral'
+}: {
+  label: string;
+  badge?: ReactNode;
+  badgeTone?: FieldBadgeTone;
+}) {
+  return (
+    <span className={fieldLabelRowClasses}>
+      <FieldLabelContent label={label} badge={badge} badgeTone={badgeTone} />
+    </span>
+  );
+}
 
 function SearchableField({
   label,
   tooltip,
   tooltipPlacement = 'top',
-  minChars = DEFAULT_SEARCH_MIN_CHARS,
+  badge,
+  badgeTone = 'neutral',
   value,
   options,
   placeholder,
@@ -303,7 +362,8 @@ function SearchableField({
   label: string;
   tooltip: string;
   tooltipPlacement?: 'top' | 'right';
-  minChars?: number;
+  badge?: ReactNode;
+  badgeTone?: FieldBadgeTone;
   value: string;
   options: string[];
   placeholder: string;
@@ -313,53 +373,82 @@ function SearchableField({
 }) {
   const inputId = useId();
   const listboxId = `${inputId}-listbox`;
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
+  const [showAllOptions, setShowAllOptions] = useState(false);
 
   useEffect(() => {
     setQuery(value);
     setIsOpen(false);
+    setShowAllOptions(false);
   }, [value]);
 
   const normalizedQuery = normalizeSearchValue(query);
   const filteredOptions = useMemo(() => {
-    if (normalizedQuery.length < minChars) {
+    if (!isOpen) {
       return [];
     }
 
-    return options.filter((option) => normalizeSearchValue(option).includes(normalizedQuery));
-  }, [minChars, normalizedQuery, options]);
+    if (showAllOptions || normalizedQuery.length === 0) {
+      return options;
+    }
 
-  const showDropdown = !disabled && normalizedQuery.length >= minChars && isOpen;
+    return options.filter((option) => normalizeSearchValue(option).includes(normalizedQuery));
+  }, [isOpen, normalizedQuery, options, showAllOptions]);
+
+  const showDropdown = !disabled && isOpen;
 
   const selectOption = (option: string) => {
     setQuery(option);
     setIsOpen(false);
+    setShowAllOptions(false);
     onSelect(option);
+  };
+
+  const handleFocus = () => {
+    if (disabled) return;
+
+    setIsOpen(true);
+    setShowAllOptions(true);
+    requestAnimationFrame(() => {
+      inputRef.current?.select();
+    });
   };
 
   return (
     <label className={labelClasses}>
-      <FieldLabelWithTooltip label={label} tooltip={tooltip} tooltipPlacement={tooltipPlacement} />
+      <FieldLabelWithTooltip
+        label={label}
+        tooltip={tooltip}
+        tooltipPlacement={tooltipPlacement}
+        badge={badge}
+        badgeTone={badgeTone}
+      />
       <div className="relative">
         <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
         <input
+          ref={inputRef}
           id={inputId}
           type="text"
           value={query}
+          onFocus={handleFocus}
           onChange={(event) => {
             const nextQuery = event.target.value;
             setQuery(nextQuery);
-            setIsOpen(normalizeSearchValue(nextQuery).length >= minChars);
+            setShowAllOptions(false);
+            setIsOpen(true);
           }}
           onBlur={() => {
             setIsOpen(false);
+            setShowAllOptions(false);
             setQuery(value);
           }}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.preventDefault();
               setIsOpen(false);
+              setShowAllOptions(false);
               setQuery(value);
               return;
             }
@@ -372,7 +461,7 @@ function SearchableField({
             }
           }}
           placeholder={placeholder}
-          className={`${fieldClasses} pl-11`}
+          className={`${fieldClasses} pl-12 sm:pl-12`}
           disabled={disabled}
           role="combobox"
           aria-autocomplete="list"
@@ -393,6 +482,7 @@ function SearchableField({
                   key={option}
                   type="button"
                   role="option"
+                  aria-selected={option === value}
                   className="flex w-full rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-sky-50 hover:text-sky-700 focus-visible:bg-sky-50 focus-visible:text-sky-700 focus-visible:outline-none dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-cyan-300 dark:focus-visible:bg-white/5 dark:focus-visible:text-cyan-300"
                   onPointerDown={(event) => {
                     event.preventDefault();
@@ -416,14 +506,14 @@ function SearchableField({
 }
 
 const fieldClasses =
-  'min-h-12 w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 outline-none ring-1 ring-transparent transition duration-150 focus:border-sky-500 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-80 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10 dark:disabled:bg-slate-900/80 sm:min-h-14 sm:rounded-3xl sm:py-3 sm:text-base';
+  'min-h-12 w-full min-w-0 rounded-2xl border border-slate-300/80 bg-white px-3 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 outline-none ring-1 ring-transparent transition duration-150 focus:border-sky-500 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-80 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10 dark:disabled:bg-slate-900/80 sm:min-h-14 sm:rounded-3xl sm:px-4 sm:py-3 sm:text-base';
 
-const labelClasses = 'flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300';
+const labelClasses = 'flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300';
 const errorTextClasses = 'text-xs text-rose-600 dark:text-rose-300';
 const pageCardClasses =
-  'mx-auto w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg ring-1 ring-slate-200/70 sm:rounded-[32px] sm:shadow-xl dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)] dark:ring-white/5';
+  'mx-auto w-full max-w-6xl overflow-hidden rounded-[28px] border border-slate-200/60 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/50 sm:rounded-[32px] dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)] dark:ring-white/5';
 const headerCardClasses =
-  'border-b border-slate-200 bg-gradient-to-br from-sky-700 via-sky-600 to-cyan-500 p-5 text-white sm:p-6 dark:border-white/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700';
+  'border-b border-slate-200/70 bg-gradient-to-br from-sky-700 via-sky-600 to-cyan-500 p-4 text-white sm:p-6 dark:border-white/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700';
 const notificationBackdropClasses =
   'fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:items-center sm:p-6';
 const notificationCardBaseClasses =
@@ -871,11 +961,11 @@ export default function SalesIntentionForm() {
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-6 md:grid-cols-2 xl:grid-cols-12"
+        className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-5 md:grid-cols-2 xl:grid-cols-12"
       >
-        <div className="grid gap-4 md:col-span-2 xl:col-span-8">
+        <div className="grid gap-3 sm:gap-4 md:col-span-2 xl:col-span-8">
           <label className={labelClasses}>
-            Proprietário
+            <FieldLabel label="Proprietário" badge="Automático" badgeTone="auto" />
             <input
               name="proprietario"
               value={formData.proprietario}
@@ -888,9 +978,9 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-4">
+        <div className="grid gap-3 sm:gap-4 xl:col-span-4">
           <label className={labelClasses}>
-            Tipo de venda
+            <FieldLabel label="Tipo de venda" badge="Obrigatório" badgeTone="required" />
             <select
               name="tipoVenda"
               value={formData.tipoVenda}
@@ -909,9 +999,9 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-4">
+        <div className="grid gap-3 sm:gap-4 xl:col-span-3">
           <label className={labelClasses}>
-            Bandeira
+            <FieldLabel label="Bandeira" badge="Obrigatório" badgeTone="required" />
             <select
               name="bandeira"
               value={formData.bandeira}
@@ -930,11 +1020,12 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 xl:col-span-5">
+        <div className="grid gap-3 sm:gap-4 xl:col-span-5">
           <SearchableField
             label="Regional"
             tooltip={regionalTooltipText}
-            minChars={1}
+            badge="Depende da bandeira"
+            badgeTone="dependency"
             value={formData.regional}
             options={filteredOptions.regional}
             placeholder={formData.bandeira ? 'Digite 1 caractere para buscar' : 'Escolha a bandeira primeiro'}
@@ -944,9 +1035,14 @@ export default function SalesIntentionForm() {
           />
         </div>
 
-        <div className="grid gap-4 xl:col-span-3">
+        <div className="grid gap-3 sm:gap-4 xl:col-span-4">
           <label className={labelClasses}>
-            <FieldLabelWithTooltip label="Loja de venda" tooltip={lojaTooltipText} />
+            <FieldLabelWithTooltip
+              label="Loja de venda"
+              tooltip={lojaTooltipText}
+              badge="Depende da regional"
+              badgeTone="dependency"
+            />
             <select
               name="lojaVenda"
               value={formData.lojaVenda}
@@ -974,13 +1070,13 @@ export default function SalesIntentionForm() {
         <div
           className={
             showSeminovosFields
-              ? 'grid gap-4 md:col-span-2 md:grid-cols-3 xl:col-span-12 xl:grid-cols-12'
-              : 'grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12'
+              ? 'grid gap-3 sm:gap-4 md:col-span-2 md:grid-cols-3 xl:col-span-12 xl:grid-cols-12'
+              : 'grid gap-3 sm:gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12'
           }
         >
           {showSeminovosFields ? (
             <label className={`${labelClasses} md:col-span-1 xl:col-span-2`}>
-              Placa
+              <FieldLabel label="Placa" badge="SÓ seminovos" badgeTone="auto" />
               <input
                 type="text"
                 name="placa"
@@ -997,31 +1093,33 @@ export default function SalesIntentionForm() {
             </label>
           ) : null}
 
-          <div className="grid gap-4 md:col-span-1 xl:col-span-4">
-          <SearchableField
-            label="Marca veículo"
-            tooltip={vehicleTooltipText}
-            minChars={1}
-            value={formData.marcaVeiculo}
-            options={filteredOptions.marcaVeiculo}
-            placeholder={formData.tipoVenda ? 'Digite 1 caractere para buscar' : 'Escolha o tipo de venda primeiro'}
-            disabled={isLoading || isOptionsLoading || !formData.tipoVenda}
-            error={errors.marcaVeiculo}
-            onSelect={(nextValue) => updateFormField('marcaVeiculo', nextValue)}
-          />
+          <div className="grid gap-3 sm:gap-4 md:col-span-1 xl:col-span-4">
+            <SearchableField
+              label="Marca veículo"
+              tooltip={vehicleTooltipText}
+              badge="Depende do tipo"
+              badgeTone="dependency"
+              value={formData.marcaVeiculo}
+              options={filteredOptions.marcaVeiculo}
+              placeholder={formData.tipoVenda ? 'Digite 1 caractere para buscar' : 'Escolha o tipo de venda primeiro'}
+              disabled={isLoading || isOptionsLoading || !formData.tipoVenda}
+              error={errors.marcaVeiculo}
+              onSelect={(nextValue) => updateFormField('marcaVeiculo', nextValue)}
+            />
           </div>
 
           <div
             className={
               showSeminovosFields
-                ? 'grid gap-4 md:col-span-1 xl:col-span-6'
-                : 'grid gap-4 md:col-span-1 xl:col-span-8'
+                ? 'grid gap-3 sm:gap-4 md:col-span-1 xl:col-span-6'
+                : 'grid gap-3 sm:gap-4 md:col-span-1 xl:col-span-8'
             }
           >
             <SearchableField
               label="Modelo"
               tooltip={modelTooltipText}
-              minChars={1}
+              badge="Depende da marca"
+              badgeTone="dependency"
               value={formData.modelo}
               options={filteredOptions.modelo}
               placeholder={formData.marcaVeiculo ? 'Digite 1 caractere para buscar' : 'Escolha a marca primeiro'}
@@ -1032,12 +1130,13 @@ export default function SalesIntentionForm() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:col-span-2 xl:col-span-12">
+        <div className="grid gap-3 sm:gap-4 md:col-span-2 xl:col-span-12 pr-4">
           <SearchableField
             label="Versão"
             tooltip={versionTooltipText}
             tooltipPlacement="right"
-            minChars={1}
+            badge="Depende do modelo"
+            badgeTone="dependency"
             value={formData.versao}
             options={filteredOptions.versao}
             placeholder={
@@ -1055,9 +1154,9 @@ export default function SalesIntentionForm() {
 
         {showSeminovosFields ? (
           <>
-            <div className="grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12">
+            <div className="grid gap-3 sm:gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12">
               <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
-                Ano
+                <FieldLabel label="Ano" badge="Obrigatório" badgeTone="required" />
                 <select
                   name="ano"
                   value={formData.ano}
@@ -1075,7 +1174,7 @@ export default function SalesIntentionForm() {
                 {errors.ano ? <span className={errorTextClasses}>{errors.ano}</span> : null}
               </label>
               <label className={`${labelClasses} md:col-span-1 xl:col-span-4`}>
-                Classificação
+                <FieldLabel label="Classificação" badge="Obrigatório" badgeTone="required" />
                 <select
                   name="classificacao"
                   value={formData.classificacao}
@@ -1094,7 +1193,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={`${labelClasses} md:col-span-1 xl:col-span-2`}>
-                Quantidade
+                <FieldLabel label="Quant." badge="Obrigatório" badgeTone="required" />
                 <input
                   type="number"
                   min={1}
@@ -1108,7 +1207,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
-                Data de solicitação
+                <FieldLabel label="Data de solicitação" badge="Obrigatório" badgeTone="required" />
                 <input
                   type="date"
                   name="dataSolicitacao"
@@ -1123,9 +1222,9 @@ export default function SalesIntentionForm() {
           </>
         ) : (
           <>
-            <div className="grid gap-4 md:col-span-2 xl:col-span-4">
+            <div className="grid gap-3 sm:gap-4 md:col-span-2 xl:col-span-4">
               <label className={labelClasses}>
-                Classificação
+                <FieldLabel label="Classificação" badge="Obrigatório" badgeTone="required" />
                 <select
                   name="classificacao"
                   value={formData.classificacao}
@@ -1144,9 +1243,9 @@ export default function SalesIntentionForm() {
               </label>
             </div>
 
-            <div className="grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-8">
+            <div className="grid gap-3 sm:gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-8">
               <label className={labelClasses}>
-                Quantidade
+                <FieldLabel label="Quantidade" badge="Obrigatório" badgeTone="required" />
                 <input
                   type="number"
                   min={1}
@@ -1160,7 +1259,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={labelClasses}>
-                Data de solicitação
+                <FieldLabel label="Data de solicitação" badge="Obrigatório" badgeTone="required" />
                 <input
                   type="date"
                   name="dataSolicitacao"
