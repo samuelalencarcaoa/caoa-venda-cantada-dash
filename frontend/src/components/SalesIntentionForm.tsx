@@ -652,12 +652,20 @@ export default function SalesIntentionForm() {
         label: formatTipoVendaLabel(value)
       })),
       bandeira: catalogSources.bandeira,
-      regional: getFilteredOptions('regional', { bandeira: formData.bandeira }, catalogHierarchy),
+      regional: formData.lojaVenda
+        ? getFilteredOptions(
+            'regional',
+            {
+              bandeira: formData.bandeira,
+              lojaVenda: formData.lojaVenda
+            },
+            catalogHierarchy
+          )
+        : [],
       lojaVenda: getFilteredOptions(
         'lojaVenda',
         {
-          bandeira: formData.bandeira,
-          regional: formData.regional
+          bandeira: formData.bandeira
         },
         catalogHierarchy
       ),
@@ -699,21 +707,19 @@ export default function SalesIntentionForm() {
       formData.bandeira,
       formData.marcaVeiculo,
       formData.modelo,
-      formData.regional,
+      formData.lojaVenda,
       formData.tipoVenda,
       vehicleCatalogRows,
       vehicleCatalogSources
     ]
   );
 
-  const regionalTooltipText = formData.bandeira
-    ? 'As regionais são filtradas pela bandeira selecionada.'
-    : 'Escolha a bandeira para liberar as regionais.';
   const lojaTooltipText = formData.bandeira
-    ? formData.regional
-      ? 'As lojas são filtradas pela regional selecionada.'
-      : 'Escolha a regional para liberar as lojas.'
+    ? 'As lojas são filtradas pela bandeira selecionada.'
     : 'Escolha a bandeira para liberar as lojas.';
+  const regionalTooltipText = formData.lojaVenda
+    ? 'As regionais são filtradas pela loja de venda selecionada.'
+    : 'Escolha a loja de venda para liberar as regionais.';
   const vehicleTooltipText = isTipoVenda(formData.tipoVenda, 'NOVOS')
     ? 'Mostrando apenas veículos zero quilômetro.'
     : isTipoVenda(formData.tipoVenda, 'SEMINOVOS')
@@ -815,7 +821,7 @@ export default function SalesIntentionForm() {
         ...(name === 'marcaVeiculo' ? { modelo: '', versao: '' } : {}),
         ...(name === 'modelo' ? { versao: '' } : {}),
         ...(name === 'bandeira' ? { regional: '', lojaVenda: '' } : {}),
-        ...(name === 'regional' ? { lojaVenda: '' } : {})
+        ...(name === 'lojaVenda' ? { regional: '' } : {})
       };
 
       return nextFormData;
@@ -828,7 +834,7 @@ export default function SalesIntentionForm() {
         ? { placa: undefined, ano: undefined, marcaVeiculo: undefined, modelo: undefined, versao: undefined }
         : {}),
       ...(name === 'bandeira' ? { regional: undefined, lojaVenda: undefined } : {}),
-      ...(name === 'regional' ? { lojaVenda: undefined } : {}),
+      ...(name === 'lojaVenda' ? { regional: undefined } : {}),
       ...(name === 'marcaVeiculo' ? { modelo: undefined, versao: undefined } : {}),
       ...(name === 'modelo' ? { versao: undefined } : {})
     }));
@@ -1020,27 +1026,12 @@ export default function SalesIntentionForm() {
           </label>
         </div>
 
-        <div className="grid gap-3 sm:gap-4 xl:col-span-5">
-          <SearchableField
-            label="Regional"
-            tooltip={regionalTooltipText}
-            badge="Depende da bandeira"
-            badgeTone="dependency"
-            value={formData.regional}
-            options={filteredOptions.regional}
-            placeholder={formData.bandeira ? 'Digite 1 caractere para buscar' : 'Escolha a bandeira primeiro'}
-            disabled={isLoading || isOptionsLoading || !formData.bandeira}
-            error={errors.regional}
-            onSelect={(nextValue) => updateFormField('regional', nextValue)}
-          />
-        </div>
-
         <div className="grid gap-3 sm:gap-4 xl:col-span-4">
           <label className={labelClasses}>
             <FieldLabelWithTooltip
               label="Loja de venda"
               tooltip={lojaTooltipText}
-              badge="Depende da regional"
+              badge="Depende da bandeira"
               badgeTone="dependency"
             />
             <select
@@ -1048,14 +1039,10 @@ export default function SalesIntentionForm() {
               value={formData.lojaVenda}
               onChange={handleChange}
               className={fieldClasses}
-              disabled={isLoading || isOptionsLoading || !formData.bandeira || !formData.regional}
+              disabled={isLoading || isOptionsLoading || !formData.bandeira}
             >
               <option value="">
-                {formData.bandeira
-                  ? formData.regional
-                    ? 'Escolha a loja'
-                    : 'Escolha a regional primeiro'
-                  : 'Escolha a bandeira primeiro'}
+                {formData.bandeira ? 'Escolha a loja' : 'Escolha a bandeira primeiro'}
               </option>
               {filteredOptions.lojaVenda.map((value) => (
                 <option key={value} value={value}>
@@ -1065,6 +1052,21 @@ export default function SalesIntentionForm() {
             </select>
             {errors.lojaVenda ? <span className={errorTextClasses}>{errors.lojaVenda}</span> : null}
           </label>
+        </div>
+
+        <div className="grid gap-3 sm:gap-4 xl:col-span-5">
+          <SearchableField
+            label="Regional"
+            tooltip={regionalTooltipText}
+            badge="Depende da loja"
+            badgeTone="dependency"
+            value={formData.regional}
+            options={filteredOptions.regional}
+            placeholder={formData.lojaVenda ? 'Digite 1 caractere para buscar' : 'Escolha a loja de venda primeiro'}
+            disabled={isLoading || isOptionsLoading || !formData.lojaVenda}
+            error={errors.regional}
+            onSelect={(nextValue) => updateFormField('regional', nextValue)}
+          />
         </div>
 
         <div
