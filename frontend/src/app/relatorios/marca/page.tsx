@@ -5,14 +5,8 @@ import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec } from "@visactor/vchart";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { Button } from "@/components/ui/button";
+import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { format } from "date-fns";
-
-const normalizeLabel = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toUpperCase()
-    .trim();
 
 const parseDate = (dateString: string): Date => {
   const [day, month, year] = dateString.split("/");
@@ -29,8 +23,6 @@ export default function MarcaVeiculoRelatorioPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined);
   const [chartError, setChartError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -139,65 +131,6 @@ export default function MarcaVeiculoRelatorioPage() {
       startDate,
       endDate,
     ],
-  );
-
-  const allKeys = useMemo(() => {
-    const keySet = new Set<string>();
-    enhancedSalesIntention.forEach((row) => Object.keys(row || {}).forEach((key) => keySet.add(key)));
-    return Array.from(keySet);
-  }, [enhancedSalesIntention]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filteredItems, itemsPerPage]);
-
-  const currentPageItems = useMemo(
-    () =>
-      filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
-    [filteredItems, currentPage, itemsPerPage],
-  );
-
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  const sortedItems = useMemo(() => {
-    if (!sortKey) return filteredItems;
-    const items = [...filteredItems];
-    const compareValue = (value: unknown) => {
-      const raw = String(value ?? "");
-      const numeric = Number(raw.replace(/[.,]/g, ""));
-      if (!Number.isNaN(numeric) && raw.trim() !== "") {
-        return numeric;
-      }
-      return normalizeLabel(raw);
-    };
-
-    items.sort((a, b) => {
-      const aVal = compareValue((a as Record<string, unknown>)[sortKey]);
-      const bVal = compareValue((b as Record<string, unknown>)[sortKey]);
-
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sortDir === "asc" ? aVal - bVal : bVal - aVal;
-      }
-
-      return sortDir === "asc"
-        ? String(aVal).localeCompare(String(bVal), "pt-BR", { sensitivity: "base" })
-        : String(bVal).localeCompare(String(aVal), "pt-BR", { sensitivity: "base" });
-    });
-    return items;
-  }, [filteredItems, sortKey, sortDir]);
-
-  const currentPageItemsSorted = useMemo(
-    () => sortedItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
-    [sortedItems, currentPage, itemsPerPage],
   );
 
   const totalProposals = filteredItems.reduce(
@@ -603,112 +536,7 @@ export default function MarcaVeiculoRelatorioPage() {
         </div>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm">
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold">Lista de dados</h2>
-            <p className="text-xs text-muted-foreground">
-              Exibindo {currentPageItems.length} de {filteredItems.length} registros filtrados
-            </p>
-          </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label className="flex items-center gap-2 text-xs">
-              <span>Itens por página:</span>
-              <select
-                className="rounded-lg border border-border bg-background px-2 py-1 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                value={itemsPerPage}
-                onChange={(event) => setItemsPerPage(Number(event.target.value))}
-              >
-                {[10, 25, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="text-xs text-muted-foreground">
-              Página {currentPage} de {totalPages}
-            </div>
-            <Button variant="outline" onClick={exportToExcel} className="h-8 text-xs ml-2">
-              Baixar Excel
-            </Button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                {allKeys.map((key) => {
-                  return (
-                  <th
-                      key={key}
-                      className="border-b border-border bg-background px-2 py-2 text-left font-medium text-muted-foreground"
-                      aria-sort={sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (sortKey === key) {
-                            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-                          } else {
-                            setSortKey(key);
-                            setSortDir("asc");
-                          }
-                        }}
-                        className="inline-flex w-full items-center justify-between gap-2 text-left text-muted-foreground transition hover:text-primary focus:outline-none"
-                        title={`Ordenar por ${key}`}
-                      >
-                        <span>{key}</span>
-                        <span className="text-[0.65rem]">{sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}</span>
-                      </button>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-background">
-              {currentPageItemsSorted.map((item, rowIndex) => (
-                <tr key={`row-${(currentPage - 1) * itemsPerPage + rowIndex}`} className="odd:bg-card">
-                  {allKeys.map((key) => {
-                    const raw = String((item as Record<string, unknown>)[key] ?? "");
-                    const display = key === "Marca_Veiculo" || key === "Versao" ? normalizeLabel(raw) : raw;
-                    return (
-                      <td key={`${rowIndex}-${key}`} className="border-b border-border px-2 py-2">
-                        {display}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <div>
-            {filteredItems.length === 0 ? "Nenhum registro encontrado." : `Mostrando ${currentPageItems.length} registros nesta página.`}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="rounded-lg border border-border bg-background px-3 py-1 text-xs transition hover:bg-muted"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-border bg-background px-3 py-1 text-xs transition hover:bg-muted"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            >
-              Próxima
-            </button>
-          </div>
-        </div>
-      </div>
+      <SalesIntentionDataList items={filteredItems} exportFilePrefix="relatorio-marca" />
     </section>
   );
 }

@@ -7,6 +7,7 @@ import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec } from "@visactor/vchart";
 
 import { Button } from "@/components/ui/button";
+import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
 
@@ -220,7 +221,6 @@ export default function DashboardV2Page() {
   );
   const {
     items: sales,
-    isLoading,
     isRefreshing,
     error,
     lastUpdatedAt,
@@ -441,6 +441,12 @@ export default function DashboardV2Page() {
               {totalProposals.toLocaleString("pt-BR")} propostas registradas
             </span>
           </div>
+
+          <SalesIntentionDataList
+            items={filteredSales}
+            exportFilePrefix="dashboard-lista-dados"
+            className="mt-3"
+          />
         </section>
       </div>
     </main>

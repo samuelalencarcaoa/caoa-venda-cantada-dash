@@ -290,9 +290,11 @@ function FieldLabelWithTooltip({
   );
 }
 
-const fieldLabelRowClasses = 'inline-flex flex-wrap items-center gap-x-1.5 gap-y-1';
+const fieldLabelRowClasses = 'inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 ';
+const fieldLabelTextClasses =
+  'min-w-0 text-base font-extrabold leading-tight tracking-[-0.02em] text-slate-950 dark:text-slate-50 sm:text-[1.0rem]';
 const fieldBadgeBaseClasses =
-  'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] leading-none sm:text-[10px]';
+  'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[7px] font-semibold uppercase tracking-[0.08em] leading-none sm:text-[10px]';
 const fieldBadgeToneClasses = {
   auto: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-200',
   dependency:
@@ -324,7 +326,7 @@ function FieldLabelContent({
 }) {
   return (
     <>
-      <span className="min-w-0">{label}</span>
+      <span className={fieldLabelTextClasses}>{label}</span>
       {badge ? <FieldBadge tone={badgeTone}>{badge}</FieldBadge> : null}
     </>
   );
