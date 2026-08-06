@@ -324,7 +324,7 @@ export default function DashboardV2Page() {
     <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_35%_10%,#15568b_0%,#06345e_38%,#031d43_100%)] p-3 text-white sm:p-5">
       <div className="mx-auto max-w-[1800px]">
         <header className="px-2 py-2 text-white sm:px-4 desktop:px-2">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between desktop:gap-4">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between xl:pr-16 desktop:gap-4">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl desktop:text-3xl">
               INTENÇÃO DE VENDAS
             </h1>
@@ -350,6 +350,8 @@ export default function DashboardV2Page() {
                 <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
               </Button>
             </div>
+          </div>
+          <div className="mt-3 flex justify-start xl:justify-end xl:pr-16">
             <div className="text-left xl:text-right desktop:shrink-0">
               <p className="text-lg font-bold italic desktop:text-base">
                 {lastUpdatedAt
