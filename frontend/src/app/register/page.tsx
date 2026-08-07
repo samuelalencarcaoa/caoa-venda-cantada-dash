@@ -57,25 +57,25 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_34%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_100%)] px-4 py-10 dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.14),_transparent_32%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-10 shadow-xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[radial-gradient(circle_at_35%_10%,#15568b_0%,#06345e_38%,#031d43_100%)] px-4 py-10 text-white">
+      <div className="w-full max-w-md rounded-3xl border-2 border-emerald-300/70 bg-[#365888]/95 p-10 shadow-lg shadow-slate-950/20">
         <div className="mb-8">
           <BrandLogo className="mx-auto w-full max-w-[320px]" />
         </div>
 
         <div className="mb-8 text-center">
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Cadastro</p>
-          <h1 className="mt-4 text-3xl font-semibold text-slate-900 dark:text-slate-100">Crie sua conta</h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm uppercase tracking-[0.3em] text-emerald-200/90">Cadastro</p>
+          <h1 className="mt-4 text-3xl font-semibold text-white">Crie sua conta</h1>
+          <p className="mt-2 text-sm text-white/75">
             Depois do cadastro você poderá acessar as rotas do sistema.
           </p>
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Nome de usuário</span>
+            <span className="text-sm font-medium text-emerald-200/90">Nome de usuário</span>
             <input
-              className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/60 focus:border-emerald-300/70 focus:ring-2 focus:ring-emerald-300/20"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               placeholder="seu.usuario"
@@ -84,10 +84,10 @@ export default function RegisterPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</span>
+            <span className="text-sm font-medium text-emerald-200/90">Email</span>
             <input
               type="email"
-              className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/60 focus:border-emerald-300/70 focus:ring-2 focus:ring-emerald-300/20"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="seu@email.com"
@@ -96,10 +96,10 @@ export default function RegisterPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Senha</span>
+            <span className="text-sm font-medium text-emerald-200/90">Senha</span>
             <input
               type="password"
-              className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/60 focus:border-emerald-300/70 focus:ring-2 focus:ring-emerald-300/20"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Mínimo 6 caracteres"
@@ -108,10 +108,10 @@ export default function RegisterPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar senha</span>
+            <span className="text-sm font-medium text-emerald-200/90">Confirmar senha</span>
             <input
               type="password"
-              className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/60 focus:border-emerald-300/70 focus:ring-2 focus:ring-emerald-300/20"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Repita a senha"
@@ -119,8 +119,8 @@ export default function RegisterPage() {
             />
           </label>
 
-          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-100">{error}</div>}
-          {success && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100">{success}</div>}
+          {error && <div className="rounded-2xl border border-rose-400/50 bg-rose-500/15 px-4 py-3 text-sm text-rose-100">{error}</div>}
+          {success && <div className="rounded-2xl border border-emerald-400/50 bg-emerald-500/15 px-4 py-3 text-sm text-emerald-100">{success}</div>}
 
           <Button
             type="submit"
@@ -131,9 +131,9 @@ export default function RegisterPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+        <div className="mt-6 text-center text-sm text-white/85">
           Já tem conta?{' '}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href="/login" className="font-medium text-emerald-200 hover:text-emerald-100">
             Fazer login
           </Link>
         </div>

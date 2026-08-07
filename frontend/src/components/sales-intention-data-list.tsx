@@ -5,6 +5,7 @@ import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
+import { cn } from "@/lib/utils";
 
 const REPORT_COLUMNS: Array<keyof SalesIntentionReportRow> = [
   "ID",
@@ -135,48 +136,62 @@ export function SalesIntentionDataList({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden rounded-3xl border border-border bg-card p-3 text-foreground shadow-sm ${className}`}
+      className={cn(
+        "min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white/92 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.38)] backdrop-blur",
+        className,
+      )}
     >
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">Lista de dados</h2>
-          <p className="text-xs text-muted-foreground">
-            Exibindo {currentPageItems.length} de {sortedItems.length} registros filtrados
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="flex items-center gap-2 text-xs">
-            <span>Itens por página:</span>
-            <select
-              className="rounded-lg border border-border bg-background px-2 py-1 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-              value={itemsPerPage}
-              onChange={(event) => setItemsPerPage(Number(event.target.value))}
-            >
-              {[10, 25, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="text-xs text-muted-foreground">
-            Página {currentPage} de {totalPages}
+      <div className="border-b border-slate-200/80 bg-slate-50/80 px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-400">
+              Tabela detalhada
+            </p>
+            <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
+              Lista de dados
+            </h2>
+            <p className="text-sm text-slate-500">
+              Exibindo {currentPageItems.length} de {sortedItems.length} registros filtrados
+            </p>
           </div>
-          <Button variant="outline" onClick={exportToExcel} className="h-8 text-xs">
-            Baixar Excel
-          </Button>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
+              <span className="font-medium">Itens por página</span>
+              <select
+                className="bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                value={itemsPerPage}
+                onChange={(event) => setItemsPerPage(Number(event.target.value))}
+              >
+                {[10, 25, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 shadow-sm">
+              Página {currentPage} de {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              onClick={exportToExcel}
+              className="h-10 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+            >
+              Baixar Excel
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-xs">
-          <thead>
+          <thead className="bg-slate-50/80">
             <tr>
               {REPORT_COLUMNS.map((key) => (
                 <th
                   key={key}
-                  className="border-b border-border bg-background px-2 py-2 text-left font-medium text-muted-foreground"
+                  className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500"
                   aria-sort={
                     sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"
                   }
@@ -192,11 +207,11 @@ export function SalesIntentionDataList({
                       setSortKey(key);
                       setSortDir("asc");
                     }}
-                    className="inline-flex w-full items-center justify-between gap-2 text-left text-muted-foreground transition hover:text-primary focus:outline-none"
+                    className="inline-flex w-full items-center justify-between gap-2 text-left text-slate-500 transition hover:text-slate-900 focus:outline-none"
                     title={`Ordenar por ${key}`}
                   >
                     <span>{key}</span>
-                    <span className="text-[0.65rem]">
+                    <span className="text-[0.65rem] font-bold">
                       {sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
                     </span>
                   </button>
@@ -204,16 +219,19 @@ export function SalesIntentionDataList({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border bg-background">
+          <tbody className="divide-y divide-slate-200 bg-white">
             {currentPageItems.map((item, rowIndex) => (
-              <tr key={`row-${(currentPage - 1) * itemsPerPage + rowIndex}`} className="odd:bg-card">
+              <tr
+                key={`row-${(currentPage - 1) * itemsPerPage + rowIndex}`}
+                className="transition hover:bg-slate-50/80 odd:bg-white even:bg-slate-50/40"
+              >
                 {REPORT_COLUMNS.map((key) => {
                   const raw = String(item[key] ?? "");
                   const display =
                     key === "Marca_Veiculo" || key === "Versao" ? normalizeLabel(raw) : raw;
 
                   return (
-                    <td key={`${rowIndex}-${key}`} className="border-b border-border px-2 py-2">
+                    <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
                       {display}
                     </td>
                   );
@@ -224,7 +242,7 @@ export function SalesIntentionDataList({
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 px-4 py-4 text-xs text-slate-500 sm:px-5">
         <div>
           {sortedItems.length === 0
             ? "Nenhum registro encontrado."
@@ -233,7 +251,7 @@ export function SalesIntentionDataList({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="rounded-lg border border-border bg-background px-3 py-1 text-xs transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
           >
@@ -241,7 +259,7 @@ export function SalesIntentionDataList({
           </button>
           <button
             type="button"
-            className="rounded-lg border border-border bg-background px-3 py-1 text-xs transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
           >
