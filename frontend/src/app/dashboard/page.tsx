@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec } from "@visactor/vchart";
 
+import BrandLogo from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
@@ -27,6 +28,25 @@ const brands = [
 const vehicleBrands = brands.filter((brand) => brand !== "SEMINOVOS");
 type PeriodType = (typeof periodOptions)[number]["key"];
 type CountItem = { label: string; value: number };
+
+function HeaderMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-[180px] text-center sm:min-w-[220px]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">
+        {label}
+      </p>
+      <p className="mt-1 text-[15px] font-bold italic leading-none text-white sm:text-[17px]">
+        {value}
+      </p>
+    </div>
+  );
+}
 
 function parseReportDate(value: string) {
   const [datePart, timePart = "00:00:00"] = value.trim().split(/\s+/);
@@ -239,6 +259,10 @@ export default function DashboardV2Page() {
       }),
     [range, sales],
   );
+  const lastRecordText = filteredSales[0]?.Criado ?? "--/--/---- --:--:--";
+  const lastUpdatedText = lastUpdatedAt
+    ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss")
+    : "--/--/---- --:--:--";
   const totalProposals = filteredSales.reduce(
     (sum, item) => sum + (Number(item.Quantidade) || 0),
     0,
@@ -322,69 +346,69 @@ export default function DashboardV2Page() {
 
   return (
     <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_35%_10%,#15568b_0%,#06345e_38%,#031d43_100%)] p-3 text-white sm:p-5">
-      <div className="mx-auto max-w-[1800px]">
+      <div className="mx-auto max-w-[1700px]">
         <header className="px-2 py-2 text-white sm:px-4 desktop:px-2">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between xl:pr-16 desktop:gap-4">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl desktop:text-3xl">
-              INTENÇÃO DE VENDAS
-            </h1>
-            <div className="flex flex-wrap items-center gap-2 desktop:gap-1.5">
-              {periodOptions.map((option) => (
-                <button
-                  type="button"
-                  key={option.key}
-                  onClick={() => setPeriod(option.key)}
-                  className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${period === option.key ? "bg-white text-sky-950" : "bg-white/10 text-white hover:bg-white/20"}`}
-                >
-                  {option.label}
-                </button>
-              ))}
+          <div className="grid gap-4 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-start xl:gap-6">
+            <div className="flex items-start">
+              <BrandLogo
+                variant="header"
+                className="h-[68px] w-[242px] sm:h-[76px] sm:w-[270px] xl:h-[88px] xl:w-[312px]"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-start gap-3 xl:justify-center xl:gap-4 xl:pt-1">
+              <HeaderMetric label="Data do último registro" value={lastRecordText} />
+              <HeaderMetric label="Última atualização" value={lastUpdatedText} />
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
                 aria-label="Atualizar dados"
                 onClick={() => void refresh({ silent: true })}
-                className="text-white hover:bg-white/15 hover:text-white"
+                className="h-[50px] w-[50px] rounded-2xl border border-white/20 bg-white/10 text-white shadow-lg shadow-slate-950/20 transition hover:bg-white/20 hover:text-white"
               >
-                <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
+                <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
               </Button>
             </div>
-          </div>
-          <div className="mt-3 flex justify-start xl:justify-end xl:pr-16">
-            <div className="text-left xl:text-right desktop:shrink-0">
-              <p className="text-lg font-bold italic desktop:text-base">
-                {lastUpdatedAt
-                  ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss")
-                  : "--/--/---- --:--:--"}
-              </p>
-              <p className="mt-1 text-xs font-semibold italic desktop:mt-0.5">
-                Última Atualização
-              </p>
+
+            <div className="flex flex-col items-end gap-3 xl:pt-1">
+              <div className="flex flex-wrap items-center justify-end gap-2 desktop:gap-1.5">
+                {periodOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.key}
+                    onClick={() => setPeriod(option.key)}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${period === option.key ? "bg-white text-sky-950" : "bg-white/10 text-white hover:bg-white/20"}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {period === "intervalo" && (
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-cyan-50">
+                    <span>De</span>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(event) => setStartDate(event.target.value)}
+                      className="w-[132px] rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-white outline-none placeholder:text-white/60"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-cyan-50">
+                    <span>Até</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(event) => setEndDate(event.target.value)}
+                      className="w-[132px] rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-white outline-none placeholder:text-white/60"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
           </div>
-          {period === "intervalo" && (
-            <div className="mt-5 flex flex-wrap gap-3">
-              <label className="text-xs font-semibold text-cyan-50">
-                De{" "}
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  className="ml-2 rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-white outline-none"
-                />
-              </label>
-              <label className="text-xs font-semibold text-cyan-50">
-                Até{" "}
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                  className="ml-2 rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-white outline-none"
-                />
-              </label>
-            </div>
-          )}
         </header>
         {error && (
           <div className="mt-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-700">
@@ -401,13 +425,13 @@ export default function DashboardV2Page() {
             {brandModelData.map(({ brand, data }) => (
               <RankingCard
                 key={brand}
-                title="Propostas x Modelo"
+                title="Venda Cantada X Modelo"
                 data={data}
                 description={brand}
               />
             ))}
             <RankingCard
-              title="Propostas x Bandeira"
+              title="Venda Cantada X Bandeira"
               data={flagData}
               description="Distribuição por bandeira"
             />
@@ -416,7 +440,7 @@ export default function DashboardV2Page() {
             {vehicleBrands.map((brand) => (
               <RankingCard
                 key={brand}
-                title="Propostas x Regional de Vendas"
+                title="Venda Cantada x Regional de Vendas"
                 data={topTenWithOthers(
                   groupCounts(
                     filteredSales.filter((item) => matchesBrand(item, brand)),
@@ -428,7 +452,7 @@ export default function DashboardV2Page() {
             ))}
             <Panel className="min-h-[280px] desktop:min-h-[240px]">
               <h2 className="text-center text-base font-bold text-white desktop:text-sm">
-                Propostas x Regional de Vendas
+                Venda Cantada x Regional de Vendas
               </h2>
               <p className="text-center text-xs text-white/65 desktop:mb-2 desktop:text-[11px]">
                 Visão consolidada do período

@@ -167,7 +167,7 @@ function formatDate(value: string | Date): string {
 function formatDateTime(value: string | Date): string {
   const date = toDate(value);
   if (!date) return String(value);
-  return `${formatDate(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${formatDate(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 function transformApiRecord(record: SalesIntentionApiRecord): SalesIntentionReportRow {
