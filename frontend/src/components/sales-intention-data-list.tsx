@@ -1,10 +1,13 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
+import { AlertTriangle, Check, Pencil, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
+import { updateSalesIntention } from "@/lib/salesIntentionApi";
 import { cn } from "@/lib/utils";
 
 const REPORT_COLUMNS: Array<keyof SalesIntentionReportRow> = [
@@ -66,13 +69,37 @@ export function SalesIntentionDataList({
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [sortKey, setSortKey] = useState<keyof SalesIntentionReportRow | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [editableItems, setEditableItems] = useState<SalesIntentionReportRow[]>(items);
+  const [editRowId, setEditRowId] = useState<number | null>(null);
+  const [editingValues, setEditingValues] = useState({
+    Quantidade: "",
+    Data_solicitacao: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSavedRowId, setJustSavedRowId] = useState<number | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    item: SalesIntentionReportRow | null;
+    payload: Partial<Pick<SalesIntentionReportRow, "Quantidade" | "Data_solicitacao">>;
+    message: string;
+  }>({
+    open: false,
+    item: null,
+    payload: {},
+    message: "",
+  });
+  const [alertModal, setAlertModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+  });
 
   const sortedItems = useMemo(() => {
     if (!sortKey) {
-      return items;
+      return editableItems;
     }
 
-    const nextItems = [...items];
+    const nextItems = [...editableItems];
 
     nextItems.sort((a, b) => {
       const aVal = compareValue(a[sortKey]);
@@ -88,7 +115,7 @@ export function SalesIntentionDataList({
     });
 
     return nextItems;
-  }, [items, sortDir, sortKey]);
+  }, [editableItems, sortDir, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(sortedItems.length / itemsPerPage));
 
@@ -99,17 +126,142 @@ export function SalesIntentionDataList({
   }, [currentPage, totalPages]);
 
   useEffect(() => {
+    setEditableItems(items);
+  }, [items]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [items, itemsPerPage]);
+
+  useEffect(() => {
+    if (justSavedRowId === null) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setJustSavedRowId(null);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [justSavedRowId]);
+
+  useEffect(() => {
+    const modalOpen = confirmModal.open || alertModal.open;
+    const originalOverflow = document.body.style.overflow;
+
+    if (modalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = originalOverflow;
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [confirmModal.open, alertModal.open]);
 
   const currentPageItems = useMemo(
     () => sortedItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
     [currentPage, itemsPerPage, sortedItems],
   );
 
+  function toInputDate(value: string) {
+    const [day, month, year] = value.split('/');
+    if (!day || !month || !year) return '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  function toDisplayDate(value: string) {
+    const [year, month, day] = value.split('-');
+    if (!year || !month || !day) return value;
+    return `${day}/${month}/${year}`;
+  }
+
+  function startEditing(item: SalesIntentionReportRow) {
+    setEditRowId(item.ID);
+    setEditingValues({
+      Quantidade: item.Quantidade,
+      Data_solicitacao: toInputDate(item.Data_solicitacao),
+    });
+  }
+
+  function cancelEditing() {
+    setEditRowId(null);
+  }
+
+  function saveEditing(item: SalesIntentionReportRow) {
+    const payload: Partial<Pick<SalesIntentionReportRow, 'Quantidade' | 'Data_solicitacao'>> = {};
+    if (editingValues.Quantidade !== item.Quantidade) {
+      payload.Quantidade = editingValues.Quantidade;
+    }
+    if (editingValues.Data_solicitacao && toDisplayDate(editingValues.Data_solicitacao) !== item.Data_solicitacao) {
+      payload.Data_solicitacao = toDisplayDate(editingValues.Data_solicitacao);
+    }
+
+    if (Object.keys(payload).length === 0) {
+      cancelEditing();
+      return;
+    }
+
+    setConfirmModal({
+      open: true,
+      item,
+      payload,
+      message: `Deseja salvar a edição do registro ${item.ID}?`,
+    });
+  }
+
+  function closeConfirmModal() {
+    setConfirmModal({
+      open: false,
+      item: null,
+      payload: {},
+      message: "",
+    });
+  }
+
+  function closeAlertModal() {
+    setAlertModal({
+      open: false,
+      title: "",
+      message: "",
+    });
+  }
+
+  async function confirmEditSave() {
+    const item = confirmModal.item;
+    if (!item) {
+      closeConfirmModal();
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updatedRow = await updateSalesIntention(item.ID, {
+        quantidade: confirmModal.payload.Quantidade ? Number(confirmModal.payload.Quantidade) : undefined,
+        dataSolicitacao: confirmModal.payload.Data_solicitacao,
+      });
+
+      setEditableItems((current) =>
+        current.map((row) => (row.ID === item.ID ? updatedRow : row)),
+      );
+      cancelEditing();
+      setJustSavedRowId(item.ID);
+      closeConfirmModal();
+    } catch (error) {
+      setAlertModal({
+        open: true,
+        title: "Erro ao salvar",
+        message: "Não foi possível salvar a edição. Tente novamente.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const exportToExcel = () => {
     const headers = REPORT_COLUMNS;
-    const rows = items.map((item) =>
+    const rows = editableItems.map((item) =>
       headers.map((header) => escapeHtml(item[header] ?? "")),
     );
 
@@ -217,27 +369,105 @@ export function SalesIntentionDataList({
                   </button>
                 </th>
               ))}
+              <th className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
-            {currentPageItems.map((item, rowIndex) => (
-              <tr
-                key={`row-${(currentPage - 1) * itemsPerPage + rowIndex}`}
-                className="transition hover:bg-slate-50/80 odd:bg-white even:bg-slate-50/40"
-              >
-                {REPORT_COLUMNS.map((key) => {
-                  const raw = String(item[key] ?? "");
-                  const display =
-                    key === "Marca_Veiculo" || key === "Versao" ? normalizeLabel(raw) : raw;
+            {currentPageItems.map((item, rowIndex) => {
+              const isEditing = editRowId === item.ID;
 
-                  return (
-                    <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
-                      {display}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+              return (
+                <tr
+                  key={`row-${(currentPage - 1) * itemsPerPage + rowIndex}`}
+                  className={cn(
+                    "transition-colors duration-500",
+                    isEditing
+                      ? "bg-sky-50/80"
+                      : justSavedRowId === item.ID
+                      ? "bg-emerald-50/90"
+                      : "odd:bg-white even:bg-slate-50/40 hover:bg-slate-50/80"
+                  )}
+                >
+                  {REPORT_COLUMNS.map((key) => {
+                    const raw = String(item[key] ?? "");
+                    const display =
+                      key === "Marca_Veiculo" || key === "Versao" ? normalizeLabel(raw) : raw;
+                    const isDateField = key === "Data_solicitacao";
+                    const isQuantityField = key === "Quantidade";
+
+                    return (
+                      <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
+                        {isEditing && isQuantityField ? (
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingValues.Quantidade}
+                            onChange={(event) =>
+                              setEditingValues((current) => ({
+                                ...current,
+                                Quantidade: event.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                          />
+                        ) : isEditing && isDateField ? (
+                          <input
+                            type="date"
+                            value={editingValues.Data_solicitacao}
+                            onChange={(event) =>
+                              setEditingValues((current) => ({
+                                ...current,
+                                Data_solicitacao: event.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                          />
+                        ) : (
+                          display
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
+                    {isEditing ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={cancelEditing}
+                          title="Cancelar edição"
+                          aria-label="Cancelar edição"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={() => saveEditing(item)}
+                          disabled={isSaving}
+                          title="Salvar edição"
+                          aria-label="Salvar edição"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEditing(item)}
+                        title="Editar registro"
+                        aria-label="Editar registro"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -267,6 +497,62 @@ export function SalesIntentionDataList({
           </button>
         </div>
       </div>
+      {confirmModal.open &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-slate-950/60 px-4 py-6">
+            <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-rose-100 p-3 text-rose-600">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-slate-900">Confirmar edição</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {confirmModal.message}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <Button variant="secondary" size="sm" onClick={closeConfirmModal}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => void confirmEditSave()}
+                  disabled={isSaving}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+      {alertModal.open &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-slate-950/60 px-4 py-6">
+            <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-rose-100 p-3 text-rose-600">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-slate-900">{alertModal.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {alertModal.message}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <Button variant="default" size="sm" onClick={closeAlertModal}>
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

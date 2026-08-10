@@ -181,7 +181,7 @@ function transformApiRecord(record: SalesIntentionApiRecord): SalesIntentionRepo
     Versao: record.versao,
     Classificacao: record.classificacao,
     Quantidade: String(record.quantidade),
-    Data_solicitacao: formatDate(record.dataSolicitacao),
+    Data_solicitacao: formatDateTime(record.dataSolicitacao),
     Placa: record.placa,
     Regional: record.regional,
     Criado: formatDateTime(record.criado)
@@ -241,6 +241,19 @@ export async function lookupSalesIntentionModelosDealerByPlate(
   );
 
   return response.found && response.record ? response.record : null;
+}
+
+export async function updateSalesIntention(
+  id: number,
+  payload: Partial<Pick<SalesIntentionPayload, 'quantidade' | 'dataSolicitacao'>>,
+): Promise<SalesIntentionReportRow> {
+  const data = await fetchApi<SalesIntentionApiRecord>(`/api/sales-intentions/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  return transformApiRecord(data);
 }
 
 export async function createSalesIntention(payload: SalesIntentionPayload): Promise<SalesIntentionApiRecord> {

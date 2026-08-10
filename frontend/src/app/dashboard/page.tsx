@@ -764,13 +764,19 @@ export default function DashboardV2Page() {
             ))}
 
             <RankingCard
-              title="Venda Cantada x Lojas"
+              title="Venda Cantada x Região"
               data={storeData}
               tooltip="Top 10 lojas por propostas no período selecionado"
             />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+            <RankingCard
+              title="Venda Cantada x Região"
+              data={regionData}
+              tooltip="Visão consolidada do período selecionado"
+            />
+
             {vehicleBrands.map((brand) => (
               <RankingCard
                 key={brand}
@@ -784,12 +790,6 @@ export default function DashboardV2Page() {
                 description={brand}
               />
             ))}
-
-            <RankingCard
-              title="Venda Cantada x Região"
-              data={regionData}
-              tooltip="Visão consolidada do período selecionado"
-            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
