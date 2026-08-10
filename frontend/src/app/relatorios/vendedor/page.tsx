@@ -517,7 +517,7 @@ export default function VendedorRelatorioPage() {
 
     const headers = [
       "Vendedor",
-      "Propostas",
+      "Venda Cantada",
       "Quantidade",
       "Média por Proposta",
     ];
@@ -602,7 +602,7 @@ export default function VendedorRelatorioPage() {
 
       <div className="grid gap-6 sm:grid-cols-4">
         <div className="rounded-lg border border-border bg-background p-3">
-          <p className="text-xs text-muted-foreground">Total de Propostas</p>
+          <p className="text-xs text-muted-foreground">Total de Venda Cantada</p>
           <p className="mt-0.5 text-2xl font-semibold">{totalProposals}</p>
         </div>
         <div className="rounded-lg border border-border bg-background p-3">
@@ -736,7 +736,7 @@ export default function VendedorRelatorioPage() {
                   Vendedor
                 </th>
                 <th className="border-b border-border bg-background px-3 py-2 text-right font-medium">
-                  Propostas
+                  Venda Cantada
                 </th>
                 <th className="border-b border-border bg-background px-3 py-2 text-right font-medium">
                   Quantidade

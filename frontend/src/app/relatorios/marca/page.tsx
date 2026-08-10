@@ -495,7 +495,7 @@ export default function MarcaVeiculoRelatorioPage() {
       <div className="min-w-0 overflow-hidden rounded-3xl border border-border bg-card p-3 shadow-sm">
         <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-base font-semibold">Propostas por Marca</h2>
+            <h2 className="text-base font-semibold">Venda Cantada por Marca</h2>
             <p className="text-xs text-muted-foreground">
               Top marcas no período filtrado ({brandChartData.length} marcas)
             </p>
