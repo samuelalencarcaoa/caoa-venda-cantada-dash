@@ -12,8 +12,6 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CircleHelp, RefreshCw } from "lucide-react";
-import { VChart } from "@visactor/react-vchart";
-import type { IBarChartSpec } from "@visactor/vchart";
 
 import BrandLogo from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
@@ -309,10 +307,12 @@ function RankingCard({
   title,
   data,
   description,
+  tooltip,
 }: {
   title: string;
   data: CountItem[];
-  description: string;
+  description?: string;
+  tooltip?: string;
 }) {
   const max = data[0]?.value || 1;
 
@@ -320,10 +320,15 @@ function RankingCard({
     <DashboardCard className="min-h-[280px] px-5 py-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-[-0.01em] text-slate-900">
-            {title}
-          </h2>
-          <p className="mt-1 text-xs text-slate-500">{description}</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold tracking-[-0.01em] text-slate-900">
+              {title}
+            </h2>
+            {tooltip ? <HeaderTooltip text={tooltip} /> : null}
+          </div>
+          {description ? (
+            <p className="mt-1 text-xs text-slate-500">{description}</p>
+          ) : null}
         </div>
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
           Top 10
@@ -546,43 +551,30 @@ export default function DashboardV2Page() {
     [seminovosSales],
   );
 
+  const brandStoreData = useMemo(
+    () =>
+      vehicleBrands.map((brand) => ({
+        brand,
+        data: topTenWithOthers(
+          groupCounts(
+            novosSales.filter((item) => matchesBrand(item, brand)),
+            "Loja_Venda",
+          ),
+        ),
+      })),
+    [novosSales],
+  );
+
+  const storeData = useMemo(
+    () => topTenWithOthers(groupCounts(novosSales, "Loja_Venda")),
+    [novosSales],
+  );
+
   const regionData = useMemo(
     () => topTenWithOthers(groupCounts(novosSales, "Regional")),
     [novosSales],
   );
 
-  const barSpec = useMemo<IBarChartSpec>(
-    () => ({
-      type: "bar",
-      data: [
-        {
-          id: "regions",
-          values: regionData.map((item) => ({
-            regional: item.label,
-            propostas: item.value,
-          })),
-        },
-      ],
-      direction: "vertical",
-      xField: "regional",
-      yField: "propostas",
-      padding: [16, 20, 38, 42],
-      color: ["#2563eb"],
-      bar: { style: { cornerRadius: [8, 8, 0, 0] } },
-      axis: {
-        xAxis: {
-          label: {
-            rotate: 35,
-            textAlign: "right",
-            maxWidth: 90,
-            overflow: "ellipsis",
-          },
-        },
-      },
-      tooltip: { trigger: ["hover"] },
-    }),
-    [regionData],
-  );
 
   return (
     <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#edf4fb_48%,_#e8eef7_100%)] p-3 text-slate-900 sm:p-5">
@@ -762,10 +754,27 @@ export default function DashboardV2Page() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+            {brandStoreData.map(({ brand, data }) => (
+              <RankingCard
+                key={brand}
+                title="Venda Cantada x Região"
+                data={data}
+                description={brand}
+              />
+            ))}
+
+            <RankingCard
+              title="Venda Cantada x Lojas"
+              data={storeData}
+              tooltip="Top 10 lojas por propostas no período selecionado"
+            />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
             {vehicleBrands.map((brand) => (
               <RankingCard
                 key={brand}
-                title="Venda Cantada x Regional"
+                title="Venda Cantada x Lojas"
                 data={topTenWithOthers(
                   groupCounts(
                     novosSales.filter((item) => matchesBrand(item, brand)),
@@ -776,25 +785,11 @@ export default function DashboardV2Page() {
               />
             ))}
 
-            <DashboardCard className="min-h-[280px] px-5 py-5">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold tracking-[-0.01em] text-slate-900">
-                    Venda Cantada x Regional de Vendas
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Visão consolidada do período selecionado
-                  </p>
-                </div>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  Gráfico
-                </span>
-              </div>
-
-              <div className="h-[220px] pt-2">
-                <VChart spec={barSpec} />
-              </div>
-            </DashboardCard>
+            <RankingCard
+              title="Venda Cantada x Região"
+              data={regionData}
+              tooltip="Visão consolidada do período selecionado"
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
