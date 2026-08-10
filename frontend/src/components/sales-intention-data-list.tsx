@@ -440,7 +440,7 @@ export function SalesIntentionDataList({
                           title="Cancelar edição"
                           aria-label="Cancelar edição"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-4 w-4 text-rose-600 transition-colors duration-200 hover:text-rose-800" />
                         </Button>
                         <Button
                           variant="secondary"
@@ -450,7 +450,7 @@ export function SalesIntentionDataList({
                           title="Salvar edição"
                           aria-label="Salvar edição"
                         >
-                          <Check className="h-4 w-4" />
+                          <Check className="h-4 w-4 text-emerald-600 transition-colors duration-200 hover:text-emerald-800" />
                         </Button>
                       </div>
                     ) : (
@@ -461,7 +461,7 @@ export function SalesIntentionDataList({
                         title="Editar registro"
                         aria-label="Editar registro"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-4 w-4 text-sky-600 transition-colors duration-200 hover:text-sky-800" />
                       </Button>
                     )}
                   </td>
