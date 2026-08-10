@@ -772,7 +772,7 @@ export default function DashboardV2Page() {
 
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
             <RankingCard
-              title="Venda Cantada x Região"
+              title="Venda Cantada x Lojas"
               data={regionData}
               tooltip="Visão consolidada do período selecionado"
             />
