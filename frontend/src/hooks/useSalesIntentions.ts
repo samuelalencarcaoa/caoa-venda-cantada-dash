@@ -2,21 +2,29 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchAllSalesIntentions,
   fetchSalesIntentions,
   formatSalesIntentionApiError,
   type SalesIntentionDateRange,
   type SalesIntentionReportRow,
 } from "@/lib/salesIntentionApi";
 
-export function useSalesIntentions(dateRange?: SalesIntentionDateRange) {
+type UseSalesIntentionsOptions = {
+  searchAll?: boolean;
+};
+
+export function useSalesIntentions(
+  dateRange?: SalesIntentionDateRange,
+  options?: UseSalesIntentionsOptions,
+) {
   const [items, setItems] = useState<SalesIntentionReportRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
-  const loadItems = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent ?? false;
+  const loadItems = useCallback(async (requestOptions?: { silent?: boolean }) => {
+    const silent = requestOptions?.silent ?? false;
     if (silent) {
       setIsRefreshing(true);
     } else {
@@ -25,7 +33,9 @@ export function useSalesIntentions(dateRange?: SalesIntentionDateRange) {
     setError(null);
 
     try {
-      const data = await fetchSalesIntentions(dateRange);
+      const data = options?.searchAll
+        ? await fetchAllSalesIntentions()
+        : await fetchSalesIntentions(dateRange);
       setItems(data);
       setLastUpdatedAt(new Date());
     } catch (err) {
@@ -37,7 +47,12 @@ export function useSalesIntentions(dateRange?: SalesIntentionDateRange) {
         setIsLoading(false);
       }
     }
-  }, [dateRange?.endDate, dateRange?.startDate, dateRange?.tipoVenda]);
+  }, [
+    dateRange?.endDate,
+    dateRange?.startDate,
+    dateRange?.tipoVenda,
+    options?.searchAll,
+  ]);
 
   useEffect(() => {
     void loadItems();

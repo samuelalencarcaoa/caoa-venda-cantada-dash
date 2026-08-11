@@ -2,10 +2,18 @@
 
 import { format } from "date-fns";
 import { Medal, Trophy } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec, ILineChartSpec } from "@visactor/vchart";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 
 export default function VendedorRelatorioPage() {
@@ -14,7 +22,7 @@ export default function VendedorRelatorioPage() {
     isLoading: apiLoading,
     error,
   } = useSalesIntentions();
-  const [selectedVendor, setSelectedVendor] = useState<string>("");
+  const [selectedVendor, setSelectedVendor] = useState<string[]>(["Todos"]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -22,11 +30,52 @@ export default function VendedorRelatorioPage() {
 
   const itemsPerPage = 25;
 
+  const toggleFilterValue = (
+    option: string,
+    checked: boolean,
+    selected: string[],
+    setSelected: Dispatch<SetStateAction<string[]>>,
+  ) => {
+    setSelected((current) => {
+      const active = current.includes("Todos") ? [] : current;
+
+      if (option === "Todos") {
+        return ["Todos"];
+      }
+
+      if (checked) {
+        return [...new Set([...active.filter((value) => value !== "Todos"), option])];
+      }
+
+      const next = active.filter((value) => value !== option);
+      return next.length === 0 ? ["Todos"] : next;
+    });
+  };
+
+  const getFilterSummary = (selected: string[]) => {
+    if (selected.includes("Todos")) {
+      return "Todos";
+    }
+    if (selected.length === 1) {
+      return selected[0];
+    }
+    return `${selected.length} selecionados`;
+  };
+
   // Helper function (not a hook, safe to use anywhere)
   const parseDate = (dateString: string): Date => {
     const [day, month, year] = dateString.split("/");
     return new Date(`${year}-${month}-${day}`);
   };
+
+  const sortUniqueOptions = (values: Array<string | null | undefined>) =>
+    Array.from(
+      new Set(
+        values
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value) => value && value !== "Todos"),
+      ),
+    ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 
   // Get unique vendors sorted by total quantity
   const vendorOptions = useMemo(() => {
@@ -47,25 +96,23 @@ export default function VendedorRelatorioPage() {
       }
     });
 
-    return Array.from(vendorMap.entries())
-      .sort((a, b) =>
-        a[0].localeCompare(b[0], "pt-BR", { sensitivity: "base" }),
-      )
-      .map(([vendor]) => vendor);
+    return sortUniqueOptions(Array.from(vendorMap.keys()));
   }, [enhancedSalesIntention]);
 
-  // Set first vendor as default
   useEffect(() => {
-    if (vendorOptions.length > 0 && !selectedVendor) {
-      setSelectedVendor(vendorOptions[0]);
-    }
-  }, [vendorOptions, selectedVendor]);
+    setSelectedVendor((current) => {
+      if (current.includes("Todos")) return current;
+      const next = current.filter((value) => vendorOptions.includes(value));
+      return next.length === 0 ? ["Todos"] : next;
+    });
+  }, [vendorOptions]);
 
   // Filter items by selected vendor and date range
   const filteredItems = useMemo(() => {
     return enhancedSalesIntention.filter((item) => {
       const matchesVendor =
-        !selectedVendor || item.Proprietario === selectedVendor;
+        selectedVendor.includes("Todos") ||
+        selectedVendor.includes(item.Proprietario || "Sem vendedor");
 
       let matchesDateRange = true;
       if (startDate || endDate) {
@@ -562,26 +609,49 @@ export default function VendedorRelatorioPage() {
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="space-y-0.5">
             <span className="text-xs font-medium">Vendedor</span>
-            <select
-              className="w-full rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-              value={selectedVendor}
-              onChange={(event) => {
-                setSelectedVendor(event.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              {vendorOptions.map((vendor) => (
-                <option key={vendor} value={vendor}>
-                  {vendor}
-                </option>
-              ))}
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="mt-3 flex h-[42px] w-full items-center justify-between rounded-lg border border-border bg-background px-3 text-xs text-left text-slate-900 outline-none transition hover:border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                >
+                  <span className="truncate">
+                    {selectedVendor.includes("Todos") ? "Todos" : getFilterSummary(selectedVendor)}
+                  </span>
+                  <span className="text-slate-400">▾</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="mt-2 max-h-[260px] w-full overflow-y-auto p-2">
+                <DropdownMenuLabel>Vendedor</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={selectedVendor.includes("Todos")}
+                  onCheckedChange={(checked) =>
+                    toggleFilterValue("Todos", !!checked, selectedVendor, setSelectedVendor)
+                  }
+                >
+                  Todos
+                </DropdownMenuCheckboxItem>
+                {vendorOptions.map((vendor) => (
+                  <DropdownMenuCheckboxItem
+                    key={vendor}
+                    checked={selectedVendor.includes(vendor)}
+                    onCheckedChange={(checked) =>
+                      toggleFilterValue(vendor, !!checked, selectedVendor, setSelectedVendor)
+                    }
+                  >
+                    {vendor}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </label>
 
           <label className="space-y-0.5">
             <span className="text-xs font-medium">De</span>
             <input
               type="date"
+              max={endDate || undefined}
               className="w-full rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
@@ -592,6 +662,7 @@ export default function VendedorRelatorioPage() {
             <span className="text-xs font-medium">Até</span>
             <input
               type="date"
+              min={startDate || undefined}
               className="w-full rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}

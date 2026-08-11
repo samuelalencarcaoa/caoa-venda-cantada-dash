@@ -97,14 +97,28 @@ export type SalesIntentionModelosDealerLookupResponse = {
   record: SalesIntentionModelosDealerLookupRecord | null;
 };
 
-const SALES_INTENTION_API_ERROR_PREFIX = 'Ops, ocorreu um erro';
-
 function buildSalesIntentionApiErrorMessage(status: number | null) {
-  const statusLabel = typeof status === 'number' && Number.isFinite(status) && status > 0
-    ? String(status)
-    : 'desconhecido';
+  if (status === 401 || status === 403) {
+    return "Você não tem permissão para acessar estes dados.";
+  }
 
-  return `${SALES_INTENTION_API_ERROR_PREFIX}: status ${statusLabel}. Tente novamente mais tarde ou entre em contato com o administrador do sistema.`;
+  if (status === 400 || status === 422) {
+    return "Não conseguimos aplicar os filtros informados. Revise o período e tente novamente.";
+  }
+
+  if (status === 404) {
+    return "Não encontramos dados para o período selecionado.";
+  }
+
+  if (status !== null && status >= 500) {
+    return "Estamos com instabilidade para carregar os dados agora. Tente novamente em alguns instantes.";
+  }
+
+  if (status === null) {
+    return "Não conseguimos acessar os dados agora. Verifique sua conexão e tente novamente.";
+  }
+
+  return "Não conseguimos carregar os dados agora. Tente novamente em alguns instantes.";
 }
 
 export class SalesIntentionApiError extends Error {
@@ -212,6 +226,11 @@ export async function fetchSalesIntentions(
   if (dateRange?.tipoVenda) searchParams.set('tipoVenda', dateRange.tipoVenda);
   const query = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
   const data = await fetchApi<SalesIntentionApiRecord[]>(`/api/sales-intentions${query}`);
+  return data.map(transformApiRecord);
+}
+
+export async function fetchAllSalesIntentions(): Promise<SalesIntentionReportRow[]> {
+  const data = await fetchApi<SalesIntentionApiRecord[]>('/api/sales-intentions/search');
   return data.map(transformApiRecord);
 }
 

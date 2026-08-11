@@ -1,7 +1,8 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
+  differenceInCalendarDays,
   endOfDay,
   endOfMonth,
   format,
@@ -39,62 +40,16 @@ const vehicleBrands = brands.filter((brand) => brand !== "SEMINOVOS");
 type PeriodType = (typeof periodOptions)[number]["key"];
 type CountItem = { label: string; value: number };
 
-function HeaderMetric({
-  label,
-  value,
-  action,
-  tooltip,
-}: {
-  label: string;
-  value: string;
-  action?: ReactNode;
-  tooltip?: string;
-}) {
+function TooltipIcon({ text }: { text: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-[22px] border border-white/20 bg-white/95 px-4 py-3 shadow-[0_10px_30px_-22px_rgba(15,23,42,0.95)] backdrop-blur">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-400">
-            {label}
-          </p>
-          {tooltip ? <HeaderTooltip text={tooltip} /> : null}
-        </div>
-        <p className="mt-1 truncate text-[14px] font-bold italic leading-none text-slate-900 sm:text-[15px]">
-          {value}
-        </p>
-      </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
-    </div>
-  );
-}
-
-function HeaderTooltip({ text }: { text: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <span className="relative inline-flex shrink-0">
-      <button
-        type="button"
-        aria-label={text}
-        aria-expanded={isOpen}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sky-500 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30"
-        onClick={() => setIsOpen((current) => !current)}
-        onBlur={() => setIsOpen(false)}
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-      >
-        <CircleHelp className="h-4 w-4" />
-      </button>
-      <span
-        role="tooltip"
-        className={`pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-950 px-3 py-2 text-left text-[11px] leading-5 text-white shadow-xl transition duration-150 ${
-          isOpen ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        {text}
-      </span>
-    </span>
+    <button
+      type="button"
+      aria-label={text}
+      title={text}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sky-500 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30"
+    >
+      <CircleHelp className="h-4 w-4" />
+    </button>
   );
 }
 
@@ -137,10 +92,14 @@ function DateField({
   label,
   value,
   onChange,
+  min,
+  max,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  min?: string;
+  max?: string;
 }) {
   return (
     <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
@@ -148,6 +107,8 @@ function DateField({
       <input
         type="date"
         value={value}
+        min={min}
+        max={max}
         onChange={(event) => onChange(event.target.value)}
         className="min-w-0 bg-transparent text-sm font-semibold text-slate-700 outline-none [color-scheme:light]"
       />
@@ -168,11 +129,30 @@ function parseReportDate(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function formatQueryDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function buildLocalDateFromInput(value: string, endOfDay = false) {
+  if (!value) {
+    return null;
+  }
+
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  );
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function getMonthRange(referenceDate: Date, monthOffset: number) {
@@ -192,16 +172,33 @@ function getDayRange(referenceDate: Date, dayOffset: number) {
 }
 
 function getIntervalRange(startValue: string, endValue: string) {
+  const start = buildLocalDateFromInput(startValue);
+  const end = buildLocalDateFromInput(endValue, true);
+
   return {
-    start: startValue ? new Date(`${startValue}T00:00:00`) : new Date(0),
-    end: endValue
-      ? new Date(`${endValue}T23:59:59.999`)
-      : new Date(8640000000000000),
+    start: start ?? new Date(0),
+    end: end ?? new Date(8640000000000000),
   };
 }
 
 function formatMonthTitle(date: Date) {
   return format(date, "MMMM 'de' yyyy", { locale: ptBR });
+}
+
+function capitalizeText(value: string) {
+  if (!value) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatInputDateLabel(value: string) {
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  return format(new Date(year, month - 1, day), "dd/MM/yyyy", { locale: ptBR });
 }
 
 function getDayBadgeLabel(dayOffset: number) {
@@ -263,7 +260,7 @@ function DashboardCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_-42px_rgba(15,23,42,0.32)]",
+        "overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_20px_60px_-42px_rgba(15,23,42,0.18)]",
         className,
       )}
     >
@@ -280,7 +277,7 @@ function BrandTotalCard({
   brand: string;
 }) {
   return (
-    <DashboardCard className="min-h-[172px] px-5 py-5">
+    <DashboardCard className="min-h-[168px] px-5 py-5">
       <div className="flex h-full flex-col justify-between gap-3">
         <div className="flex items-center justify-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
@@ -306,28 +303,30 @@ function BrandTotalCard({
 function RankingCard({
   title,
   data,
-  description,
+  contextLabel,
   tooltip,
 }: {
   title: string;
   data: CountItem[];
-  description?: string;
+  contextLabel?: string;
   tooltip?: string;
 }) {
   const max = data[0]?.value || 1;
 
   return (
-    <DashboardCard className="min-h-[280px] px-5 py-5">
+    <DashboardCard className="min-h-[276px] px-5 py-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold tracking-[-0.01em] text-slate-900">
               {title}
             </h2>
-            {tooltip ? <HeaderTooltip text={tooltip} /> : null}
+            {tooltip ? <TooltipIcon text={tooltip} /> : null}
           </div>
-          {description ? (
-            <p className="mt-1 text-xs text-slate-500">{description}</p>
+          {contextLabel ? (
+            <span className="mt-1 inline-flex max-w-full items-center rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              {contextLabel}
+            </span>
           ) : null}
         </div>
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
@@ -370,7 +369,7 @@ function RankingCard({
 
 export default function DashboardV2Page() {
   const [referenceDate] = useState(() => new Date());
-  const [period, setPeriod] = useState<PeriodType>("mes");
+  const [period, setPeriod] = useState<PeriodType>("dia");
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
   const [startDate, setStartDate] = useState("");
@@ -404,44 +403,83 @@ export default function DashboardV2Page() {
     [referenceDate],
   );
 
-  const requestedDateRange = useMemo(() => {
-    if (period === "mes") {
-      const { start, end } = getMonthRange(referenceDate, selectedMonthOffset);
-      return {
-        startDate: formatQueryDate(start),
-        endDate: formatQueryDate(end),
-      };
-    }
-
-    if (period === "dia") {
-      const { start, end } = getDayRange(referenceDate, selectedDayOffset);
-      return {
-        startDate: formatQueryDate(start),
-        endDate: formatQueryDate(end),
-      };
-    }
-
-    if (startDate && endDate) {
-      return { startDate, endDate };
-    }
-
-    return undefined;
-  }, [
-    endDate,
-    period,
-    referenceDate,
-    selectedDayOffset,
-    selectedMonthOffset,
-    startDate,
-  ]);
-
   const {
     items: sales,
     isRefreshing,
     error,
     lastUpdatedAt,
     refresh,
-  } = useSalesIntentions(requestedDateRange);
+  } = useSalesIntentions(undefined, { searchAll: true });
+
+  const latestAvailableDate = useMemo(() => {
+    return sales.reduce<Date | null>((latest, item) => {
+      const current = parseReportDate(item.Data_solicitacao);
+
+      if (!current) {
+        return latest;
+      }
+
+      if (!latest || current > latest) {
+        return current;
+      }
+
+      return latest;
+    }, null);
+  }, [sales]);
+
+  const hasDataForToday = useMemo(() => {
+    const today = startOfDay(referenceDate).getTime();
+
+    return sales.some((item) => {
+      const current = parseReportDate(item.Data_solicitacao);
+      return current ? startOfDay(current).getTime() === today : false;
+    });
+  }, [referenceDate, sales]);
+
+  const latestAvailableDayOffset = useMemo(() => {
+    if (!latestAvailableDate) {
+      return null;
+    }
+
+    const offset = differenceInCalendarDays(
+      startOfDay(referenceDate),
+      startOfDay(latestAvailableDate),
+    );
+
+    return Math.max(0, offset);
+  }, [latestAvailableDate, referenceDate]);
+
+  const isTodayFallbackActive =
+    period === "dia" &&
+    !hasDataForToday &&
+    latestAvailableDayOffset !== null &&
+    latestAvailableDayOffset > 0 &&
+    selectedDayOffset === latestAvailableDayOffset;
+
+  useEffect(() => {
+    if (period !== "dia") {
+      return;
+    }
+
+    if (selectedDayOffset !== 0) {
+      return;
+    }
+
+    if (hasDataForToday) {
+      return;
+    }
+
+    if (!latestAvailableDayOffset || latestAvailableDayOffset === 0) {
+      return;
+    }
+
+    setSelectedDayOffset(latestAvailableDayOffset);
+  }, [
+    hasDataForToday,
+    latestAvailableDayOffset,
+    period,
+    selectedDayOffset,
+  ]);
 
   const range = useMemo(() => {
     if (period === "mes") {
@@ -470,6 +508,43 @@ export default function DashboardV2Page() {
       }),
     [range, sales],
   );
+
+  const activePeriodText = useMemo(() => {
+    if (period === "mes") {
+      return `Período ativo: ${capitalizeText(
+        format(range.start, "MMMM 'de' yyyy", { locale: ptBR }),
+      )}`;
+    }
+
+    if (period === "dia") {
+      return selectedDayOffset === 0
+        ? "Período ativo: Hoje"
+        : `Período ativo: ${format(range.start, "dd/MM/yyyy", { locale: ptBR })}`;
+    }
+
+    if (startDate && endDate) {
+      return `Período ativo: ${formatInputDateLabel(startDate)} a ${formatInputDateLabel(endDate)}`;
+    }
+
+    if (startDate) {
+      return `Período ativo: a partir de ${formatInputDateLabel(startDate)}`;
+    }
+
+    if (endDate) {
+      return `Período ativo: até ${formatInputDateLabel(endDate)}`;
+    }
+
+    return "Período ativo: intervalo livre";
+  }, [endDate, period, range.start, selectedDayOffset, startDate]);
+
+  const fallbackNotice = useMemo(() => {
+    if (!isTodayFallbackActive || !latestAvailableDate) {
+      return null;
+    }
+
+    return `Hoje sem dados, usando ${format(latestAvailableDate, "dd/MM/yyyy", { locale: ptBR })}`;
+  }, [isTodayFallbackActive, latestAvailableDate]);
+
   const novosSales = useMemo(
     () =>
       filteredSales.filter(
@@ -566,15 +641,14 @@ export default function DashboardV2Page() {
   );
 
   const storeData = useMemo(
-    () => topTenWithOthers(groupCounts(novosSales, "Loja_Venda")),
-    [novosSales],
+    () => topTenWithOthers(groupCounts(seminovosSales, "Loja_Venda")),
+    [seminovosSales],
   );
 
   const regionData = useMemo(
-    () => topTenWithOthers(groupCounts(novosSales, "Regional")),
-    [novosSales],
+    () => topTenWithOthers(groupCounts(seminovosSales, "Regional")),
+    [seminovosSales],
   );
-
 
   return (
     <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#edf4fb_48%,_#e8eef7_100%)] p-3 text-slate-900 sm:p-5">
@@ -588,48 +662,49 @@ export default function DashboardV2Page() {
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <HeaderMetric
-                label="Data do último registro"
-                value={lastRecordText}
-                tooltip="Essa data corresponde ao último registro cadastrado dentro do período selecionado."
-              />
-              <HeaderMetric
-                label="Última atualização"
-                value={lastUpdatedText}
-                action={
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Atualizar dados"
-                    onClick={() => void refresh({ silent: true })}
-                    className="h-11 w-11 rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900"
-                  >
-                    <RefreshCw
-                      className={cn(
-                        "h-4 w-4",
-                        isRefreshing && "animate-spin",
-                      )}
-                    />
-                  </Button>
-                }
-              />
+            <div className="min-w-0 space-y-2">
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-sky-100/80">
+                  Dashboard
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                    Painel de Vendas Cantadas
+                  </h1>
+                  <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-100/80">
+                  <span className="rounded-full bg-white/10 px-3 py-1">
+                    Última atualização: {lastUpdatedText}
+                  </span>
+                  <span className="rounded-full bg-white/10 px-3 py-1">
+                    {isRefreshing ? "Atualizando..." : "Dados prontos"}
+                  </span>
+                  <span className="rounded-full bg-white/10 px-3 py-1">
+                    Último registro: {lastRecordText}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-sky-50/90">
+                  <span className="rounded-full bg-white/10 px-3 py-1">
+                    {activePeriodText}
+                  </span>
+                  {fallbackNotice ? (
+                    <span className="rounded-full bg-amber-400/20 px-3 py-1 text-amber-100">
+                      {fallbackNotice}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
             </div>
 
             <DashboardCard className="border-white/20 bg-white/95 px-4 py-4 text-slate-900 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.55)]">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                  <div className="flex items-center gap-1.5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-400">
                       Período
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      Escolha a visão principal
-                    </p>
-                  </div>
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                    Filtros rápidos
+                    <TooltipIcon text="Escolha entre a visão por mês, por dia ou intervalo personalizado." />
                   </div>
                 </div>
 
@@ -649,12 +724,12 @@ export default function DashboardV2Page() {
                 {period === "mes" && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-400">
-                        Atalhos do mês
-                      </p>
-                      <span className="text-[10px] font-medium text-slate-500">
-                        Clique em um mês para filtrar
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-400">
+                          Atalhos do mês
+                        </p>
+                        <TooltipIcon text="Selecione um mês para aplicar o recorte rapidamente." />
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {monthQuickFilters.map((item) => (
@@ -676,12 +751,12 @@ export default function DashboardV2Page() {
                 {period === "dia" && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-400">
-                        Atalhos do dia
-                      </p>
-                      <span className="text-[10px] font-medium text-slate-500">
-                        Clique para voltar alguns dias
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-400">
+                          Atalhos do dia
+                        </p>
+                        <TooltipIcon text="Volte alguns dias de forma rápida sem abrir o calendário." />
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {dayQuickFilters.map((item) => (
@@ -702,19 +777,24 @@ export default function DashboardV2Page() {
 
                 {period === "intervalo" && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-400">
-                      Intervalo personalizado
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-400">
+                        Intervalo personalizado
+                      </p>
+                      <TooltipIcon text="Escolha uma data inicial e uma data final para filtrar o período." />
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <DateField
                         label="De"
                         value={startDate}
                         onChange={setStartDate}
+                        max={endDate || undefined}
                       />
                       <DateField
                         label="Até"
                         value={endDate}
                         onChange={setEndDate}
+                        min={startDate || undefined}
                       />
                     </div>
                   </div>
@@ -726,7 +806,8 @@ export default function DashboardV2Page() {
 
         {error && (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
-            Não foi possível carregar os dados: {error}
+            Não conseguimos carregar os dados agora. Tente atualizar e, se o
+            problema continuar, volte em alguns instantes.
           </div>
         )}
 
@@ -743,13 +824,14 @@ export default function DashboardV2Page() {
                 key={brand}
                 title="Venda Cantada x Modelo"
                 data={data}
-                description={brand}
+                contextLabel={brand}
+                tooltip="Quantidade total de propostas por modelo da marca selecionada no período."
               />
             ))}
             <RankingCard
               title="Venda Cantada x Bandeira"
               data={flagData}
-              description="Distribuição por bandeira"
+              tooltip="Quantidade total de propostas por bandeira no período selecionado."
             />
           </div>
 
@@ -757,39 +839,41 @@ export default function DashboardV2Page() {
             {brandStoreData.map(({ brand, data }) => (
               <RankingCard
                 key={brand}
-                title="Venda Cantada x Região"
+                title="Venda Cantada x Lojas"
                 data={data}
-                description={brand}
+                contextLabel={brand}
+                tooltip="Quantidade total de propostas por loja da marca selecionada no período."
               />
             ))}
 
             <RankingCard
-              title="Venda Cantada x Região"
+              title="Venda Cantada x Lojas"
               data={storeData}
-              tooltip="Top 10 lojas por propostas no período selecionado"
+              tooltip="Quantidade total de propostas por loja no período selecionado."
             />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
-            <RankingCard
-              title="Venda Cantada x Lojas"
-              data={regionData}
-              tooltip="Visão consolidada do período selecionado"
-            />
-
             {vehicleBrands.map((brand) => (
               <RankingCard
                 key={brand}
-                title="Venda Cantada x Lojas"
+                title="Venda Cantada x Região"
                 data={topTenWithOthers(
                   groupCounts(
                     novosSales.filter((item) => matchesBrand(item, brand)),
                     "Regional",
                   ),
                 )}
-                description={brand}
+                contextLabel={brand}
+                tooltip="Quantidade total de propostas por região da marca selecionada no período."
               />
             ))}
+
+            <RankingCard
+              title="Venda Cantada x Região"
+              data={regionData}
+              tooltip="Quantidade total de propostas por região no período selecionado."
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
