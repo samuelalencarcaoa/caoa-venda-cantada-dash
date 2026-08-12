@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec, ILineChartSpec } from "@visactor/vchart";
 import { Button } from "@/components/ui/button";
+import { ReportErrorCard } from "@/components/report-error-card";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,7 +21,9 @@ export default function VendedorRelatorioPage() {
   const {
     items: enhancedSalesIntention,
     isLoading: apiLoading,
+    isRefreshing,
     error,
+    refresh,
   } = useSalesIntentions();
   const [selectedVendor, setSelectedVendor] = useState<string[]>(["Todos"]);
   const [startDate, setStartDate] = useState<string>("");
@@ -68,14 +71,22 @@ export default function VendedorRelatorioPage() {
     return new Date(`${year}-${month}-${day}`);
   };
 
-  const sortUniqueOptions = (values: Array<string | null | undefined>) =>
-    Array.from(
-      new Set(
+const sortUniqueOptions = (values: Array<string | null | undefined>) =>
+  Array.from(
+    new Set(
         values
           .map((value) => (typeof value === "string" ? value.trim() : ""))
           .filter((value) => value && value !== "Todos"),
-      ),
-    ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+    ),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+
+const xAxisLabelStyle = {
+  angle: Math.PI / 4,
+  textAlign: "right" as const,
+  textBaseline: "middle" as const,
+  maxLineWidth: 120,
+  ellipsis: "...",
+};
 
   // Get unique vendors sorted by total quantity
   const vendorOptions = useMemo(() => {
@@ -218,22 +229,20 @@ export default function VendedorRelatorioPage() {
       seriesField: "brand",
       stack: false,
       padding: [20, 20, 20, 20],
-      axis: {
-        xAxis: {
+      axes: [
+        {
+          orient: "bottom",
           label: {
-            rotate: 45,
-            textAlign: "right",
-            textBaseline: "middle",
-            maxWidth: 120,
-            overflow: "ellipsis",
+            style: xAxisLabelStyle,
           },
         },
-        yAxis: {
+        {
+          orient: "left",
           label: {
-            formatter: (value: string | number) => String(value),
+            formatMethod: (text: string | string[]) => String(text),
           },
         },
-      },
+      ],
       tooltip: {
         trigger: ["hover", "click"],
       },
@@ -266,22 +275,20 @@ export default function VendedorRelatorioPage() {
       seriesField: "version",
       stack: false,
       padding: [20, 20, 20, 20],
-      axis: {
-        xAxis: {
+      axes: [
+        {
+          orient: "bottom",
           label: {
-            rotate: 45,
-            textAlign: "right",
-            textBaseline: "middle",
-            maxWidth: 120,
-            overflow: "ellipsis",
+            style: xAxisLabelStyle,
           },
         },
-        yAxis: {
+        {
+          orient: "left",
           label: {
-            formatter: (value: string | number) => String(value),
+            formatMethod: (text: string | string[]) => String(text),
           },
         },
-      },
+      ],
       tooltip: {
         trigger: ["hover", "click"],
       },
@@ -349,22 +356,20 @@ export default function VendedorRelatorioPage() {
       seriesField: "id",
       smooth: true,
       padding: [20, 20, 20, 20],
-      axis: {
-        xAxis: {
+      axes: [
+        {
+          orient: "bottom",
           label: {
-            rotate: 45,
-            textAlign: "right",
-            textBaseline: "middle",
-            maxWidth: 120,
-            overflow: "ellipsis",
+            style: xAxisLabelStyle,
           },
         },
-        yAxis: {
+        {
+          orient: "left",
           label: {
-            formatter: (value: string | number) => String(value),
+            formatMethod: (text: string | string[]) => String(text),
           },
         },
-      },
+      ],
       tooltip: {
         trigger: ["hover", "click"],
       },
@@ -404,22 +409,20 @@ export default function VendedorRelatorioPage() {
       seriesField: "classification",
       stack: false,
       padding: [20, 20, 20, 20],
-      axis: {
-        xAxis: {
+      axes: [
+        {
+          orient: "bottom",
           label: {
-            rotate: 45,
-            textAlign: "right",
-            textBaseline: "middle",
-            maxWidth: 120,
-            overflow: "ellipsis",
+            style: xAxisLabelStyle,
           },
         },
-        yAxis: {
+        {
+          orient: "left",
           label: {
-            formatter: (value: string | number) => String(value),
+            formatMethod: (text: string | string[]) => String(text),
           },
         },
-      },
+      ],
       tooltip: {
         trigger: ["hover", "click"],
       },
@@ -465,22 +468,20 @@ export default function VendedorRelatorioPage() {
       seriesField: "store",
       stack: false,
       padding: [20, 20, 20, 20],
-      axis: {
-        xAxis: {
+      axes: [
+        {
+          orient: "bottom",
           label: {
-            rotate: 45,
-            textAlign: "right",
-            textBaseline: "middle",
-            maxWidth: 120,
-            overflow: "ellipsis",
+            style: xAxisLabelStyle,
           },
         },
-        yAxis: {
+        {
+          orient: "left",
           label: {
-            formatter: (value: string | number) => String(value),
+            formatMethod: (text: string | string[]) => String(text),
           },
         },
-      },
+      ],
       tooltip: {
         trigger: ["hover", "click"],
       },
@@ -546,10 +547,21 @@ export default function VendedorRelatorioPage() {
 
   if (error) {
     return (
-      <section className="p-8 text-center">
-        <p className="text-base text-red-600">
-          Erro ao carregar dados: {error}
-        </p>
+      <section className="space-y-6 py-6">
+        <div className="flex flex-col gap-2 rounded-3xl border border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">Relatórios</p>
+            <h2 className="text-lg font-semibold">Análise de Vendedores</h2>
+          </div>
+        </div>
+
+        <ReportErrorCard
+          label="Falha ao carregar os dados"
+          title="Não conseguimos mostrar a análise de vendedores agora"
+          message={error}
+          onRetry={() => void refresh()}
+          isRetrying={isRefreshing}
+        />
       </section>
     );
   }
@@ -700,14 +712,17 @@ export default function VendedorRelatorioPage() {
           </div>
           <div className="h-[300px]">
             {chartError && (
-              <div className="mb-2 rounded-md bg-red-50 p-2 text-xs text-red-700">
-                Erro: {chartError}
+              <div className="mb-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                <p className="font-semibold">Falha ao renderizar o gráfico</p>
+                <p className="mt-1">{chartError}</p>
               </div>
             )}
             <VChart
               spec={brandChartSpec}
               onError={(err) =>
-                setChartError(err ? String(err) : "Erro desconhecido")
+                setChartError(
+                  err ? String(err) : "Não foi possível renderizar este gráfico.",
+                )
               }
             />
           </div>
@@ -724,7 +739,9 @@ export default function VendedorRelatorioPage() {
             <VChart
               spec={versionChartSpec}
               onError={(err) =>
-                setChartError(err ? String(err) : "Erro desconhecido")
+                setChartError(
+                  err ? String(err) : "Não foi possível renderizar este gráfico.",
+                )
               }
             />
           </div>
@@ -741,7 +758,9 @@ export default function VendedorRelatorioPage() {
             <VChart
               spec={timeSeriesChartSpec}
               onError={(err) =>
-                setChartError(err ? String(err) : "Erro desconhecido")
+                setChartError(
+                  err ? String(err) : "Não foi possível renderizar este gráfico.",
+                )
               }
             />
           </div>
@@ -760,7 +779,9 @@ export default function VendedorRelatorioPage() {
             <VChart
               spec={classificationChartSpec}
               onError={(err) =>
-                setChartError(err ? String(err) : "Erro desconhecido")
+                setChartError(
+                  err ? String(err) : "Não foi possível renderizar este gráfico.",
+                )
               }
             />
           </div>
@@ -775,7 +796,9 @@ export default function VendedorRelatorioPage() {
             <VChart
               spec={storeChartSpec}
               onError={(err) =>
-                setChartError(err ? String(err) : "Erro desconhecido")
+                setChartError(
+                  err ? String(err) : "Não foi possível renderizar este gráfico.",
+                )
               }
             />
           </div>

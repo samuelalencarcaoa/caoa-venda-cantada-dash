@@ -22,6 +22,9 @@ export function useSalesIntentions(
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const startDate = dateRange?.startDate;
+  const endDate = dateRange?.endDate;
+  const tipoVenda = dateRange?.tipoVenda;
 
   const loadItems = useCallback(async (requestOptions?: { silent?: boolean }) => {
     const silent = requestOptions?.silent ?? false;
@@ -35,7 +38,7 @@ export function useSalesIntentions(
     try {
       const data = options?.searchAll
         ? await fetchAllSalesIntentions()
-        : await fetchSalesIntentions(dateRange);
+        : await fetchSalesIntentions({ startDate, endDate, tipoVenda });
       setItems(data);
       setLastUpdatedAt(new Date());
     } catch (err) {
@@ -48,10 +51,10 @@ export function useSalesIntentions(
       }
     }
   }, [
-    dateRange?.endDate,
-    dateRange?.startDate,
-    dateRange?.tipoVenda,
+    endDate,
     options?.searchAll,
+    startDate,
+    tipoVenda,
   ]);
 
   useEffect(() => {

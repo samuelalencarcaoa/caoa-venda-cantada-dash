@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import { ReportErrorCard } from "@/components/report-error-card";
 
 export default function TestRelatoriosPage() {
-  const { items, isLoading, error } = useSalesIntentions();
+  const { items, isLoading, error, refresh, isRefreshing } = useSalesIntentions();
 
   if (isLoading) {
     return (
@@ -32,8 +33,14 @@ export default function TestRelatoriosPage() {
 
   if (error) {
     return (
-      <section className="p-8 text-center">
-        <p className="text-base text-red-600">Erro ao carregar dados: {error}</p>
+      <section className="mx-auto flex min-h-[70vh] w-full max-w-[900px] items-center p-8">
+        <ReportErrorCard
+          label="Falha ao carregar os dados"
+          title="Não conseguimos mostrar a prévia dos relatórios agora"
+          message={error}
+          onRetry={() => void refresh()}
+          isRetrying={isRefreshing}
+        />
       </section>
     );
   }

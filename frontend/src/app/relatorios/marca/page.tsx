@@ -117,6 +117,14 @@ const consolidatedChartColors = [
   "#6366f1",
 ];
 
+const xAxisLabelStyle = {
+  angle: Math.PI / 4,
+  textAlign: "right" as const,
+  textBaseline: "middle" as const,
+  maxLineWidth: 120,
+  ellipsis: "...",
+};
+
 const topTenWithOthers = (items: CountItem[]) => {
   if (items.length <= 10) {
     return items;
@@ -146,22 +154,20 @@ const buildConsolidatedBarChartSpec = (data: CountItem[]): IBarChartSpec => ({
   stack: false,
   padding: [20, 20, 20, 20],
   color: consolidatedChartColors,
-  axis: {
-    xAxis: {
+  axes: [
+    {
+      orient: "bottom",
       label: {
-        rotate: 45,
-        textAlign: "right",
-        textBaseline: "middle",
-        maxWidth: 120,
-        overflow: "ellipsis",
+        style: xAxisLabelStyle,
       },
     },
-    yAxis: {
+    {
+      orient: "left",
       label: {
-        formatter: (value: string | number) => String(value),
+        formatMethod: (text: string | string[]) => String(text),
       },
     },
-  },
+  ],
   tooltip: {
     trigger: ["hover", "click"],
   },
@@ -609,22 +615,20 @@ export default function MarcaVeiculoRelatorioPage() {
       "#3b82f6",
       "#6366f1",
     ],
-    axis: {
-      xAxis: {
+    axes: [
+        {
+          orient: "bottom",
+          label: {
+            style: xAxisLabelStyle,
+          },
+        },
+      {
+        orient: "left",
         label: {
-          rotate: 45,
-          textAlign: "right",
-          textBaseline: "middle",
-          maxWidth: 120,
-          overflow: "ellipsis",
+          formatMethod: (text: string | string[]) => String(text),
         },
       },
-      yAxis: {
-        label: {
-          formatter: (value: string | number) => String(value),
-        },
-      },
-    },
+    ],
     tooltip: {
       trigger: ["hover", "click"],
     },
@@ -1143,8 +1147,9 @@ export default function MarcaVeiculoRelatorioPage() {
 
           <div className="h-[400px] w-full overflow-hidden">
             {chartError && (
-              <div className="mb-2 rounded-md bg-red-50 p-2 text-xs text-red-700">
-                Erro: {chartError}
+              <div className="mb-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                <p className="font-semibold">Falha ao renderizar o gráfico</p>
+                <p className="mt-1">{chartError}</p>
               </div>
             )}
             <VChart
@@ -1153,7 +1158,9 @@ export default function MarcaVeiculoRelatorioPage() {
               onError={(err) => {
                 // eslint-disable-next-line no-console
                 console.error("VChart error:", err);
-                setChartError(err ? String(err) : "Erro desconhecido");
+                setChartError(
+                  err ? String(err) : "Não foi possível renderizar este gráfico.",
+                );
               }}
             />
           </div>

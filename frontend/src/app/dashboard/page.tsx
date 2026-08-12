@@ -1,8 +1,8 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
-  differenceInCalendarDays,
   endOfDay,
   endOfMonth,
   format,
@@ -269,6 +269,78 @@ function DashboardCard({
   );
 }
 
+type PeriodNoDataNotice = {
+  title: string;
+  message: string;
+  chip: string;
+  key: string;
+};
+
+function PeriodNoDataModal({
+  open,
+  notice,
+  onClose,
+  onRefresh,
+}: {
+  open: boolean;
+  notice: PeriodNoDataNotice;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-slate-950/60 px-4 py-6"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        aria-describedby="period-no-data-description"
+        aria-labelledby="period-no-data-title"
+        aria-modal="true"
+        className="w-full max-w-lg rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+            <CircleHelp className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p id="period-no-data-title" className="text-base font-semibold text-slate-900">
+              {notice.title}
+            </p>
+            <p
+              id="period-no-data-description"
+              className="mt-2 text-sm leading-6 text-slate-600"
+            >
+              {notice.message}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onRefresh}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Atualizar agora
+          </Button>
+          <Button type="button" onClick={onClose}>
+            Entendi
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function BrandTotalCard({
   value,
   brand,
@@ -374,6 +446,8 @@ export default function DashboardV2Page() {
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [isNoDataModalOpen, setIsNoDataModalOpen] = useState(false);
+  const [lastAutoOpenedNoticeKey, setLastAutoOpenedNoticeKey] = useState<string | null>(null);
 
   const monthQuickFilters = useMemo(
     () =>
@@ -403,84 +477,6 @@ export default function DashboardV2Page() {
     [referenceDate],
   );
 
-  const {
-    items: sales,
-    isRefreshing,
-    error,
-    lastUpdatedAt,
-    refresh,
-  } = useSalesIntentions(undefined, { searchAll: true });
-
-  const latestAvailableDate = useMemo(() => {
-    return sales.reduce<Date | null>((latest, item) => {
-      const current = parseReportDate(item.Data_solicitacao);
-
-      if (!current) {
-        return latest;
-      }
-
-      if (!latest || current > latest) {
-        return current;
-      }
-
-      return latest;
-    }, null);
-  }, [sales]);
-
-  const hasDataForToday = useMemo(() => {
-    const today = startOfDay(referenceDate).getTime();
-
-    return sales.some((item) => {
-      const current = parseReportDate(item.Data_solicitacao);
-      return current ? startOfDay(current).getTime() === today : false;
-    });
-  }, [referenceDate, sales]);
-
-  const latestAvailableDayOffset = useMemo(() => {
-    if (!latestAvailableDate) {
-      return null;
-    }
-
-    const offset = differenceInCalendarDays(
-      startOfDay(referenceDate),
-      startOfDay(latestAvailableDate),
-    );
-
-    return Math.max(0, offset);
-  }, [latestAvailableDate, referenceDate]);
-
-  const isTodayFallbackActive =
-    period === "dia" &&
-    !hasDataForToday &&
-    latestAvailableDayOffset !== null &&
-    latestAvailableDayOffset > 0 &&
-    selectedDayOffset === latestAvailableDayOffset;
-
-  useEffect(() => {
-    if (period !== "dia") {
-      return;
-    }
-
-    if (selectedDayOffset !== 0) {
-      return;
-    }
-
-    if (hasDataForToday) {
-      return;
-    }
-
-    if (!latestAvailableDayOffset || latestAvailableDayOffset === 0) {
-      return;
-    }
-
-    setSelectedDayOffset(latestAvailableDayOffset);
-  }, [
-    hasDataForToday,
-    latestAvailableDayOffset,
-    period,
-    selectedDayOffset,
-  ]);
-
   const range = useMemo(() => {
     if (period === "mes") {
       return getMonthRange(referenceDate, selectedMonthOffset);
@@ -500,6 +496,33 @@ export default function DashboardV2Page() {
     startDate,
   ]);
 
+  const salesQuery = useMemo(() => {
+    if (period === "intervalo") {
+      if (!startDate && !endDate) {
+        return undefined;
+      }
+
+      return {
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {})
+      };
+    }
+
+    return {
+      startDate: format(range.start, "yyyy-MM-dd"),
+      endDate: format(range.end, "yyyy-MM-dd")
+    };
+  }, [endDate, period, range.end, range.start, startDate]);
+
+  const {
+    items: sales,
+    isLoading,
+    isRefreshing,
+    error,
+    lastUpdatedAt,
+    refresh,
+  } = useSalesIntentions(salesQuery);
+
   const filteredSales = useMemo(
     () =>
       sales.filter((item) => {
@@ -508,6 +531,74 @@ export default function DashboardV2Page() {
       }),
     [range, sales],
   );
+
+  const periodNoDataNotice = useMemo<PeriodNoDataNotice | null>(() => {
+    if (error || isLoading || isRefreshing || filteredSales.length > 0) {
+      return null;
+    }
+
+    const isTodayView = period === "dia" && selectedDayOffset === 0;
+    const periodLabel =
+      period === "mes"
+        ? capitalizeText(format(range.start, "MMMM 'de' yyyy", { locale: ptBR }))
+        : period === "dia"
+          ? format(range.start, "dd/MM/yyyy", { locale: ptBR })
+          : startDate && endDate
+            ? `${formatInputDateLabel(startDate)} a ${formatInputDateLabel(endDate)}`
+            : startDate
+              ? `a partir de ${formatInputDateLabel(startDate)}`
+              : endDate
+                ? `até ${formatInputDateLabel(endDate)}`
+                : "este período";
+
+    return {
+      title: isTodayView ? "Hoje ainda não tem dados" : "Sem dados para este período",
+      message: isTodayView
+        ? "Não encontramos registros para hoje. Use outro dia, mês ou intervalo para continuar."
+        : `Não encontramos registros para ${periodLabel}. Ajuste as datas ou escolha outro recorte para continuar.`,
+      chip: isTodayView ? "Hoje sem dados" : "Período sem dados",
+      key: `${period}:${range.start.toISOString()}:${range.end.toISOString()}:${startDate || "-"}:${endDate || "-"}:${selectedDayOffset}`,
+    };
+  }, [
+    error,
+    filteredSales.length,
+    isLoading,
+    isRefreshing,
+    period,
+    range.end,
+    range.start,
+    selectedDayOffset,
+    startDate,
+    endDate,
+  ]);
+
+  useEffect(() => {
+    if (!periodNoDataNotice) {
+      setIsNoDataModalOpen(false);
+      setLastAutoOpenedNoticeKey(null);
+      return;
+    }
+
+    if (lastAutoOpenedNoticeKey === periodNoDataNotice.key) {
+      return;
+    }
+
+    setIsNoDataModalOpen(true);
+    setLastAutoOpenedNoticeKey(periodNoDataNotice.key);
+  }, [lastAutoOpenedNoticeKey, periodNoDataNotice]);
+
+  useEffect(() => {
+    if (!isNoDataModalOpen) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isNoDataModalOpen]);
 
   const activePeriodText = useMemo(() => {
     if (period === "mes") {
@@ -537,13 +628,7 @@ export default function DashboardV2Page() {
     return "Período ativo: intervalo livre";
   }, [endDate, period, range.start, selectedDayOffset, startDate]);
 
-  const fallbackNotice = useMemo(() => {
-    if (!isTodayFallbackActive || !latestAvailableDate) {
-      return null;
-    }
-
-    return `Hoje sem dados, usando ${format(latestAvailableDate, "dd/MM/yyyy", { locale: ptBR })}`;
-  }, [isTodayFallbackActive, latestAvailableDate]);
+  const fallbackNotice = periodNoDataNotice?.chip ?? null;
 
   const novosSales = useMemo(
     () =>
@@ -804,12 +889,31 @@ export default function DashboardV2Page() {
           </div>
         </section>
 
-        {error && (
+        {periodNoDataNotice ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{periodNoDataNotice.title}</p>
+                <p className="mt-1 text-sm leading-6 text-amber-800">
+                  {periodNoDataNotice.message}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNoDataModalOpen(true)}
+                className="shrink-0 border-amber-200 bg-white text-amber-900 hover:bg-amber-50 hover:text-amber-950"
+              >
+                Ver detalhes
+              </Button>
+            </div>
+          </div>
+        ) : error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
             Não conseguimos carregar os dados agora. Tente atualizar e, se o
             problema continuar, volte em alguns instantes.
           </div>
-        )}
+        ) : null}
 
         <section className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -891,6 +995,15 @@ export default function DashboardV2Page() {
             className="mt-1"
           />
         </section>
+
+        {periodNoDataNotice ? (
+          <PeriodNoDataModal
+            open={isNoDataModalOpen}
+            notice={periodNoDataNotice}
+            onClose={() => setIsNoDataModalOpen(false)}
+            onRefresh={() => void refresh({ silent: true })}
+          />
+        ) : null}
       </div>
     </main>
   );

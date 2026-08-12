@@ -252,7 +252,10 @@ export function SalesIntentionDataList({
       setAlertModal({
         open: true,
         title: "Erro ao salvar",
-        message: "Não foi possível salvar a edição. Tente novamente.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível salvar a edição. Tente novamente.",
       });
     } finally {
       setIsSaving(false);
