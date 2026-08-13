@@ -716,7 +716,7 @@ export default function SalesIntentionForm() {
     ]
   );
 
-  const lojaTooltipText = formData.bandeira
+  const lojaVendaTooltipText = formData.bandeira
     ? 'As lojas são filtradas pela bandeira selecionada.'
     : 'Escolha a bandeira para liberar as lojas.';
   const regionalTooltipText = formData.lojaVenda
@@ -1031,8 +1031,8 @@ export default function SalesIntentionForm() {
         <div className="grid gap-3 sm:gap-4 xl:col-span-4">
           <label className={labelClasses}>
             <FieldLabelWithTooltip
-              label="Loja de venda"
-              tooltip={lojaTooltipText}
+              label="Regional"
+              tooltip={lojaVendaTooltipText}
               badge="Depende da bandeira"
               badgeTone="dependency"
             />
@@ -1044,7 +1044,7 @@ export default function SalesIntentionForm() {
               disabled={isLoading || isOptionsLoading || !formData.bandeira}
             >
               <option value="">
-                {formData.bandeira ? 'Escolha a loja' : 'Escolha a bandeira primeiro'}
+                {formData.bandeira ? 'Escolha a loja de venda' : 'Escolha a bandeira primeiro'}
               </option>
               {filteredOptions.lojaVenda.map((value) => (
                 <option key={value} value={value}>
@@ -1058,9 +1058,9 @@ export default function SalesIntentionForm() {
 
         <div className="grid gap-3 sm:gap-4 xl:col-span-5">
           <SearchableField
-            label="Regional"
+            label="Loja de Venda"
             tooltip={regionalTooltipText}
-            badge="Depende da loja"
+            badge="Depende da Regional"
             badgeTone="dependency"
             value={formData.regional}
             options={filteredOptions.regional}

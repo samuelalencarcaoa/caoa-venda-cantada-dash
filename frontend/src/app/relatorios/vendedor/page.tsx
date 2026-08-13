@@ -16,6 +16,21 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import {
+  themedInputClass,
+  themedTextBodyClass,
+  themedTextMutedClass,
+  themedTextTitleClass,
+} from "@/lib/theme-classes";
+import { cn } from "@/lib/utils";
+
+const xAxisLabelStyle = {
+  angle: Math.PI / 4,
+  textAlign: "right" as const,
+  textBaseline: "middle" as const,
+  maxLineWidth: 120,
+  ellipsis: "...",
+};
 
 export default function VendedorRelatorioPage() {
   const {
@@ -79,14 +94,6 @@ const sortUniqueOptions = (values: Array<string | null | undefined>) =>
           .filter((value) => value && value !== "Todos"),
     ),
   ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
-
-const xAxisLabelStyle = {
-  angle: Math.PI / 4,
-  textAlign: "right" as const,
-  textBaseline: "middle" as const,
-  maxLineWidth: 120,
-  ellipsis: "...",
-};
 
   // Get unique vendors sorted by total quantity
   const vendorOptions = useMemo(() => {
@@ -551,7 +558,7 @@ const xAxisLabelStyle = {
         <div className="flex flex-col gap-2 rounded-3xl border border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs text-muted-foreground">Relatórios</p>
-            <h2 className="text-lg font-semibold">Análise de Vendedores</h2>
+            <h2 className={cn("text-lg font-semibold", themedTextTitleClass)}>Análise de Vendedores</h2>
           </div>
         </div>
 
@@ -605,7 +612,7 @@ const xAxisLabelStyle = {
       <div className="flex flex-col gap-2 rounded-3xl border border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs text-muted-foreground">Relatórios</p>
-          <h2 className="text-lg font-semibold">Análise de Vendedores</h2>
+          <h2 className={cn("text-lg font-semibold", themedTextTitleClass)}>Análise de Vendedores</h2>
         </div>
         
       </div>
@@ -614,7 +621,7 @@ const xAxisLabelStyle = {
         <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs text-muted-foreground">Filtros</p>
-            <h2 className="text-base font-semibold">Vendedor e Período</h2>
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Vendedor e Período</h2>
           </div>
         </div>
 
@@ -625,12 +632,12 @@ const xAxisLabelStyle = {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="mt-3 flex h-[42px] w-full items-center justify-between rounded-lg border border-border bg-background px-3 text-xs text-left text-slate-900 outline-none transition hover:border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  className={cn("mt-3 flex h-[42px] w-full items-center justify-between rounded-lg border px-3 text-xs text-left outline-none transition focus:ring-2", themedInputClass)}
                 >
                   <span className="truncate">
                     {selectedVendor.includes("Todos") ? "Todos" : getFilterSummary(selectedVendor)}
                   </span>
-                  <span className="text-slate-400">▾</span>
+                  <span className={themedTextMutedClass}>▾</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="mt-2 max-h-[260px] w-full overflow-y-auto p-2">
@@ -664,7 +671,7 @@ const xAxisLabelStyle = {
             <input
               type="date"
               max={endDate || undefined}
-              className="w-full rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className={cn("w-full rounded-lg border px-1.5 py-0.5 text-xs outline-none transition focus:ring-2", themedInputClass)}
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
             />
@@ -675,7 +682,7 @@ const xAxisLabelStyle = {
             <input
               type="date"
               min={startDate || undefined}
-              className="w-full rounded-lg border border-border bg-background px-1.5 py-0.5 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className={cn("w-full rounded-lg border px-1.5 py-0.5 text-xs outline-none transition focus:ring-2", themedInputClass)}
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
             />
@@ -705,14 +712,14 @@ const xAxisLabelStyle = {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
           <div className="mb-3">
-            <h2 className="text-base font-semibold">Marcas com mais Intenções de Vendas</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Marcas com mais Intenções de Vendas</h2>
+            <p className={cn("text-xs", themedTextBodyClass)}>
               Top marcas do vendedor selecionado
             </p>
           </div>
           <div className="h-[300px]">
             {chartError && (
-              <div className="mb-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+              <div className="mb-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-50">
                 <p className="font-semibold">Falha ao renderizar o gráfico</p>
                 <p className="mt-1">{chartError}</p>
               </div>
@@ -730,8 +737,8 @@ const xAxisLabelStyle = {
 
         <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
           <div className="mb-3">
-            <h2 className="text-base font-semibold">Versões com mais Intenções de Vendas</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Versões com mais Intenções de Vendas</h2>
+            <p className={cn("text-xs", themedTextBodyClass)}>
               Top 10 versões/modelos
             </p>
           </div>
@@ -749,8 +756,8 @@ const xAxisLabelStyle = {
 
         <div className="rounded-3xl border border-border bg-card p-3 shadow-sm lg:col-span-2">
           <div className="mb-3">
-            <h2 className="text-base font-semibold">Evolução de Vendas</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Evolução de Vendas</h2>
+            <p className={cn("text-xs", themedTextBodyClass)}>
               Quantidade de Intenções de Venda ao longo do tempo
             </p>
           </div>
@@ -768,10 +775,10 @@ const xAxisLabelStyle = {
 
         <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
           <div className="mb-3">
-            <h2 className="text-base font-semibold">
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>
               Classificação das Intenções de Vendas
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", themedTextBodyClass)}>
               Distribuição por tipo
             </p>
           </div>
@@ -789,8 +796,8 @@ const xAxisLabelStyle = {
 
         <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
           <div className="mb-3">
-            <h2 className="text-base font-semibold">Lojas/Regiões</h2>
-            <p className="text-xs text-muted-foreground">Top 8 lojas/regiões</p>
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Lojas/Regiões</h2>
+            <p className={cn("text-xs", themedTextBodyClass)}>Top 8 lojas/regiões</p>
           </div>
           <div className="h-[300px]">
             <VChart
@@ -808,8 +815,8 @@ const xAxisLabelStyle = {
       <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-base font-semibold">Ranking de Vendedores</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Ranking de Vendedores</h2>
+            <p className={cn("text-xs", themedTextBodyClass)}>
               Todos os vendedores ordenados por quantidade vendida
             </p>
           </div>

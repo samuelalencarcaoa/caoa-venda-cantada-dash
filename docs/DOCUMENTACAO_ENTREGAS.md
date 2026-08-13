@@ -81,13 +81,13 @@ Projeto Next.js 15 com dashboard e fluxo de autenticação local.
   - Dashboard de intenções de venda.
   - Filtragem por UF, Região, Loja e Vendedor.
   - Gráfico de barras usando `VChart`.
-  - Total de propostas exibido dinamicamente com base no filtro.
+  - Total de Vendas Cantadas exibido dinamicamente com base no filtro.
   - Dados provenientes de `src/data/sales-intention.ts`.
 
 - `/relatorios/marca`
   - Relatório por marca de veículo.
   - Filtros multi-seleção para UF, Região, Loja, Tipo de Venda, Classificação e período de data.
-  - Indicadores de total de propostas, aprovadas e reprovadas.
+  - Indicadores de Total de Vendas Cantadas, aprovadas e reprovadas.
   - Gráfico de barras para as principais marcas.
   - Exportação de dados para Excel via geração de arquivo HTML com `Blob`.
   - Atualização periódica automática e indicador de último refresh.

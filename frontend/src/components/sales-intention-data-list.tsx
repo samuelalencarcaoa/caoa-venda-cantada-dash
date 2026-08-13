@@ -7,6 +7,13 @@ import { AlertTriangle, Check, Pencil, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
+import {
+  themedOutlineButtonClass,
+  themedPanelClass,
+  themedTextBodyClass,
+  themedTextTitleClass,
+  themedTinyLabelClass,
+} from "@/lib/theme-classes";
 import { updateSalesIntention } from "@/lib/salesIntentionApi";
 import { cn } from "@/lib/utils";
 
@@ -292,29 +299,30 @@ export function SalesIntentionDataList({
   return (
     <div
       className={cn(
-        "min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white/92 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.38)] backdrop-blur",
+        "min-w-0 backdrop-blur",
+        themedPanelClass,
         className,
       )}
     >
-      <div className="border-b border-slate-200/80 bg-slate-50/80 px-4 py-4 sm:px-5">
+      <div className="border-b border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-white/10 dark:bg-white/5 sm:px-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-400">
+            <p className={cn(themedTinyLabelClass, "tracking-[0.34em]")}>
               Tabela detalhada
             </p>
-            <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
+            <h2 className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
               Lista de dados
             </h2>
-            <p className="text-sm text-slate-500">
+            <p className={cn("text-sm", themedTextBodyClass)}>
               Exibindo {currentPageItems.length} de {sortedItems.length} registros filtrados
             </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
+            <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
               <span className="font-medium">Itens por página</span>
               <select
-                className="bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                className="bg-transparent text-sm font-semibold text-slate-700 outline-none dark:text-slate-100"
                 value={itemsPerPage}
                 onChange={(event) => setItemsPerPage(Number(event.target.value))}
               >
@@ -325,13 +333,13 @@ export function SalesIntentionDataList({
                 ))}
               </select>
             </label>
-            <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 shadow-sm">
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
               Página {currentPage} de {totalPages}
             </div>
             <Button
               variant="outline"
               onClick={exportToExcel}
-              className="h-10 rounded-full border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+              className={cn("h-10 rounded-full px-4 text-xs font-semibold", themedOutlineButtonClass)}
             >
               Baixar Excel
             </Button>
@@ -341,12 +349,12 @@ export function SalesIntentionDataList({
 
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-xs">
-          <thead className="bg-slate-50/80">
+          <thead className="bg-slate-50/80 dark:bg-white/5">
             <tr>
               {REPORT_COLUMNS.map((key) => (
                 <th
                   key={key}
-                  className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500"
+                  className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500 dark:border-white/10 dark:text-slate-400"
                   aria-sort={
                     sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"
                   }
@@ -362,7 +370,7 @@ export function SalesIntentionDataList({
                       setSortKey(key);
                       setSortDir("asc");
                     }}
-                    className="inline-flex w-full items-center justify-between gap-2 text-left text-slate-500 transition hover:text-slate-900 focus:outline-none"
+                    className="inline-flex w-full items-center justify-between gap-2 text-left text-slate-500 transition hover:text-slate-900 focus:outline-none dark:text-slate-400 dark:hover:text-slate-100"
                     title={`Ordenar por ${key}`}
                   >
                     <span>{key}</span>
@@ -372,12 +380,12 @@ export function SalesIntentionDataList({
                   </button>
                 </th>
               ))}
-              <th className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500">
+              <th className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500 dark:border-white/10 dark:text-slate-400">
                 Ações
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 bg-white">
+          <tbody className="divide-y divide-slate-200 bg-white dark:divide-white/10 dark:bg-slate-950/80">
             {currentPageItems.map((item, rowIndex) => {
               const isEditing = editRowId === item.ID;
 
@@ -387,10 +395,10 @@ export function SalesIntentionDataList({
                   className={cn(
                     "transition-colors duration-500",
                     isEditing
-                      ? "bg-sky-50/80"
+                      ? "bg-sky-50/80 dark:bg-cyan-400/10"
                       : justSavedRowId === item.ID
-                      ? "bg-emerald-50/90"
-                      : "odd:bg-white even:bg-slate-50/40 hover:bg-slate-50/80"
+                      ? "bg-emerald-50/90 dark:bg-emerald-400/10"
+                      : "odd:bg-white even:bg-slate-50/40 hover:bg-slate-50/80 dark:odd:bg-slate-950/70 dark:even:bg-slate-900/40 dark:hover:bg-white/5"
                   )}
                 >
                   {REPORT_COLUMNS.map((key) => {
@@ -401,7 +409,7 @@ export function SalesIntentionDataList({
                     const isQuantityField = key === "Quantidade";
 
                     return (
-                      <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
+                      <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700 dark:border-white/10 dark:text-slate-200">
                         {isEditing && isQuantityField ? (
                           <input
                             type="number"
@@ -413,7 +421,7 @@ export function SalesIntentionDataList({
                                 Quantidade: event.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : isEditing && isDateField ? (
                           <input
@@ -425,7 +433,7 @@ export function SalesIntentionDataList({
                                 Data_solicitacao: event.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : (
                           display
@@ -433,7 +441,7 @@ export function SalesIntentionDataList({
                       </td>
                     );
                   })}
-                  <td className="border-b border-slate-100 px-3 py-2.5 text-slate-700">
+                  <td className="border-b border-slate-100 px-3 py-2.5 text-slate-700 dark:border-white/10 dark:text-slate-200">
                     {isEditing ? (
                       <div className="flex items-center gap-1">
                         <Button
@@ -475,7 +483,7 @@ export function SalesIntentionDataList({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 px-4 py-4 text-xs text-slate-500 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 px-4 py-4 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400 sm:px-5">
         <div>
           {sortedItems.length === 0
             ? "Nenhum registro encontrado."
@@ -484,7 +492,7 @@ export function SalesIntentionDataList({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
           >
@@ -492,7 +500,7 @@ export function SalesIntentionDataList({
           </button>
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
           >
@@ -503,14 +511,14 @@ export function SalesIntentionDataList({
       {confirmModal.open &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-slate-950/60 px-4 py-6">
-            <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-950/90 dark:shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
               <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-rose-100 p-3 text-rose-600">
+                <div className="rounded-2xl bg-rose-100 p-3 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-base font-semibold text-slate-900">Confirmar edição</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className={themedTextTitleClass}>Confirmar edição</p>
+                  <p className={cn("mt-2 text-sm leading-6", themedTextBodyClass)}>
                     {confirmModal.message}
                   </p>
                 </div>
@@ -535,14 +543,14 @@ export function SalesIntentionDataList({
       {alertModal.open &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-slate-950/60 px-4 py-6">
-            <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-950/90 dark:shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
               <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-rose-100 p-3 text-rose-600">
+                <div className="rounded-2xl bg-rose-100 p-3 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-base font-semibold text-slate-900">{alertModal.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className={themedTextTitleClass}>{alertModal.title}</p>
+                  <p className={cn("mt-2 text-sm leading-6", themedTextBodyClass)}>
                     {alertModal.message}
                   </p>
                 </div>
