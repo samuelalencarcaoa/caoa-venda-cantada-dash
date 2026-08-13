@@ -5,9 +5,18 @@ import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec } from "@visactor/vchart";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { format } from "date-fns";
-import { CircleHelp, RefreshCw } from "lucide-react";
+import { ChevronDown, CircleHelp, RefreshCw } from "lucide-react";
 import {
   fetchSalesIntentionCatalogs,
   fetchSalesIntentionModelosDealer,
@@ -29,7 +38,6 @@ import {
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
 import type {
-  SalesIntentionCatalogHierarchyRecord,
   SalesIntentionCatalogResponse,
   SalesIntentionCatalogSources,
   SalesIntentionModelosDealerRecord,
@@ -118,8 +126,6 @@ const emptyCatalogSources: SalesIntentionCatalogSources = {
   classificacao: [],
 };
 
-const emptyCatalogHierarchy: SalesIntentionCatalogHierarchyRecord[] = [];
-
 const emptyModelosDealerSources: SalesIntentionModelosDealerSources = {
   tipoVenda: [],
   marca: [],
@@ -133,24 +139,11 @@ function normalizeValue(value: string) {
   return value.trim().toUpperCase();
 }
 
-function getFilteredOptions(
-  sourceKey: string,
-  filters: Record<string, string>,
-  sourceRows: Array<Record<string, string>>,
-) {
-  return Array.from(
-    new Set(
-      sourceRows
-        .filter((item) =>
-          Object.entries(filters).every(([key, value]) => {
-            if (!value) return true;
-            return normalizeValue(String(item[key] ?? "")) === normalizeValue(value);
-          }),
-        )
-        .map((item) => String(item[sourceKey] ?? "").trim())
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+function matchesSelectedValues(selected: string[], value: string) {
+  return (
+    selected.length === 0 ||
+    selected.some((option) => normalizeValue(option) === normalizeValue(value))
+  );
 }
 
 type CountItem = {
@@ -160,14 +153,20 @@ type CountItem = {
 
 function TooltipIcon({ text }: { text: string }) {
   return (
-    <button
-      type="button"
-      aria-label={text}
-      title={text}
-      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sky-500 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-cyan-300 dark:hover:text-cyan-200"
-    >
-      <CircleHelp className="h-4 w-4" />
-    </button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Ajuda: ${text}`}
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-500/10 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-cyan-300 dark:hover:bg-cyan-300/10 dark:hover:text-cyan-200"
+        >
+          <CircleHelp className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={6} className="w-64 px-3 py-2 text-xs leading-5">
+        {text}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -176,48 +175,79 @@ function FilterSelectCard({
   value,
   options,
   onChange,
-  helperText,
+  tooltip,
   disabled = false,
   formatLabel,
 }: {
   label: string;
-  value: string;
+  value: string[];
   options: string[];
-  onChange: (value: string) => void;
-  helperText?: string;
+  onChange: (value: string[]) => void;
+  tooltip: string;
   disabled?: boolean;
   formatLabel?: (value: string) => string;
 }) {
-  const currentValue = value || "Todos";
-  const displayValue = currentValue === "Todos" ? "Todos" : (formatLabel?.(currentValue) ?? currentValue);
+  const displayValue =
+    value.length === 0
+      ? "Todos"
+      : value.length === 1
+        ? (formatLabel?.(value[0]) ?? value[0])
+        : `${value.length} selecionados`;
+
+  const toggleOption = (option: string, checked: boolean) => {
+    if (checked) {
+      onChange([...new Set([...value, option])]);
+      return;
+    }
+
+    onChange(value.filter((item) => item !== option));
+  };
 
   return (
-    <div className={cn(themedSoftCardClass, "p-4")}>
-      <div className="flex items-center justify-between gap-3">
-        <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>{label}</p>
-        <span className={cn("text-[11px]", themedTextMutedClass)}>{displayValue}</span>
+    <div className={cn(themedSoftCardClass, "min-w-0 rounded-2xl p-2.5")}>
+      <div className="flex items-center gap-1.5">
+        <p className={cn(themedTinyLabelClass, "truncate tracking-[0.18em]")}>{label}</p>
+        <TooltipIcon text={tooltip} />
       </div>
 
-      <select
-        value={currentValue}
-        onChange={(event) => onChange(event.target.value === "Todos" ? "" : event.target.value)}
-        className={cn(
-          "mt-3 h-[58px] w-full rounded-2xl border px-4 text-sm outline-none transition focus:ring-2",
-          themedInputClass,
-        )}
-        disabled={disabled}
-      >
-        <option value="Todos">Todos</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {formatLabel?.(option) ?? option}
-          </option>
-        ))}
-      </select>
-
-      {helperText ? (
-        <p className={cn("mt-2 text-[11px] leading-4", themedTextMutedClass)}>{helperText}</p>
-      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={disabled}>
+          <button
+            type="button"
+            aria-label={`${label}: ${displayValue}`}
+            className={cn(
+              "mt-2 flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+              themedInputClass,
+            )}
+          >
+            <span className="truncate">{displayValue}</span>
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0", themedTextMutedClass)} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          sideOffset={6}
+          className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] min-w-48 overflow-y-auto rounded-xl p-1.5"
+        >
+          <DropdownMenuLabel className="px-2 py-1 text-xs">{label}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            checked={value.length === 0}
+            onCheckedChange={() => onChange([])}
+          >
+            Todos
+          </DropdownMenuCheckboxItem>
+          {options.map((option) => (
+            <DropdownMenuCheckboxItem
+              key={option}
+              checked={value.includes(option)}
+              onCheckedChange={(checked) => toggleOption(option, checked === true)}
+            >
+              {formatLabel?.(option) ?? option}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -353,14 +383,14 @@ export default function MarcaVeiculoRelatorioPage() {
     error,
     refresh,
   } = useSalesIntentions(undefined, { searchAll: true });
-  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string>("");
-  const [selectedBandeira, setSelectedBandeira] = useState<string>("");
-  const [selectedLojaVenda, setSelectedLojaVenda] = useState<string>("");
-  const [selectedRegional, setSelectedRegional] = useState<string>("");
-  const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string>("");
-  const [selectedModelo, setSelectedModelo] = useState<string>("");
-  const [selectedVersao, setSelectedVersao] = useState<string>("");
-  const [selectedClassificacao, setSelectedClassificacao] = useState<string>("");
+  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>([]);
+  const [selectedBandeira, setSelectedBandeira] = useState<string[]>([]);
+  const [selectedLojaVenda, setSelectedLojaVenda] = useState<string[]>([]);
+  const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
+  const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string[]>([]);
+  const [selectedModelo, setSelectedModelo] = useState<string[]>([]);
+  const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
+  const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
   const [isLoading, setIsLoading] = useState(true);
@@ -417,7 +447,6 @@ export default function MarcaVeiculoRelatorioPage() {
   }, []);
 
   const catalogSources = catalogData?.sources ?? emptyCatalogSources;
-  const catalogHierarchy = catalogData?.hierarchy ?? emptyCatalogHierarchy;
   const vehicleCatalogSources = vehicleCatalogData?.sources ?? emptyModelosDealerSources;
   const vehicleCatalogRows = vehicleCatalogData?.combinations ?? emptyVehicleCatalogRows;
   const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
@@ -444,78 +473,40 @@ export default function MarcaVeiculoRelatorioPage() {
   }, [catalogSources.bandeira, enhancedSalesIntention]);
 
   const regionalOptions = useMemo(() => {
-    if (!selectedBandeira || !selectedLojaVenda) {
-      return [];
+    if (catalogSources.regional.length > 0) {
+      return catalogSources.regional;
     }
 
-    return getFilteredOptions(
-      "regional",
-      {
-        bandeira: selectedBandeira,
-        lojaVenda: selectedLojaVenda,
-      },
-      catalogHierarchy,
-    );
-  }, [catalogHierarchy, selectedBandeira, selectedLojaVenda]);
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Regional));
+  }, [catalogSources.regional, enhancedSalesIntention]);
 
   const lojaVendaOptions = useMemo(() => {
-    if (!selectedBandeira) {
-      return [];
+    if (catalogSources.lojaVenda.length > 0) {
+      return catalogSources.lojaVenda;
     }
 
-    return getFilteredOptions(
-      "lojaVenda",
-      {
-        bandeira: selectedBandeira,
-      },
-      catalogHierarchy,
-    );
-  }, [catalogHierarchy, selectedBandeira]);
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Loja_Venda));
+  }, [catalogSources.lojaVenda, enhancedSalesIntention]);
 
   const marcaVeiculoOptions = useMemo(() => {
-    if (!selectedTipoVenda) {
-      return [];
+    if (vehicleCatalogSources.marca.length > 0) {
+      return vehicleCatalogSources.marca;
     }
 
-    return getFilteredOptions(
-      "marca",
-      {
-        tipoVenda: selectedTipoVenda,
-      },
-      vehicleCatalogRows,
-    );
-  }, [selectedTipoVenda, vehicleCatalogRows]);
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Marca_Veiculo || "Sem Marca"));
+  }, [enhancedSalesIntention, vehicleCatalogSources.marca]);
 
   const modeloOptions = useMemo(() => {
-    if (!selectedTipoVenda || !selectedMarcaVeiculo) {
-      return [];
-    }
-
-    return getFilteredOptions(
-      "modelo",
-      {
-        tipoVenda: selectedTipoVenda,
-        marca: selectedMarcaVeiculo,
-      },
-      vehicleCatalogRows,
-    );
-  }, [selectedMarcaVeiculo, selectedTipoVenda, vehicleCatalogRows]);
+    return vehicleCatalogSources.modelo;
+  }, [vehicleCatalogSources.modelo]);
 
   const versaoOptions = useMemo(() => {
-    if (!selectedTipoVenda || !selectedMarcaVeiculo || !selectedModelo) {
-      return [];
+    if (vehicleCatalogSources.versaoModelo.length > 0) {
+      return vehicleCatalogSources.versaoModelo;
     }
 
-    return getFilteredOptions(
-      "versaoModelo",
-      {
-        tipoVenda: selectedTipoVenda,
-        marca: selectedMarcaVeiculo,
-        modelo: selectedModelo,
-      },
-      vehicleCatalogRows,
-    );
-  }, [selectedMarcaVeiculo, selectedModelo, selectedTipoVenda, vehicleCatalogRows]);
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Versao));
+  }, [enhancedSalesIntention, vehicleCatalogSources.versaoModelo]);
 
   const classificacaoOptions = useMemo(() => {
     if (catalogSources.classificacao.length > 0) {
@@ -551,56 +542,15 @@ export default function MarcaVeiculoRelatorioPage() {
     [enhancedSalesIntention, todayInput],
   );
 
-  const handleTipoVendaChange = (value: string) => {
-    setSelectedTipoVenda(value);
-    setSelectedMarcaVeiculo("");
-    setSelectedModelo("");
-    setSelectedVersao("");
-  };
-
-  const handleBandeiraChange = (value: string) => {
-    setSelectedBandeira(value);
-    setSelectedRegional("");
-    setSelectedLojaVenda("");
-  };
-
-  const handleRegionalChange = (value: string) => {
-    setSelectedRegional(value);
-  };
-
-  const handleLojaVendaChange = (value: string) => {
-    setSelectedLojaVenda(value);
-    setSelectedRegional("");
-  };
-
-  const handleMarcaVeiculoChange = (value: string) => {
-    setSelectedMarcaVeiculo(value);
-    setSelectedModelo("");
-    setSelectedVersao("");
-  };
-
-  const handleModeloChange = (value: string) => {
-    setSelectedModelo(value);
-    setSelectedVersao("");
-  };
-
-  const handleVersaoChange = (value: string) => {
-    setSelectedVersao(value);
-  };
-
-  const handleClassificacaoChange = (value: string) => {
-    setSelectedClassificacao(value);
-  };
-
   const clearFilters = () => {
-    setSelectedTipoVenda("");
-    setSelectedBandeira("");
-    setSelectedRegional("");
-    setSelectedLojaVenda("");
-    setSelectedMarcaVeiculo("");
-    setSelectedModelo("");
-    setSelectedVersao("");
-    setSelectedClassificacao("");
+    setSelectedTipoVenda([]);
+    setSelectedBandeira([]);
+    setSelectedRegional([]);
+    setSelectedLojaVenda([]);
+    setSelectedMarcaVeiculo([]);
+    setSelectedModelo([]);
+    setSelectedVersao([]);
+    setSelectedClassificacao([]);
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
     setEndDate(latestAvailableDateInput);
@@ -619,30 +569,30 @@ export default function MarcaVeiculoRelatorioPage() {
         const itemClassificacao = item.Classificacao || "";
         const itemVersao = item.Versao || "";
         const normalizedItemVersao = normalizeValue(itemVersao);
-        const normalizedSelectedVersao = normalizeValue(selectedVersao);
 
-        const matchesVehicleCatalogSelection =
-          !selectedModelo ||
+        const matchesModelo =
+          selectedModelo.length === 0 ||
           vehicleCatalogRows.some(
             (row) =>
-              normalizeValue(row.tipoVenda) === normalizeValue(selectedTipoVenda) &&
-              normalizeValue(row.marca) === normalizeValue(selectedMarcaVeiculo) &&
-              normalizeValue(row.modelo) === normalizeValue(selectedModelo) &&
+              normalizeValue(row.tipoVenda) === normalizeValue(itemTipoVenda) &&
+              normalizeValue(row.marca) === normalizeValue(itemMarcaVeiculo) &&
+              matchesSelectedValues(selectedModelo, row.modelo) &&
               normalizeValue(row.versaoModelo) === normalizedItemVersao,
           );
 
-        const matchesTipoVenda = !selectedTipoVenda || selectedTipoVenda === itemTipoVenda;
-        const matchesBandeira = !selectedBandeira || selectedBandeira === itemBandeira;
-        const matchesRegional = !selectedRegional || selectedRegional === itemRegional;
-        const matchesLojaVenda = !selectedLojaVenda || selectedLojaVenda === itemLojaVenda;
-        const matchesMarcaVeiculo =
-          !selectedMarcaVeiculo || selectedMarcaVeiculo === itemMarcaVeiculo;
-        const matchesModelo = matchesVehicleCatalogSelection;
-        const matchesVersao =
-          !selectedVersao ||
-          (matchesVehicleCatalogSelection && normalizedItemVersao === normalizedSelectedVersao);
-        const matchesClassificacao =
-          !selectedClassificacao || selectedClassificacao === itemClassificacao;
+        const matchesTipoVenda = matchesSelectedValues(selectedTipoVenda, itemTipoVenda);
+        const matchesBandeira = matchesSelectedValues(selectedBandeira, itemBandeira);
+        const matchesRegional = matchesSelectedValues(selectedRegional, itemRegional);
+        const matchesLojaVenda = matchesSelectedValues(selectedLojaVenda, itemLojaVenda);
+        const matchesMarcaVeiculo = matchesSelectedValues(
+          selectedMarcaVeiculo,
+          itemMarcaVeiculo,
+        );
+        const matchesVersao = matchesSelectedValues(selectedVersao, itemVersao);
+        const matchesClassificacao = matchesSelectedValues(
+          selectedClassificacao,
+          itemClassificacao,
+        );
 
         let matchesDateRange = true;
         if (startDate || endDate) {
@@ -1099,37 +1049,33 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <section className={cn(themedPanelClass, "p-6")}>
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <section className={cn(themedPanelClass, "p-4")}>
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className={cn(themedTinyLabelClass, "tracking-[0.34em]")}>
+              <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
                 Filtros
-              </p>
-              <h2 className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
-                Refine a visualização por marca
               </h2>
+              <p className={cn("text-xs", themedTextMutedClass)}>
+                Combine uma ou mais opções em qualquer campo.
+              </p>
             </div>
             <Button
               type="button"
               variant="outline"
               onClick={clearFilters}
-              className={cn("h-10 shrink-0 rounded-full px-4 text-xs font-semibold", themedOutlineButtonClass)}
+              className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-semibold", themedOutlineButtonClass)}
             >
               Limpar filtros
             </Button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <FilterSelectCard
               label="Tipo de venda"
               value={selectedTipoVenda}
               options={tipoVendaOptions}
-              onChange={handleTipoVendaChange}
-              helperText={
-                selectedTipoVenda
-                  ? "Filtro aplicado por tipo de venda."
-                  : "Escolha o tipo de venda primeiro."
-              }
+              onChange={setSelectedTipoVenda}
+              tooltip="Filtro aplicado por tipo de venda."
               disabled={isOptionsLoading}
               formatLabel={formatTipoVendaLabel}
             />
@@ -1137,92 +1083,69 @@ export default function MarcaVeiculoRelatorioPage() {
               label="Bandeira"
               value={selectedBandeira}
               options={bandeiraOptions}
-              onChange={handleBandeiraChange}
-              helperText="Escolha a bandeira para liberar as próximas opções."
+              onChange={setSelectedBandeira}
+              tooltip="Filtro aplicado por bandeira."
               disabled={isOptionsLoading}
             />
             <FilterSelectCard
               label="Regional"
-              value={selectedLojaVenda}
-              options={lojaVendaOptions}
-              onChange={handleLojaVendaChange}
-              helperText={
-                selectedBandeira
-                  ? "As opções seguem a bandeira selecionada."
-                  : "Escolha a bandeira primeiro."
-              }
-              disabled={isOptionsLoading || !selectedBandeira}
+              value={selectedRegional}
+              options={regionalOptions}
+              onChange={setSelectedRegional}
+              tooltip="Filtro aplicado por regional."
+              disabled={isOptionsLoading}
             />
             <FilterSelectCard
               label="Loja de Venda"
-              value={selectedRegional}
-              options={regionalOptions}
-              onChange={handleRegionalChange}
-              helperText={
-                selectedLojaVenda
-                  ? "As opções seguem a loja de venda selecionada."
-                  : "Escolha a loja de venda primeiro."
-              }
-              disabled={isOptionsLoading || !selectedLojaVenda}
+              value={selectedLojaVenda}
+              options={lojaVendaOptions}
+              onChange={setSelectedLojaVenda}
+              tooltip="Filtro aplicado por loja de venda."
+              disabled={isOptionsLoading}
             />
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <FilterSelectCard
               label="Marca veículo"
               value={selectedMarcaVeiculo}
               options={marcaVeiculoOptions}
-              onChange={handleMarcaVeiculoChange}
-              helperText={
-                selectedTipoVenda
-                  ? "As marcas são filtradas pelo tipo de venda."
-                  : "Escolha o tipo de venda primeiro."
-              }
-              disabled={isOptionsLoading || !selectedTipoVenda}
+              onChange={setSelectedMarcaVeiculo}
+              tooltip="Filtro aplicado por marca do veículo."
+              disabled={isOptionsLoading}
             />
             <FilterSelectCard
               label="Modelo"
               value={selectedModelo}
               options={modeloOptions}
-              onChange={handleModeloChange}
-              helperText={
-                selectedMarcaVeiculo
-                  ? "Os modelos seguem a marca selecionada."
-                  : "Escolha a marca primeiro."
-              }
-              disabled={isOptionsLoading || !selectedMarcaVeiculo}
+              onChange={setSelectedModelo}
+              tooltip="Filtro aplicado por modelo."
+              disabled={isOptionsLoading}
             />
             <FilterSelectCard
               label="Versão"
               value={selectedVersao}
               options={versaoOptions}
-              onChange={handleVersaoChange}
-              helperText={
-                selectedModelo
-                  ? "As versões seguem o modelo selecionado."
-                  : "Escolha o modelo primeiro."
-              }
-              disabled={isOptionsLoading || !selectedModelo}
+              onChange={setSelectedVersao}
+              tooltip="Filtro aplicado por versão."
+              disabled={isOptionsLoading}
             />
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
             <FilterSelectCard
               label="Classificação"
               value={selectedClassificacao}
               options={classificacaoOptions}
-              onChange={handleClassificacaoChange}
-              helperText="Escolha a classificação."
+              onChange={setSelectedClassificacao}
+              tooltip="Filtro aplicado por classificação."
               disabled={isOptionsLoading}
             />
 
-            <div className={cn(themedSoftCardClass, "p-4")}>
-              <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Período</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="space-y-2">
+            <div className={cn(themedSoftCardClass, "rounded-2xl p-2.5 sm:col-span-2")}>
+              <div className="flex items-center gap-1.5">
+                <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Período</p>
+                <TooltipIcon text="Filtro aplicado por período da solicitação." />
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="min-w-0">
                   <span
                     className={cn(
-                      "block text-[11px] font-semibold uppercase tracking-[0.24em]",
+                      "sr-only",
                       themedTextMutedClass,
                     )}
                   >
@@ -1232,17 +1155,17 @@ export default function MarcaVeiculoRelatorioPage() {
                     type="date"
                     max={endDate || undefined}
                     className={cn(
-                      "w-full rounded-2xl border px-3 py-3 text-sm outline-none transition focus:ring-2",
+                      "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
                       themedInputClass,
                     )}
                     value={startDate}
                     onChange={(event) => handleStartDateChange(event.target.value)}
                   />
                 </label>
-                <label className="space-y-2">
+                <label className="min-w-0">
                   <span
                     className={cn(
-                      "block text-[11px] font-semibold uppercase tracking-[0.24em]",
+                      "sr-only",
                       themedTextMutedClass,
                     )}
                   >
@@ -1252,7 +1175,7 @@ export default function MarcaVeiculoRelatorioPage() {
                     type="date"
                     min={startDate || undefined}
                     className={cn(
-                      "w-full rounded-2xl border px-3 py-3 text-sm outline-none transition focus:ring-2",
+                      "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
                       themedInputClass,
                     )}
                     value={endDate}

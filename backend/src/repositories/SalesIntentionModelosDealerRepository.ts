@@ -22,6 +22,12 @@ const MODELOS_DEALER_SQL = `
   ORDER BY [Tipo_Venda], [Marca], [Modelo], [Versao_Modelo]
 `;
 
+const MODELOS_DEALER_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let cachedBundle: SalesIntentionModelosDealerBundle | null = null;
+let cachedBundleExpiresAt = 0;
+let inFlightBundle: Promise<SalesIntentionModelosDealerBundle> | null = null;
+
 function normalizeLookupKey(value: string) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
@@ -112,25 +118,54 @@ function normalizeRows(rows: SalesIntentionModelosDealerRow[]): SalesIntentionMo
     );
 }
 
+function buildBundle(rows: SalesIntentionModelosDealerRecord[]): SalesIntentionModelosDealerBundle {
+  return {
+    version: 1,
+    sources: {
+      tipoVenda: normalizeDistinctValues(rows, 'tipoVenda'),
+      marca: normalizeDistinctValues(rows, 'marca'),
+      modelo: normalizeDistinctValues(rows, 'modelo'),
+      versaoModelo: normalizeDistinctValues(rows, 'versaoModelo')
+    },
+    combinations: rows
+  };
+}
+
 async function loadRows() {
-  const rows = await prisma.$queryRawUnsafe<SalesIntentionModelosDealerRow[]>(MODELOS_DEALER_SQL);
-  return normalizeRows(rows);
+  const now = Date.now();
+  if (cachedBundle && now < cachedBundleExpiresAt) {
+    return cachedBundle;
+  }
+
+  if (inFlightBundle) {
+    return inFlightBundle;
+  }
+
+  inFlightBundle = (async () => {
+    const rows = await prisma.$queryRawUnsafe<SalesIntentionModelosDealerRow[]>(MODELOS_DEALER_SQL);
+    const combinations = normalizeRows(rows);
+    const bundle = buildBundle(combinations);
+
+    cachedBundle = bundle;
+    cachedBundleExpiresAt = Date.now() + MODELOS_DEALER_CACHE_TTL_MS;
+
+    return bundle;
+  })().finally(() => {
+    inFlightBundle = null;
+  });
+
+  return inFlightBundle;
+}
+
+export function invalidateSalesIntentionModelosDealerCache() {
+  cachedBundle = null;
+  cachedBundleExpiresAt = 0;
+  inFlightBundle = null;
 }
 
 export class SalesIntentionModelosDealerRepository {
   public async findAll(): Promise<SalesIntentionModelosDealerBundle> {
-    const combinations = await loadRows();
-
-    return {
-      version: 1,
-      sources: {
-        tipoVenda: normalizeDistinctValues(combinations, 'tipoVenda'),
-        marca: normalizeDistinctValues(combinations, 'marca'),
-        modelo: normalizeDistinctValues(combinations, 'modelo'),
-        versaoModelo: normalizeDistinctValues(combinations, 'versaoModelo')
-      },
-      combinations
-    };
+    return loadRows();
   }
 
   public async findByPlaca(placa: string): Promise<SalesIntentionModelosDealerLookupRecord | null> {

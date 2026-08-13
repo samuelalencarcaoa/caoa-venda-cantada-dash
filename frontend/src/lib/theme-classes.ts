@@ -19,6 +19,8 @@ export const themedTextBodyClass = "text-slate-600 dark:text-slate-400";
 
 export const themedTextMutedClass = "text-slate-500 dark:text-slate-400";
 
+export const themedTextTitleClass = "text-slate-900 dark:text-slate-100";
+
 export const themedTextStrongClass = "text-slate-700 dark:text-slate-200";
 
 export const themedTinyLabelClass =

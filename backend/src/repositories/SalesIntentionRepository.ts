@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { parseOptionalYear, SalesIntention, SalesIntentionPayload } from '../entities/SalesIntention';
 import { getCurrentMonthDateRange } from '../utils/dateRange';
 import { buildSalesIntentionCombination } from '../utils/salesIntentionCatalog';
+import { invalidateSalesIntentionCatalogCache } from './SalesIntentionCatalogRepository';
 
 const salesIntentionListSelect = {
   id: true,
@@ -153,6 +154,8 @@ export class SalesIntentionRepository {
       })
     ]);
 
+    invalidateSalesIntentionCatalogCache();
+
     return record;
   }
 
@@ -207,6 +210,8 @@ export class SalesIntentionRepository {
         create: catalogData,
         update: {}
       });
+
+      invalidateSalesIntentionCatalogCache();
     }
 
     return record;

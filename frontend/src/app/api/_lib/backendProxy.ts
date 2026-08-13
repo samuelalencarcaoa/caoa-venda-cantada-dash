@@ -1,6 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const REQUEST_TIMEOUT_MS = 10000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30000;
+
+function getRequestTimeoutMs() {
+  const configuredValue = Number(process.env.BACKEND_REQUEST_TIMEOUT_MS);
+
+  return Number.isFinite(configuredValue) && configuredValue >= 1000
+    ? configuredValue
+    : DEFAULT_REQUEST_TIMEOUT_MS;
+}
 
 function normalizeBaseUrl(value: string | undefined) {
   const trimmed = value?.trim();
@@ -31,12 +39,7 @@ async function forwardResponse(response: Response) {
   }
 
   const contentType = response.headers.get('content-type') ?? '';
-  if (contentType.includes('application/json')) {
-    return NextResponse.json(await response.json(), { status: response.status });
-  }
-
-  const body = await response.text();
-  return new NextResponse(body, {
+  return new NextResponse(response.body, {
     status: response.status,
     headers: contentType
       ? { 'content-type': contentType }
@@ -61,7 +64,7 @@ export async function proxyBackendRequest(
 
   for (const baseUrl of baseUrls) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), getRequestTimeoutMs());
 
     try {
       const response = await fetch(`${baseUrl}${path}`, {

@@ -6,93 +6,14 @@ import {
   type SalesIntentionCatalogSources
 } from '../entities/SalesIntentionCatalog';
 
-type DistinctValueRow = {
-  value: string | null;
-};
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
-type HierarchyRow = {
-  bandeira: string | null;
-  regional: string | null;
-  lojaVenda: string | null;
-};
-
-const TYPE_VENDA_SQL = `
-  SELECT DISTINCT
-    NULLIF(LTRIM(RTRIM(CAST([Descricao_TipoVenda] AS NVARCHAR(200)))), '') AS [value]
-  FROM [dbo].[VW_IntencaoVendas_TipoVenda]
-  WHERE NULLIF(LTRIM(RTRIM(CAST([Descricao_TipoVenda] AS NVARCHAR(200)))), '') IS NOT NULL
-  ORDER BY [value]
-`;
-
-const BANDEIRA_REGIONAL_LOJA_SQL = `
-  SELECT DISTINCT
-    NULLIF(LTRIM(RTRIM(CAST([Empresa_MarcaDescricao] AS NVARCHAR(200)))), '') AS [bandeira],
-    NULLIF(LTRIM(RTRIM(CAST([Empresa_NomeFantasia] AS NVARCHAR(200)))), '') AS [regional],
-    NULLIF(LTRIM(RTRIM(CAST([Regional_Vendas] AS NVARCHAR(200)))), '') AS [lojaVenda]
-  FROM [salesdb].[dbo].[VW_IntencaoVendas_Empresa]
-  WHERE
-    NULLIF(LTRIM(RTRIM(CAST([Empresa_MarcaDescricao] AS NVARCHAR(200)))), '') IS NOT NULL
-    AND NULLIF(LTRIM(RTRIM(CAST([Empresa_NomeFantasia] AS NVARCHAR(200)))), '') IS NOT NULL
-    AND NULLIF(LTRIM(RTRIM(CAST([Regional_Vendas] AS NVARCHAR(200)))), '') IS NOT NULL
-  ORDER BY [bandeira], [regional], [lojaVenda]
-`;
-
-const CLASSIFICACAO_SQL = `
-  SELECT DISTINCT
-    NULLIF(LTRIM(RTRIM(CAST([Descricao_Classificacao_Venda] AS NVARCHAR(200)))), '') AS [value]
-  FROM [dbo].[VW_IntencaoVendas_ClassificacaoVenda]
-  WHERE NULLIF(LTRIM(RTRIM(CAST([Descricao_Classificacao_Venda] AS NVARCHAR(200)))), '') IS NOT NULL
-  ORDER BY [value]
-`;
+let cachedBundle: SalesIntentionCatalogBundle | null = null;
+let cachedBundleExpiresAt = 0;
+let inFlightBundle: Promise<SalesIntentionCatalogBundle> | null = null;
 
 function compare(a: string, b: string): number {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
-}
-
-function normalizeDistinctValues(rows: DistinctValueRow[]) {
-  return Array.from(
-    new Set(
-      rows
-        .map((row) => row.value?.trim())
-        .filter((value): value is string => Boolean(value))
-    )
-  ).sort(compare);
-}
-
-async function loadDistinctValues(sql: string) {
-  const rows = await prisma.$queryRawUnsafe<DistinctValueRow[]>(sql);
-  return normalizeDistinctValues(rows);
-}
-
-function normalizeHierarchyRows(rows: HierarchyRow[]): SalesIntentionCatalogHierarchyRecord[] {
-  return rows
-    .map((row) => ({
-      bandeira: row.bandeira?.trim() ?? '',
-      regional: row.regional?.trim() ?? '',
-      lojaVenda: row.lojaVenda?.trim() ?? ''
-    }))
-    .filter(
-      (row): row is SalesIntentionCatalogHierarchyRecord =>
-        Boolean(row.bandeira && row.regional && row.lojaVenda)
-    )
-    .sort(
-      (a, b) =>
-        compare(a.bandeira, b.bandeira) ||
-        compare(a.regional, b.regional) ||
-        compare(a.lojaVenda, b.lojaVenda)
-    );
-}
-
-async function loadHierarchyRows(sql: string) {
-  const rows = await prisma.$queryRawUnsafe<HierarchyRow[]>(sql);
-  return normalizeHierarchyRows(rows);
-}
-
-function distinctHierarchyValues(
-  rows: SalesIntentionCatalogHierarchyRecord[],
-  key: keyof SalesIntentionCatalogHierarchyRecord
-) {
-  return Array.from(new Set(rows.map((row) => row[key].trim()).filter(Boolean))).sort(compare);
 }
 
 function normalizeCombinationRows(rows: SalesIntentionCatalogRecord[]) {
@@ -118,22 +39,78 @@ function normalizeCombinationRows(rows: SalesIntentionCatalogRecord[]) {
     );
 }
 
-export class SalesIntentionCatalogRepository {
-  private findSources(
-    hierarchy: SalesIntentionCatalogHierarchyRecord[],
-    tipoVenda: string[],
-    classificacao: string[]
-  ): SalesIntentionCatalogSources {
-    return {
-      tipoVenda,
-      bandeira: distinctHierarchyValues(hierarchy, 'bandeira'),
-      regional: distinctHierarchyValues(hierarchy, 'regional'),
-      lojaVenda: distinctHierarchyValues(hierarchy, 'lojaVenda'),
-      classificacao
+function distinctValues<T extends Record<string, string>>(rows: T[], key: keyof T) {
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => row[key].trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  ).sort(compare);
+}
+
+function normalizeHierarchyRows(
+  rows: SalesIntentionCatalogRecord[]
+): SalesIntentionCatalogHierarchyRecord[] {
+  const uniqueHierarchy = new Map<string, SalesIntentionCatalogHierarchyRecord>();
+
+  for (const row of rows) {
+    const hierarchyRow = {
+      bandeira: row.bandeira.trim(),
+      regional: row.regional.trim(),
+      lojaVenda: row.lojaVenda.trim()
     };
+
+    if (!hierarchyRow.bandeira || !hierarchyRow.regional || !hierarchyRow.lojaVenda) {
+      continue;
+    }
+
+    uniqueHierarchy.set(
+      `${hierarchyRow.bandeira}||${hierarchyRow.regional}||${hierarchyRow.lojaVenda}`,
+      hierarchyRow
+    );
   }
 
-  private async findCombinations(): Promise<SalesIntentionCatalogRecord[]> {
+  return Array.from(uniqueHierarchy.values()).sort(
+    (a, b) =>
+      compare(a.bandeira, b.bandeira) ||
+      compare(a.regional, b.regional) ||
+      compare(a.lojaVenda, b.lojaVenda)
+  );
+}
+
+function buildSources(combinations: SalesIntentionCatalogRecord[]): SalesIntentionCatalogSources {
+  return {
+    tipoVenda: distinctValues(combinations, 'tipoVenda'),
+    bandeira: distinctValues(combinations, 'bandeira'),
+    regional: distinctValues(combinations, 'regional'),
+    lojaVenda: distinctValues(combinations, 'lojaVenda'),
+    classificacao: distinctValues(combinations, 'classificacao')
+  };
+}
+
+function buildCatalogBundle(
+  combinations: SalesIntentionCatalogRecord[]
+): SalesIntentionCatalogBundle {
+  return {
+    version: 3,
+    sources: buildSources(combinations),
+    hierarchy: normalizeHierarchyRows(combinations),
+    combinations
+  };
+}
+
+async function loadBundle(): Promise<SalesIntentionCatalogBundle> {
+  const now = Date.now();
+  if (cachedBundle && now < cachedBundleExpiresAt) {
+    return cachedBundle;
+  }
+
+  if (inFlightBundle) {
+    return inFlightBundle;
+  }
+
+  inFlightBundle = (async () => {
     const rows = await prisma.salesIntentionOptionCombination.findMany({
       select: {
         tipoVenda: true,
@@ -146,22 +123,28 @@ export class SalesIntentionCatalogRepository {
       }
     });
 
-    return normalizeCombinationRows(rows);
-  }
+    const combinations = normalizeCombinationRows(rows);
+    const bundle = buildCatalogBundle(combinations);
 
+    cachedBundle = bundle;
+    cachedBundleExpiresAt = Date.now() + CATALOG_CACHE_TTL_MS;
+
+    return bundle;
+  })().finally(() => {
+    inFlightBundle = null;
+  });
+
+  return inFlightBundle;
+}
+
+export function invalidateSalesIntentionCatalogCache() {
+  cachedBundle = null;
+  cachedBundleExpiresAt = 0;
+  inFlightBundle = null;
+}
+
+export class SalesIntentionCatalogRepository {
   public async findAll(): Promise<SalesIntentionCatalogBundle> {
-    const [tipoVenda, hierarchy, classificacao, combinations] = await Promise.all([
-      loadDistinctValues(TYPE_VENDA_SQL),
-      loadHierarchyRows(BANDEIRA_REGIONAL_LOJA_SQL),
-      loadDistinctValues(CLASSIFICACAO_SQL),
-      this.findCombinations()
-    ]);
-
-    return {
-      version: 3,
-      sources: this.findSources(hierarchy, tipoVenda, classificacao),
-      hierarchy,
-      combinations
-    };
+    return loadBundle();
   }
 }
