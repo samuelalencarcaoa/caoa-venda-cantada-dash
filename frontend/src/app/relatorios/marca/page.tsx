@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { VChart } from "@visactor/react-vchart";
-import type { IBarChartSpec } from "@visactor/vchart";
+import type { ILineChartSpec } from "@visactor/vchart";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
   fetchSalesIntentionModelosDealer,
 } from "@/lib/salesIntentionApi";
 import {
+  themedBadgeClass,
   themedCardClass,
   themedChipClass,
   themedHeroClass,
@@ -33,6 +34,7 @@ import {
   themedSoftCardClass,
   themedTextBodyClass,
   themedTextMutedClass,
+  themedTextStrongClass,
   themedTextTitleClass,
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
@@ -146,11 +148,6 @@ function matchesSelectedValues(selected: string[], value: string) {
   );
 }
 
-type CountItem = {
-  label: string;
-  value: number;
-};
-
 function TooltipIcon({ text }: { text: string }) {
   return (
     <Popover>
@@ -252,126 +249,291 @@ function FilterSelectCard({
   );
 }
 
-const consolidatedChartColors = [
-  "#38bdf8",
-  "#60a5fa",
-  "#818cf8",
-  "#a78bfa",
-  "#f472b6",
-  "#fb7185",
-  "#f97316",
-  "#f59e0b",
-  "#a3e635",
-  "#4ade80",
-  "#22c55e",
-  "#14b8a6",
-  "#0ea5e9",
-  "#3b82f6",
-  "#6366f1",
-];
+type RankingChartItem = { label: string; value: number };
+type CompositionChartItem = { label: string; value: number; percentage: number };
 
-const xAxisLabelStyle = {
-  angle: Math.PI / 4,
-  textAlign: "right" as const,
-  textBaseline: "middle" as const,
-  maxLineWidth: 120,
-  ellipsis: "...",
-};
+const monitoringPalette = [
+  { hex: "#0ea5e9", dot: "bg-sky-500" },
+  { hex: "#22d3ee", dot: "bg-cyan-400" },
+  { hex: "#2dd4bf", dot: "bg-teal-400" },
+  { hex: "#818cf8", dot: "bg-indigo-400" },
+  { hex: "#94a3b8", dot: "bg-slate-400" },
+  { hex: "#38bdf8", dot: "bg-sky-400" },
+] as const;
 
-const topTenWithOthers = (items: CountItem[]) => {
-  if (items.length <= 10) {
-    return items;
-  }
+const rankingOptions = [
+  { value: "bandeira", label: "Bandeiras" },
+  { value: "marca", label: "Marcas" },
+] as const;
 
-  return [
-    ...items.slice(0, 10),
-    {
-      label: "Outros",
-      value: items.slice(10).reduce((sum, item) => sum + item.value, 0),
-    },
-  ];
-};
+const trendOptions = [
+  { value: "volume", label: "Volume" },
+  { value: "acumulado", label: "Acumulado" },
+] as const;
 
-const buildConsolidatedBarChartSpec = (data: CountItem[]): IBarChartSpec => ({
-  type: "bar",
-  data: [
-    {
-      id: "consolidatedChart",
-      values: data,
-    },
-  ],
-  direction: "vertical",
-  xField: "label",
-  yField: "value",
-  seriesField: "label",
-  stack: false,
-  padding: [20, 20, 20, 20],
-  color: consolidatedChartColors,
-  axes: [
-    {
-      orient: "bottom",
-      label: {
-        style: xAxisLabelStyle,
-      },
-    },
-    {
-      orient: "left",
-      label: {
-        formatMethod: (text: string | string[]) => String(text),
-      },
-    },
-  ],
-  tooltip: {
-    trigger: ["hover", "click"],
-  },
-  legends: {
-    visible: false,
-  },
-  bar: {
-    style: {
-      cornerRadius: [8, 8, 0, 0],
-    },
-  },
-});
+const compositionOptions = [
+  { value: "tipoVenda", label: "Tipo de venda" },
+  { value: "classificacao", label: "Classificação" },
+] as const;
 
-function ConsolidatedChartCard({
-  title,
-  tooltip,
-  data,
-}: {
-  title: string;
-  tooltip?: string;
-  data: CountItem[];
+type RankingDimension = (typeof rankingOptions)[number]["value"];
+type TrendView = (typeof trendOptions)[number]["value"];
+type CompositionDimension = (typeof compositionOptions)[number]["value"];
+
+function ChartToggle({ options, value, onChange }: {
+  options: ReadonlyArray<{ value: string; label: string }>;
+  value: string;
+  onChange: (value: string) => void;
 }) {
-  const chartSpec = useMemo(() => buildConsolidatedBarChartSpec(data), [data]);
-  const chartKey = useMemo(() => JSON.stringify(data), [data]);
-
   return (
-    <div className={cn(themedCardClass, "min-h-[340px] p-5")}>
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <div
+      className="inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5"
+      role="group"
+    >
+      {options.map((option) => {
+        const active = option.value === value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            className={cn(
+              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition sm:text-[11px]",
+              active
+                ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950"
+                : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100",
+            )}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MonitoringTrendChartCard({
+  spec,
+  chartKey,
+  hasData,
+  view,
+  onViewChange,
+  grainLabel,
+}: {
+  spec: ILineChartSpec;
+  chartKey: string;
+  hasData: boolean;
+  view: TrendView;
+  onViewChange: (value: TrendView) => void;
+  grainLabel: string;
+}) {
+  return (
+    <article className={cn(themedCardClass, "min-w-0 px-5 py-5")}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
-              {title}
+              Ritmo das vendas cantadas
             </h2>
-            {tooltip ? <TooltipIcon text={tooltip} /> : null}
+            <TooltipIcon text="Acompanha a evolução do volume no período. Alterne entre o movimento de cada intervalo e a visão acumulada." />
           </div>
+          <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>
+            {grainLabel}
+          </span>
         </div>
-        <span className={cn("px-2.5 py-1 uppercase tracking-[0.22em]", themedChipClass)}>
-          Top 10
-        </span>
+        <ChartToggle
+          options={trendOptions}
+          value={view}
+          onChange={(value) => onViewChange(value as TrendView)}
+        />
       </div>
 
-      <div className="h-[280px] overflow-hidden">
-        {data.length ? (
-          <VChart key={chartKey} spec={chartSpec} />
+      <div className="h-[300px] min-w-0 sm:h-[330px]">
+        {hasData ? (
+          <VChart key={chartKey} spec={spec} />
         ) : (
           <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>
             Nenhum dado no período.
           </p>
         )}
       </div>
-    </div>
+    </article>
+  );
+}
+
+function MonitoringRankingChartCard({
+  data,
+  dimension,
+  onDimensionChange,
+}: {
+  data: RankingChartItem[];
+  dimension: RankingDimension;
+  onDimensionChange: (value: RankingDimension) => void;
+}) {
+  const max = data[0]?.value || 1;
+  const dimensionLabel = rankingOptions.find((option) => option.value === dimension)?.label;
+
+  return (
+    <article className={cn(themedCardClass, "min-h-[400px] min-w-0 px-5 py-5")}>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+              Ranking operacional
+            </h2>
+            <TooltipIcon text="Identifica rapidamente onde o volume está concentrado. Escolha a dimensão que deseja acompanhar." />
+          </div>
+          <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>
+            {dimensionLabel}
+          </span>
+        </div>
+        <span className={cn("shrink-0 px-2.5 py-1 uppercase tracking-[0.22em]", themedChipClass)}>
+          Top 10
+        </span>
+      </div>
+
+      <div className="mb-4">
+        <ChartToggle
+          options={rankingOptions}
+          value={dimension}
+          onChange={(value) => onDimensionChange(value as RankingDimension)}
+        />
+      </div>
+
+      <div className="max-h-[286px] space-y-3 overflow-y-auto pr-1">
+        {data.length ? (
+          data.map((item) => (
+            <div key={item.label} title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}>
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className={cn("truncate font-medium", themedTextStrongClass)}>{item.label}</span>
+                <span className={cn("rounded-full px-2 py-0.5 font-semibold", themedBadgeClass)}>
+                  {item.value.toLocaleString("pt-BR")}
+                </span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400"
+                  style={{ width: item.value > 0 ? `${Math.max(5, (item.value / max) * 100)}%` : "0%" }}
+                />
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className={cn("py-24 text-center text-sm", themedTextMutedClass)}>
+            Nenhum dado no período.
+          </p>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function MonitoringCompositionChartCard({
+  data,
+  total,
+  dimension,
+  onDimensionChange,
+}: {
+  data: CompositionChartItem[];
+  total: number;
+  dimension: CompositionDimension;
+  onDimensionChange: (value: CompositionDimension) => void;
+}) {
+  let offset = 0;
+  const donutBackground = data.length
+    ? `conic-gradient(${data.map((item, index) => {
+        const start = offset;
+        offset += item.percentage;
+        return `${monitoringPalette[index % monitoringPalette.length].hex} ${start}% ${offset}%`;
+      }).join(", ")})`
+    : "conic-gradient(#e2e8f0 0 100%)";
+
+  return (
+    <article className={cn(themedCardClass, "min-h-[400px] min-w-0 px-5 py-5")}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+              Composição comercial
+            </h2>
+            <TooltipIcon text="Mostra como o volume total está distribuído por tipo de venda ou classificação comercial." />
+          </div>
+          <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>
+            Participação no volume
+          </span>
+        </div>
+        <ChartToggle
+          options={compositionOptions}
+          value={dimension}
+          onChange={(value) => onDimensionChange(value as CompositionDimension)}
+        />
+      </div>
+
+      <div className="grid min-h-[306px] items-center gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
+        {data.length ? (
+          <>
+            <div className="flex justify-center">
+              <div
+                aria-label={`Distribuição de ${total.toLocaleString("pt-BR")} vendas cantadas`}
+                className="relative h-40 w-40 rounded-full shadow-inner"
+                role="img"
+                style={{ background: donutBackground }}
+              >
+                <div className="absolute inset-[23%] flex flex-col items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-950">
+                  <span className={cn("text-3xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+                    {total.toLocaleString("pt-BR")}
+                  </span>
+                  <span className={cn("text-[9px] font-semibold uppercase tracking-[0.2em]", themedTextMutedClass)}>
+                    Volume
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-h-[286px] space-y-2 overflow-y-auto pr-1">
+              {data.map((item, index) => {
+                const color = monitoringPalette[index % monitoringPalette.length];
+
+                return (
+                  <div
+                    key={item.label}
+                    className="rounded-xl border border-slate-100 px-3 py-2 dark:border-white/[0.06]"
+                    title={`${item.label}: ${item.value.toLocaleString("pt-BR")} (${item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)`}
+                  >
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className={cn("flex min-w-0 items-center gap-2 font-medium", themedTextStrongClass)}>
+                        <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", color.dot)} />
+                        <span className="truncate">{item.label}</span>
+                      </span>
+                      <span className={cn("shrink-0 font-semibold tabular-nums", themedTextTitleClass)}>
+                        {item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: color.hex, width: `${item.percentage}%` }}
+                        />
+                      </div>
+                      <span className={cn("min-w-8 text-right text-[10px] tabular-nums", themedTextMutedClass)}>
+                        {item.value.toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className={cn("col-span-full text-center text-sm", themedTextMutedClass)}>
+            Nenhum dado no período.
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -395,13 +557,16 @@ export default function MarcaVeiculoRelatorioPage() {
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined);
-  const [chartError, setChartError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
   const [catalogData, setCatalogData] = useState<SalesIntentionCatalogResponse | null>(null);
   const [vehicleCatalogData, setVehicleCatalogData] = useState<SalesIntentionModelosDealerResponse | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
+  const [trendView, setTrendView] = useState<TrendView>("volume");
+  const [rankingDimension, setRankingDimension] = useState<RankingDimension>("bandeira");
+  const [compositionDimension, setCompositionDimension] =
+    useState<CompositionDimension>("tipoVenda");
   const todayInput = useMemo(() => getTodayInputValue(), []);
 
   // Move all hooks BEFORE conditional returns
@@ -554,7 +719,6 @@ export default function MarcaVeiculoRelatorioPage() {
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
     setEndDate(latestAvailableDateInput);
-    setChartError(null);
     setRefreshTick((tick) => tick + 1);
   };
 
@@ -646,129 +810,187 @@ export default function MarcaVeiculoRelatorioPage() {
     ],
   );
 
-  const totalProposals = filteredItems.reduce(
+  const totalQuantity = filteredItems.reduce(
     (sum, item) => sum + (Number(item.Quantidade) || 0),
     0,
   );
 
-  const brandData = useMemo(() => {
-    const grouped = new Map<string, { marca: string; count: number }>();
+  const averageQuantityPerRecord = filteredItems.length
+    ? totalQuantity / filteredItems.length
+    : 0;
+
+  const activeBrands = useMemo(
+    () =>
+      new Set(
+        filteredItems
+          .map((item) => item.Marca_Veiculo?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ).size,
+    [filteredItems],
+  );
+
+  const trendChartData = useMemo(() => {
+    const isSingleDay = Boolean(startDate && endDate && startDate === endDate);
+
+    if (isSingleDay) {
+      const hourlyValues = Array.from({ length: 24 }, (_, hour) => ({
+        time: hour,
+        label: `${String(hour).padStart(2, "0")}:00`,
+        value: 0,
+      }));
+
+      filteredItems.forEach((item) => {
+        const createdAt = parseReportDate(item.Criado);
+        if (!createdAt) return;
+
+        hourlyValues[createdAt.getHours()].value += Number(item.Quantidade) || 0;
+      });
+
+      let accumulated = 0;
+      return {
+        grainLabel: "Visão por hora",
+        values: filteredItems.length
+          ? hourlyValues.map((item) => {
+              accumulated += item.value;
+              return {
+                ...item,
+                quantity: trendView === "acumulado" ? accumulated : item.value,
+              };
+            })
+          : [],
+      };
+    }
+
+    const grouped = new Map<string, { time: number; label: string; value: number }>();
 
     filteredItems.forEach((item) => {
-      const marca = item.Marca_Veiculo || "Sem Marca";
-      const quantity = Number(item.Quantidade) || 0;
-      const previous = grouped.get(marca);
+      const date = parseReportDate(item.Data_solicitacao);
+      if (!date) return;
 
-      if (previous) {
-        grouped.set(marca, {
-          ...previous,
-          count: previous.count + quantity,
-        });
-      } else {
-        grouped.set(marca, {
-          marca,
-          count: quantity,
-        });
-      }
+      const dateKey = format(date, "yyyy-MM-dd");
+      const time = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      const current = grouped.get(dateKey);
+      grouped.set(dateKey, {
+        time,
+        label: format(date, "dd/MM/yy"),
+        value: (current?.value || 0) + (Number(item.Quantidade) || 0),
+      });
     });
 
-    return Array.from(grouped.values()).sort((a, b) => b.count - a.count);
-  }, [filteredItems]);
+    const dailyValues = Array.from(grouped.values()).sort((a, b) => a.time - b.time);
+    const useMonthlyGrain = dailyValues.length > 45;
+    const values = useMonthlyGrain
+      ? Array.from(
+          dailyValues.reduce((months, item) => {
+            const date = new Date(item.time);
+            const key = format(date, "yyyy-MM");
+            const current = months.get(key);
+            months.set(key, {
+              time: new Date(date.getFullYear(), date.getMonth(), 1).getTime(),
+              label: format(date, "MM/yy"),
+              value: (current?.value || 0) + item.value,
+            });
+            return months;
+          }, new Map<string, { time: number; label: string; value: number }>()).values(),
+        ).sort((a, b) => a.time - b.time)
+      : dailyValues;
 
-  const brandChartData = useMemo(() => brandData, [brandData]);
+    let accumulated = 0;
+    return {
+      grainLabel: useMonthlyGrain ? "Visão mensal" : "Visão diária",
+      values: values.map((item) => {
+        accumulated += item.value;
+        return {
+          ...item,
+          quantity: trendView === "acumulado" ? accumulated : item.value,
+        };
+      }),
+    };
+  }, [endDate, filteredItems, startDate, trendView]);
 
-  const brandChartSpec = useMemo<IBarChartSpec>(
+  const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
-      type: "bar",
-      data: [
-        {
-          id: "marcaPropostas",
-          values: brandChartData,
-        },
-      ],
-      direction: "vertical",
-      xField: "marca",
-      yField: "count",
-      seriesField: "marca",
-      stack: false,
-      padding: [20, 20, 20, 20],
-      color: [
-        "#38bdf8",
-        "#60a5fa",
-        "#818cf8",
-        "#a78bfa",
-        "#f472b6",
-        "#fb7185",
-        "#f97316",
-        "#f59e0b",
-        "#a3e635",
-        "#4ade80",
-        "#22c55e",
-        "#14b8a6",
-        "#0ea5e9",
-        "#3b82f6",
-        "#6366f1",
-      ],
+      type: "line",
+      data: [{ id: "monitoringTrend", values: trendChartData.values }],
+      xField: "label",
+      yField: "quantity",
+      smooth: true,
+      padding: [20, 24, 42, 42],
+      color: ["#0ea5e9"],
       axes: [
         {
           orient: "bottom",
-          label: {
-            style: xAxisLabelStyle,
-          },
+          label: { autoRotate: false, autoHide: true, autoHideMethod: "greedy" },
         },
         {
           orient: "left",
           label: {
-            formatMethod: (text: string | string[]) => String(text),
+            formatMethod: (text: string | string[]) =>
+              Number(Array.isArray(text) ? text[0] : text).toLocaleString("pt-BR"),
           },
         },
       ],
       tooltip: {
         trigger: ["hover", "click"],
-      },
-      legends: {
-        visible: false,
-      },
-      bar: {
-        style: {
-          cornerRadius: [8, 8, 0, 0],
+        confine: true,
+        mark: {
+          title: { value: (datum) => datum?.label || "Período" },
+          content: [
+            {
+              key: trendView === "acumulado" ? "Volume acumulado" : "Volume",
+              value: (datum) => Number(datum?.quantity || 0).toLocaleString("pt-BR"),
+            },
+          ],
         },
       },
+      point: {
+        visible: true,
+        style: { size: 7, fill: "#22d3ee", stroke: "#ffffff", lineWidth: 2 },
+      },
+      line: { style: { lineWidth: 3, curveType: "monotone" } },
+      area: { visible: true, style: { fillOpacity: 0.12 } },
     }),
-    [brandChartData],
+    [trendChartData.values, trendView],
   );
 
-  const brandChartKey = useMemo(() => JSON.stringify(brandChartSpec), [brandChartSpec]);
-
-  const consolidatedBandeiraData = useMemo(() => {
+  const rankingChartData = useMemo(() => {
     const grouped = new Map<string, number>();
+    const fieldByDimension = {
+      bandeira: "Bandeira",
+      marca: "Marca_Veiculo",
+    } as const;
+    const field = fieldByDimension[rankingDimension];
 
     filteredItems.forEach((item) => {
-      const label = item.Bandeira?.trim() || "Sem Bandeira";
+      const label = item[field]?.trim() || "Não informado";
       grouped.set(label, (grouped.get(label) || 0) + (Number(item.Quantidade) || 0));
     });
 
-    return topTenWithOthers(
-      Array.from(grouped, ([label, value]) => ({ label, value })).sort(
-        (a, b) => b.value - a.value,
-      ),
-    );
-  }, [filteredItems]);
+    return Array.from(grouped, ([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [filteredItems, rankingDimension]);
 
-  const consolidatedModeloData = useMemo(() => {
+  const compositionChartData = useMemo(() => {
     const grouped = new Map<string, number>();
 
     filteredItems.forEach((item) => {
-      const label = item.Versao?.trim() || "Sem versão";
+      const rawLabel =
+        compositionDimension === "tipoVenda" ? item.Tipo_Venda : item.Classificacao;
+      const label = rawLabel?.trim()
+        ? compositionDimension === "tipoVenda"
+          ? formatTipoVendaLabel(rawLabel.trim())
+          : rawLabel.trim()
+        : "Não informado";
       grouped.set(label, (grouped.get(label) || 0) + (Number(item.Quantidade) || 0));
     });
 
-    return topTenWithOthers(
-      Array.from(grouped, ([label, value]) => ({ label, value })).sort(
-        (a, b) => b.value - a.value,
-      ),
-    );
-  }, [filteredItems]);
+    return Array.from(grouped, ([label, value]) => ({
+      label,
+      value,
+      percentage: totalQuantity > 0 ? (value / totalQuantity) * 100 : 0,
+    })).sort((a, b) => b.value - a.value);
+  }, [compositionDimension, filteredItems, totalQuantity]);
 
   const lastUpdatedText = lastUpdated ? format(lastUpdated, "dd/MM/yyyy HH:mm:ss") : "Carregando...";
 
@@ -901,25 +1123,9 @@ export default function MarcaVeiculoRelatorioPage() {
             ))}
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
-            {Array.from({ length: 2 }).map((_, index) => (
-              <div key={index} className={cn(themedCardClass, "min-h-[340px] p-5")}>
-                <div className="mb-4 h-5 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-white/10" />
-                <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, barIndex) => (
-                    <div key={barIndex} className="flex items-center gap-2">
-                      <div className="h-3 flex-1 animate-pulse rounded bg-slate-100 dark:bg-white/5" />
-                      <div className="h-3 w-10 animate-pulse rounded bg-slate-100 dark:bg-white/5" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-
           <section className={cn(themedCardClass, "p-5")}>
             <div className="mb-4 h-5 w-48 animate-pulse rounded bg-slate-200/80 dark:bg-white/10" />
-            <div className="h-[380px] rounded-2xl bg-slate-100/70 dark:bg-white/5" />
+            <div className="h-40 rounded-2xl bg-slate-100/70 dark:bg-white/5" />
           </section>
         </div>
       </main>
@@ -957,49 +1163,6 @@ export default function MarcaVeiculoRelatorioPage() {
       </main>
     );
   }
-
-
-
-
-  const exportToExcel = () => {
-    // Build a set of all keys present in the salesIntention dataset
-    const allKeys = new Set<string>();
-    enhancedSalesIntention.forEach((row) => Object.keys(row || {}).forEach((k) => allKeys.add(k)));
-
-    // Preserve the key order from the first row when possible, then append any additional keys alphabetically
-    const firstRow = enhancedSalesIntention[0] || {};
-    const firstKeys = Object.keys(firstRow);
-    const remainingKeys = Array.from(allKeys).filter((k) => !firstKeys.includes(k)).sort((a, b) =>
-      a.localeCompare(b, "pt-BR", { sensitivity: "base" }),
-    );
-    const headers = [...firstKeys, ...remainingKeys];
-
-    // Build rows in the same header order using the currently filtered items
-    const rows = filteredItems.map((item) => headers.map((h) => ((item as Record<string, unknown>)[h] ?? "")));
-
-    const table = [headers, ...rows]
-      .map(
-        (row) =>
-          `<tr>${row
-            .map((cell) => `<td>${String(cell ?? "")}</td>`)
-            .join("")}</tr>`,
-      )
-      .join("");
-
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><table>${table}</table></body></html>`;
-    const blob = new Blob(["\ufeff", html], {
-      type: "application/vnd.ms-excel",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `relatorio-marca-${format(new Date(), "yyyyMMdd_HHmmss")}.xls`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
       <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
@@ -1013,7 +1176,7 @@ export default function MarcaVeiculoRelatorioPage() {
                 <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
                   Visão global por Marca de Veículo
                 </h1>
-                <TooltipIcon text="Os gráficos abaixo já respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca e período." />
+                <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca e período." />
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-100/80">
                 <span className="rounded-full bg-white/10 px-3 py-1">
@@ -1187,78 +1350,94 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className={cn(themedCardClass, "p-5")}>
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
-              Total de Vendas Cantadas
+              Volume total
             </p>
             <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
-              {totalProposals.toLocaleString("pt-BR")}
+              {totalQuantity.toLocaleString("pt-BR")}
             </p>
             <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
-              Soma das quantidades no recorte atual.
+              Soma das vendas cantadas no recorte.
             </p>
           </div>
 
           <div className={cn(themedCardClass, "p-5")}>
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
-              Registros filtrados
+              Intenções registradas
             </p>
             <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
               {filteredItems.length.toLocaleString("pt-BR")}
             </p>
             <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
-              Quantidade de linhas que alimenta os gráficos.
+              Registros que sustentam a análise.
+            </p>
+          </div>
+
+          <div className={cn(themedCardClass, "p-5")}>
+            <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
+              Média por intenção
+            </p>
+            <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+              {averageQuantityPerRecord.toLocaleString("pt-BR", {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              })}
+            </p>
+            <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
+              Quantidade média informada por registro.
+            </p>
+          </div>
+
+          <div className={cn(themedCardClass, "p-5")}>
+            <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
+              Marcas ativas
+            </p>
+            <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+              {activeBrands.toLocaleString("pt-BR")}
+            </p>
+            <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
+              Marcas com movimentação no recorte atual.
             </p>
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-2">
-          <ConsolidatedChartCard
-            title="Consolidado por Bandeira"
-            tooltip="Quantidade Total de Vendas Cantadas por bandeira no período selecionado."
-            data={consolidatedBandeiraData}
-          />
-          <ConsolidatedChartCard
-            title="Consolidado por Modelo"
-            tooltip="Quantidade Total de Vendas Cantadas por modelo no período selecionado."
-            data={consolidatedModeloData}
-          />
-        </section>
-
-        <section className={cn(themedCardClass, "p-5")}>
-          <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2">
-              <p className={cn(themedTinyLabelClass, "tracking-[0.34em]")}>
-                Ranking consolidado
-              </p>
-              <TooltipIcon
-                text={`Venda Cantada por Marca. Top marcas no período filtrado (${brandChartData.length} marcas).`}
-              />
-            </div>
-
-            <Button variant="default" onClick={exportToExcel} className="h-8 text-xs">
-              Exportar Excel
-            </Button>
+        <section aria-labelledby="charts-section-title" className="space-y-4">
+          <div className="px-1">
+            <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Análise executiva</p>
+            <h2
+              id="charts-section-title"
+              className={cn("mt-1 text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}
+            >
+              Monitoramento das vendas cantadas
+            </h2>
+            <p className={cn("mt-1 text-xs", themedTextBodyClass)}>
+              Acompanhe ritmo, concentração e composição usando as visões interativas.
+            </p>
           </div>
 
-          <div className="h-[400px] w-full overflow-hidden">
-            {chartError && (
-              <div className="mb-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-50">
-                <p className="font-semibold">Falha ao renderizar o gráfico</p>
-                <p className="mt-1">{chartError}</p>
-              </div>
-            )}
-            <VChart
-              key={brandChartKey}
-              spec={brandChartSpec}
-              onError={(err) => {
-                // eslint-disable-next-line no-console
-                console.error("VChart error:", err);
-                setChartError(
-                  err ? String(err) : "Não foi possível renderizar este gráfico.",
-                );
-              }}
+          <MonitoringTrendChartCard
+            spec={trendChartSpec}
+            chartKey={`${trendView}-${JSON.stringify(trendChartData.values)}`}
+            hasData={trendChartData.values.length > 0}
+            view={trendView}
+            onViewChange={setTrendView}
+            grainLabel={trendChartData.grainLabel}
+          />
+
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+            <MonitoringRankingChartCard
+              data={rankingChartData}
+              dimension={rankingDimension}
+              onDimensionChange={setRankingDimension}
+            />
+
+            <MonitoringCompositionChartCard
+              data={compositionChartData}
+              total={totalQuantity}
+              dimension={compositionDimension}
+              onDimensionChange={setCompositionDimension}
             />
           </div>
         </section>
