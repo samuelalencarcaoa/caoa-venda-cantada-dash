@@ -16,17 +16,68 @@ function compare(a: string, b: string): number {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
 }
 
+function normalizeIdentity(value: string) {
+  return value.trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+}
+
+function normalizeTipoVenda(value: string) {
+  const normalized = normalizeIdentity(value);
+  if (normalized === 'NOVOS' || normalized === 'SEMINOVOS') {
+    return normalized;
+  }
+
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeBandeira(value: string) {
+  const normalized = normalizeIdentity(value);
+  const aliases: Record<string, string> = {
+    'CAOA CHANGAN': 'CAOA CHANGAN',
+    'CAOA CHERY': 'CAOA CHERY',
+    FORD: 'FORD',
+    HYUNDAI: 'HYUNDAI',
+    HYUNDAIHMB: 'HYUNDAI',
+    SUBARU: 'SUBARU'
+  };
+
+  return aliases[normalized] ?? value.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeLocationPair(regionalValue: string, storeValue: string) {
+  const regional = regionalValue.trim().replace(/\s+/g, ' ');
+  const lojaVenda = storeValue.trim().replace(/\s+/g, ' ');
+  const regionalLooksLikeStore = regional.includes('-');
+  const storeLooksLikeRegional = !lojaVenda.includes('-');
+
+  if (regionalLooksLikeStore && storeLooksLikeRegional) {
+    return { regional: lojaVenda, lojaVenda: regional };
+  }
+
+  return { regional, lojaVenda };
+}
+
 function normalizeCombinationRows(rows: SalesIntentionCatalogRecord[]) {
-  return rows
-    .map((row) => ({
-      tipoVenda: row.tipoVenda.trim(),
-      bandeira: row.bandeira.trim(),
-      regional: row.regional.trim(),
-      lojaVenda: row.lojaVenda.trim(),
-      marcaVeiculo: row.marcaVeiculo.trim(),
-      versao: row.versao.trim(),
-      classificacao: row.classificacao.trim()
-    }))
+  const uniqueCombinations = new Map<string, SalesIntentionCatalogRecord>();
+
+  rows.forEach((row) => {
+    const location = normalizeLocationPair(row.regional, row.lojaVenda);
+    const combination = {
+      tipoVenda: normalizeTipoVenda(row.tipoVenda),
+      bandeira: normalizeBandeira(row.bandeira),
+      regional: location.regional,
+      lojaVenda: location.lojaVenda,
+      marcaVeiculo: row.marcaVeiculo.trim().replace(/\s+/g, ' '),
+      versao: row.versao.trim().replace(/\s+/g, ' '),
+      classificacao: row.classificacao.trim().replace(/\s+/g, ' ')
+    };
+    const key = Object.values(combination).map(normalizeIdentity).join('||');
+
+    if (!uniqueCombinations.has(key)) {
+      uniqueCombinations.set(key, combination);
+    }
+  });
+
+  return Array.from(uniqueCombinations.values())
     .sort(
       (a, b) =>
         compare(a.tipoVenda, b.tipoVenda) ||
@@ -40,13 +91,16 @@ function normalizeCombinationRows(rows: SalesIntentionCatalogRecord[]) {
 }
 
 function distinctValues<T extends Record<string, string>>(rows: T[], key: keyof T) {
-  return Array.from(
-    new Set(
-      rows
-        .map((row) => row[key].trim())
-        .filter((value): value is string => Boolean(value))
-    )
-  ).sort(compare);
+  const uniqueValues = new Map<string, string>();
+
+  rows.forEach((row) => {
+    const value = row[key].trim();
+    if (value && !uniqueValues.has(normalizeIdentity(value))) {
+      uniqueValues.set(normalizeIdentity(value), value);
+    }
+  });
+
+  return Array.from(uniqueValues.values()).sort(compare);
 }
 
 function normalizeHierarchyRows(
@@ -65,10 +119,11 @@ function normalizeHierarchyRows(
       continue;
     }
 
-    uniqueHierarchy.set(
-      `${hierarchyRow.bandeira}||${hierarchyRow.regional}||${hierarchyRow.lojaVenda}`,
-      hierarchyRow
-    );
+    const key = [hierarchyRow.bandeira, hierarchyRow.regional, hierarchyRow.lojaVenda]
+      .map(normalizeIdentity)
+      .join('||');
+
+    uniqueHierarchy.set(key, hierarchyRow);
   }
 
   return Array.from(uniqueHierarchy.values()).sort(
