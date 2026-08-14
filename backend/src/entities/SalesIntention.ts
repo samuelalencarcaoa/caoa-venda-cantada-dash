@@ -83,23 +83,45 @@ export class SalesIntention {
   }
 
   public static parseDate(value: string): Date {
-    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-    if (!match) {
-      throw badRequest('dataSolicitacao precisa estar no formato DD/MM/YYYY');
+    const normalizedValue = value.trim();
+
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(normalizedValue)) {
+      const parsedIsoDate = new Date(normalizedValue);
+      if (!isValidDate(parsedIsoDate)) {
+        throw badRequest('dataSolicitacao precisa ser uma data e hora válidas.');
+      }
+
+      return parsedIsoDate;
     }
 
-    const [, dayText, monthText, yearText] = match;
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(
+      normalizedValue
+    );
+    if (!match) {
+      throw badRequest(
+        'dataSolicitacao precisa estar em ISO 8601 ou no formato DD/MM/YYYY HH:mm'
+      );
+    }
+
+    const [, dayText, monthText, yearText, hourText = '0', minuteText = '0', secondText = '0'] =
+      match;
     const day = Number(dayText);
     const month = Number(monthText);
     const year = Number(yearText);
-    const parsedDate = new Date(year, month - 1, day);
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    const second = Number(secondText);
+    const parsedDate = new Date(year, month - 1, day, hour, minute, second);
 
     if (
       parsedDate.getFullYear() !== year ||
       parsedDate.getMonth() !== month - 1 ||
-      parsedDate.getDate() !== day
+      parsedDate.getDate() !== day ||
+      parsedDate.getHours() !== hour ||
+      parsedDate.getMinutes() !== minute ||
+      parsedDate.getSeconds() !== second
     ) {
-      throw badRequest('dataSolicitacao precisa ser uma data válida.');
+      throw badRequest('dataSolicitacao precisa ser uma data e hora válidas.');
     }
 
     return parsedDate;

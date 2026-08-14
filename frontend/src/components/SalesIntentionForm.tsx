@@ -116,11 +116,19 @@ function isTipoVenda(value: string, expected: 'NOVOS' | 'SEMINOVOS') {
   return normalizeValue(value) === expected;
 }
 
-function getCurrentDateValue() {
-  const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  return `${day}/${month}/${today.getFullYear()}`;
+function getCurrentDateTimeInputValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toApiDateTime(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
 }
 
 function buildFormSchema(currentOwner: string) {
@@ -143,7 +151,13 @@ function buildFormSchema(currentOwner: string) {
       dataSolicitacao: z
         .string()
         .trim()
-        .regex(/^\d{2}\/\d{2}\/\d{4}$/, 'Use a data no formato DD/MM/AAAA.'),
+        .regex(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+          'Informe a data e a hora da solicitação.'
+        )
+        .refine((value) => Boolean(toApiDateTime(value)), {
+          message: 'Informe uma data e hora válidas.'
+        }),
       placa: z.string().trim().min(1, 'Informe a placa do veículo.'),
       regional: z.string().trim().min(1, 'Escolha a regional.'),
       ano: z.string().trim(),
@@ -194,18 +208,6 @@ function getFilteredOptions(
         .filter(Boolean)
     )
   ).sort();
-}
-
-function formatDateInput(value: string) {
-  const [year, month, day] = value.split('-');
-  if (!year || !month || !day) return '';
-  return `${day}/${month}/${year}`;
-}
-
-function getDateInputValue(value: string) {
-  const [day, month, year] = value.split('/');
-  if (!day || !month || !year) return '';
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 function getYearOptions() {
@@ -533,7 +535,7 @@ export default function SalesIntentionForm() {
   const { user, loading: isUserLoading } = useCurrentUser();
   const [formData, setFormData] = useState<SalesIntentionFormData>({
     ...initialValues,
-    dataSolicitacao: getCurrentDateValue(),
+    dataSolicitacao: getCurrentDateTimeInputValue(),
     ano: '',
     modelo: ''
   });
@@ -801,15 +803,13 @@ export default function SalesIntentionForm() {
   const closeNotification = () => setNotification(defaultNotification);
   const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
 
-  const updateFormField = (name: keyof SalesIntentionFormData, rawValue: string, type?: string) => {
+  const updateFormField = (name: keyof SalesIntentionFormData, rawValue: string) => {
     const nextValue =
       name === 'quantidade'
         ? Number(rawValue)
-        : name === 'dataSolicitacao' && type === 'date'
-          ? formatDateInput(rawValue)
-          : name === 'placa'
-            ? formatBrazilPlateInput(rawValue)
-            : rawValue;
+        : name === 'placa'
+          ? formatBrazilPlateInput(rawValue)
+          : rawValue;
 
     setFormData((current) => {
       const nextFormData = {
@@ -843,8 +843,8 @@ export default function SalesIntentionForm() {
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = event.target;
-    updateFormField(name as keyof SalesIntentionFormData, value, type);
+    const { name, value } = event.target;
+    updateFormField(name as keyof SalesIntentionFormData, value);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -881,6 +881,7 @@ export default function SalesIntentionForm() {
       const { ano, modelo, ...payload } = result.data;
       await createSalesIntention({
         ...payload,
+        dataSolicitacao: toApiDateTime(payload.dataSolicitacao),
         modelo,
         ano_fabricacao: ano ? Number(ano) : null,
         ano_modelo: ano ? Number(ano) : null
@@ -893,7 +894,7 @@ export default function SalesIntentionForm() {
 
       setFormData({
         ...initialValues,
-        dataSolicitacao: getCurrentDateValue(),
+        dataSolicitacao: getCurrentDateTimeInputValue(),
         ano: '',
         modelo: '',
         proprietario: currentOwner
@@ -1211,11 +1212,12 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
-                <FieldLabel label="Data de solicitação" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Data e hora da solic" badge="Obrigatório" badgeTone="required" />
                 <input
-                  type="date"
+                  type="datetime-local"
+                  step={60}
                   name="dataSolicitacao"
-                  value={getDateInputValue(formData.dataSolicitacao)}
+                  value={formData.dataSolicitacao}
                   onChange={handleChange}
                   className={fieldClasses}
                   disabled={isLoading || isOptionsLoading}
@@ -1263,11 +1265,12 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={labelClasses}>
-                <FieldLabel label="Data de solicitação" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Data e hora da solic" badge="Obrigatório" badgeTone="required" />
                 <input
-                  type="date"
+                  type="datetime-local"
+                  step={60}
                   name="dataSolicitacao"
-                  value={getDateInputValue(formData.dataSolicitacao)}
+                  value={formData.dataSolicitacao}
                   onChange={handleChange}
                   className={fieldClasses}
                   disabled={isLoading || isOptionsLoading}

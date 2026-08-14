@@ -254,7 +254,7 @@ export const openApiSpec = {
                     versao: 'TIGGO 5X SPORT',
                     classificacao: 'PCD',
                     quantidade: 1,
-                    dataSolicitacao: '04/06/2025',
+                    dataSolicitacao: '2025-06-04T18:06:00.000Z',
                     ano_fabricacao: 2025,
                     ano_modelo: 2025,
                     placa: 'AAA1B12',
@@ -777,8 +777,9 @@ export const openApiSpec = {
           quantidade: { type: 'integer' },
           dataSolicitacao: {
             type: 'string',
-            description: 'Data no formato DD/MM/YYYY',
-            example: '04/06/2025'
+            format: 'date-time',
+            description: 'Data e hora em ISO 8601. O formato legado DD/MM/YYYY HH:mm também é aceito.',
+            example: '2025-06-04T18:06:00.000Z'
           },
           ano_fabricacao: {
             type: 'integer',
@@ -813,7 +814,8 @@ export const openApiSpec = {
           quantidade: { type: 'integer' },
           dataSolicitacao: {
             type: 'string',
-            description: 'Data no formato DD/MM/YYYY'
+            format: 'date-time',
+            description: 'Data e hora em ISO 8601. O formato legado DD/MM/YYYY HH:mm também é aceito.'
           },
           ano_fabricacao: {
             type: 'integer',

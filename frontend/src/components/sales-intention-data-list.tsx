@@ -172,23 +172,31 @@ export function SalesIntentionDataList({
     [currentPage, itemsPerPage, sortedItems],
   );
 
-  function toInputDate(value: string) {
-    const [day, month, year] = value.split('/');
-    if (!day || !month || !year) return '';
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  function toInputDateTime(value: string) {
+    const [datePart, timePart = "00:00:00"] = value.trim().split(/\s+/);
+    const [day, month, year] = datePart.split("/");
+    const [hours = "00", minutes = "00", seconds = "00"] = timePart.split(":");
+
+    if (!day || !month || !year) return "";
+
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:${seconds.padStart(2, "0")}`;
   }
 
-  function toDisplayDate(value: string) {
-    const [year, month, day] = value.split('-');
+  function toDisplayDateTime(value: string) {
+    const [datePart, timePart = "00:00:00"] = value.split("T");
+    const [year, month, day] = datePart.split("-");
+    const [hours = "00", minutes = "00", seconds = "00"] = timePart.split(":");
+
     if (!year || !month || !day) return value;
-    return `${day}/${month}/${year}`;
+
+    return `${day}/${month}/${year} ${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:${seconds.padStart(2, "0")}`;
   }
 
   function startEditing(item: SalesIntentionReportRow) {
     setEditRowId(item.ID);
     setEditingValues({
       Quantidade: item.Quantidade,
-      Data_solicitacao: toInputDate(item.Data_solicitacao),
+      Data_solicitacao: toInputDateTime(item.Data_solicitacao),
     });
   }
 
@@ -201,8 +209,10 @@ export function SalesIntentionDataList({
     if (editingValues.Quantidade !== item.Quantidade) {
       payload.Quantidade = editingValues.Quantidade;
     }
-    if (editingValues.Data_solicitacao && toDisplayDate(editingValues.Data_solicitacao) !== item.Data_solicitacao) {
-      payload.Data_solicitacao = toDisplayDate(editingValues.Data_solicitacao);
+    const editedDateTime = toDisplayDateTime(editingValues.Data_solicitacao);
+    const currentDateTime = toDisplayDateTime(toInputDateTime(item.Data_solicitacao));
+    if (editingValues.Data_solicitacao && editedDateTime !== currentDateTime) {
+      payload.Data_solicitacao = editedDateTime;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -425,7 +435,8 @@ export function SalesIntentionDataList({
                           />
                         ) : isEditing && isDateField ? (
                           <input
-                            type="date"
+                            type="datetime-local"
+                            step={1}
                             value={editingValues.Data_solicitacao}
                             onChange={(event) =>
                               setEditingValues((current) => ({
@@ -433,7 +444,7 @@ export function SalesIntentionDataList({
                                 Data_solicitacao: event.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
+                            className="min-w-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : (
                           display
