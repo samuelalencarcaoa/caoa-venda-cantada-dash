@@ -1,12 +1,13 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { AlertTriangle, Check, Pencil, X } from "lucide-react";
+import { AlertTriangle, Check, Pencil, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
+import { TooltipIcon } from "@/components/sales-intention-filter-select-card";
 import {
   themedOutlineButtonClass,
   themedPanelClass,
@@ -77,6 +78,19 @@ function compareValue(value: unknown) {
   return normalizeLabel(raw);
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function getSearchableRowText(item: SalesIntentionReportRow) {
+  return REPORT_COLUMNS.map((key) => String(item[key] ?? "")).join(" ");
+}
+
 type SalesIntentionDataListProps = {
   items: SalesIntentionReportRow[];
   exportFilePrefix?: string;
@@ -90,6 +104,7 @@ export function SalesIntentionDataList({
 }: SalesIntentionDataListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<keyof SalesIntentionReportRow | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [editableItems, setEditableItems] = useState<SalesIntentionReportRow[]>(items);
@@ -117,12 +132,31 @@ export function SalesIntentionDataList({
     message: "",
   });
 
-  const sortedItems = useMemo(() => {
-    if (!sortKey) {
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = normalizeSearchText(deferredSearchQuery);
+    if (!normalizedQuery) {
       return editableItems;
     }
 
-    const nextItems = [...editableItems];
+    const tokens = normalizedQuery.split(" ").filter(Boolean);
+    if (tokens.length === 0) {
+      return editableItems;
+    }
+
+    return editableItems.filter((item) => {
+      const searchableText = normalizeSearchText(getSearchableRowText(item));
+      return tokens.every((token) => searchableText.includes(token));
+    });
+  }, [deferredSearchQuery, editableItems]);
+
+  const sortedItems = useMemo(() => {
+    if (!sortKey) {
+      return filteredItems;
+    }
+
+    const nextItems = [...filteredItems];
 
     nextItems.sort((a, b) => {
       const aVal = compareValue(a[sortKey]);
@@ -138,7 +172,7 @@ export function SalesIntentionDataList({
     });
 
     return nextItems;
-  }, [editableItems, sortDir, sortKey]);
+  }, [filteredItems, sortDir, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(sortedItems.length / itemsPerPage));
 
@@ -154,7 +188,7 @@ export function SalesIntentionDataList({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [items, itemsPerPage]);
+  }, [items, itemsPerPage, searchQuery]);
 
   useEffect(() => {
     if (justSavedRowId === null) {
@@ -297,7 +331,7 @@ export function SalesIntentionDataList({
 
   const exportToExcel = () => {
     const headers = REPORT_COLUMNS;
-    const rows = editableItems.map((item) =>
+    const rows = sortedItems.map((item) =>
       headers.map((header) => escapeHtml(item[header] ?? "")),
     );
 
@@ -331,45 +365,74 @@ export function SalesIntentionDataList({
       )}
     >
       <div className="border-b border-slate-200/80 bg-slate-50/80 px-0 py-3 dark:border-white/10 dark:bg-white/5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-0.5">
-            <p className={cn(themedTinyLabelClass, "tracking-[0.3em]")}>
-              Tabela detalhada
-            </p>
-            <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
-              Lista de dados
-            </h2>
-            <p className={cn("text-xs", themedTextBodyClass)}>
-              Exibindo {currentPageItems.length} de {sortedItems.length} registros filtrados
-            </p>
+        <div className="space-y-3">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)_auto] lg:items-center">
+            <div className="space-y-0.5">
+              <p className={cn(themedTinyLabelClass, "tracking-[0.3em]")}>
+                Tabela detalhada
+              </p>
+              <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+                Lista de dados
+              </h2>
+              <p className={cn("text-xs", themedTextBodyClass)}>
+                Exibindo {currentPageItems.length} de {sortedItems.length} registros filtrados
+              </p>
+            </div>
+
+            <div className="w-full lg:justify-self-center">
+              <label className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+                <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Buscar em todas as colunas"
+                  className="min-w-0 flex-1 bg-transparent text-[11px] font-medium text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                  aria-label="Buscar na tabela detalhada"
+                />
+                <TooltipIcon text="Busca global em ID, proprietário, tipo de venda, bandeira, loja, marca, versão, classificação, quantidade, data, placa, regional e criado. Use mais de uma palavra para exigir todos os termos." />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200"
+                    aria-label="Limpar busca"
+                    title="Limpar busca"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center lg:justify-self-end">
+              <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+                <span className="font-medium">Itens por página</span>
+                <select
+                  className="bg-transparent text-[11px] font-medium text-slate-700 outline-none dark:text-slate-100"
+                  value={itemsPerPage}
+                  onChange={(event) => setItemsPerPage(Number(event.target.value))}
+                >
+                  {[10, 25, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+                Página {currentPage} de {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                onClick={exportToExcel}
+                className={cn("h-8 rounded-full px-2.5 text-[11px] font-medium", themedOutlineButtonClass)}
+              >
+                Baixar Excel
+              </Button>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
-              <span className="font-medium">Itens por página</span>
-              <select
-                className="bg-transparent text-[11px] font-medium text-slate-700 outline-none dark:text-slate-100"
-                value={itemsPerPage}
-                onChange={(event) => setItemsPerPage(Number(event.target.value))}
-              >
-                {[10, 25, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
-              Página {currentPage} de {totalPages}
-            </div>
-            <Button
-              variant="outline"
-              onClick={exportToExcel}
-              className={cn("h-8 rounded-full px-2.5 text-[11px] font-medium", themedOutlineButtonClass)}
-            >
-              Baixar Excel
-            </Button>
-          </div>
         </div>
       </div>
 
