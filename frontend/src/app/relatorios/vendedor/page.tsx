@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, CircleHelp, Maximize2, Medal, RefreshCw, Trophy, X } from "lucide-react";
+import { ChevronDown, CircleHelp, Crown, Maximize2, Medal, RefreshCw, Trophy, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { VChart } from "@visactor/react-vchart";
@@ -617,30 +617,54 @@ function PodiumCard({
       rank: 2,
       item: topThree[1],
       baseClass:
-        "border-slate-200/60 bg-white/90 text-slate-900 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100",
-      accentClass: "bg-slate-300/60 dark:bg-slate-500/60",
-      heightClass: "min-h-[166px]",
-      iconClass: "text-slate-500/90 dark:text-slate-400/90",
+        "border-slate-300/60 bg-[linear-gradient(180deg,rgba(250,250,250,0.98),rgba(241,245,249,0.9))] text-slate-900 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.18)] dark:border-slate-200/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.78))] dark:text-slate-100 dark:shadow-[0_22px_54px_-38px_rgba(0,0,0,0.42)]",
+      accentClass:
+        "bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 dark:from-slate-500 dark:via-slate-400 dark:to-slate-500",
+      heightClass: "min-h-[176px]",
+      iconClass: "h-12 w-12 sm:h-14 sm:w-14 text-slate-400 dark:text-slate-300",
+      rankClass: "text-[3rem] font-black tracking-[-0.1em] text-slate-500 dark:text-slate-300",
+      vendorClass: "text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100",
+      quantityClass: "text-3xl sm:text-4xl font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
+      metaClass: "text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400",
+      progressClass: "bg-gradient-to-r from-slate-400 to-slate-300 dark:from-slate-400 dark:to-slate-500",
+      footClass: "bg-slate-200/80 dark:bg-white/10",
     },
     {
       label: "1º",
       rank: 1,
       item: topThree[0],
       baseClass:
-        "border-slate-200/60 bg-slate-50/95 text-slate-900 shadow-[0_18px_48px_-36px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100 dark:shadow-[0_20px_54px_-38px_rgba(0,0,0,0.4)]",
-      accentClass: "bg-slate-400/60 dark:bg-slate-400/60",
-      heightClass: "min-h-[200px] sm:-translate-y-3",
-      iconClass: "text-slate-600/90 dark:text-slate-300/90",
+        "border-amber-300/40 bg-[linear-gradient(180deg,rgba(255,251,235,0.98),rgba(255,249,220,0.92))] text-slate-950 shadow-[0_26px_72px_-42px_rgba(180,83,9,0.42)] ring-1 ring-amber-200/45 dark:border-amber-300/20 dark:bg-[linear-gradient(180deg,rgba(36,26,10,0.96),rgba(15,23,42,0.84))] dark:text-slate-100 dark:shadow-[0_28px_76px_-40px_rgba(251,191,36,0.26)] dark:ring-amber-300/20",
+      accentClass:
+        "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-200 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200",
+      heightClass: "min-h-[224px] sm:-translate-y-6",
+      iconClass: "h-16 w-16 sm:h-20 sm:w-20 text-amber-500 dark:text-amber-300",
+      rankClass: "text-[4rem] sm:text-[4.75rem] font-black tracking-[-0.14em] text-amber-500 dark:text-amber-300",
+      vendorClass: "text-xl sm:text-2xl font-semibold text-slate-950 dark:text-slate-50",
+      quantityClass: "text-5xl sm:text-6xl font-semibold tracking-[-0.1em] text-slate-950 dark:text-slate-50",
+      metaClass: "text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-200",
+      progressClass: "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-200 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200",
+      footClass: "bg-amber-200/80 dark:bg-amber-300/30",
+      badgeClass:
+        "border-amber-300/50 bg-amber-100/95 text-amber-800 shadow-[0_12px_24px_-18px_rgba(180,83,9,0.45)] dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-200",
     },
     {
       label: "3º",
       rank: 3,
       item: topThree[2],
       baseClass:
-        "border-slate-200/60 bg-white/85 text-slate-900 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-slate-950/75 dark:text-slate-100",
-      accentClass: "bg-slate-300/60 dark:bg-slate-500/60",
-      heightClass: "min-h-[154px]",
-      iconClass: "text-slate-500/90 dark:text-slate-400/90",
+        "border-[#6b4124]/35 bg-[linear-gradient(180deg,rgba(241,226,213,0.96),rgba(211,169,127,0.9))] text-slate-900 shadow-[0_16px_42px_-34px_rgba(78,46,27,0.22)] dark:border-[#7b4a2a]/25 dark:bg-[linear-gradient(180deg,rgba(27,18,12,0.98),rgba(10,16,24,0.9))] dark:text-slate-100 dark:shadow-[0_20px_52px_-38px_rgba(0,0,0,0.48)]",
+      accentClass:
+        "bg-gradient-to-r from-[#4f301c] via-[#6b4124] to-[#8a5a35] dark:from-[#422718] dark:via-[#5d3820] dark:to-[#7b4a2a]",
+      heightClass: "min-h-[164px]",
+      iconClass: "h-12 w-12 sm:h-14 sm:w-14 text-[#6b4124] dark:text-[#b37a4a]",
+      rankClass: "text-[3rem] font-black tracking-[-0.1em] text-[#5d3820] dark:text-[#c58a55]",
+      vendorClass: "text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100",
+      quantityClass: "text-3xl sm:text-4xl font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
+      metaClass: "text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5d3820] dark:text-[#c58a55]",
+      progressClass: "bg-gradient-to-r from-[#4f301c] via-[#6b4124] to-[#8a5a35] dark:from-[#422718] dark:via-[#5d3820] dark:to-[#7b4a2a]",
+      footClass: "bg-[#ae7647]/65 dark:bg-[#7b4a2a]/20",
+      badgeClass: "",
     },
   ] as const;
 
@@ -669,18 +693,16 @@ function PodiumCard({
         {podiumSlots.map((slot) => {
           const item = slot.item;
           const share = item && totalQuantity > 0 ? (item.quantity / totalQuantity) * 100 : 0;
-          const progressClass =
-            slot.rank === 1
-              ? "bg-slate-500 dark:bg-slate-300"
-              : slot.rank === 2
-                ? "bg-slate-400 dark:bg-slate-400"
-                : "bg-slate-300 dark:bg-slate-500";
           const displayVendor = item ? formatVendorDisplayName(item.vendor) : "Sem dados";
-          const rankTone =
-            slot.rank === 1 ? "text-slate-600 dark:text-slate-300" : "text-slate-500 dark:text-slate-400";
 
           return (
-            <div key={slot.rank} className="flex min-w-0 flex-col items-center">
+            <div
+              key={slot.rank}
+              className={cn(
+                "flex min-w-0 flex-col items-center",
+                slot.rank === 1 && "relative z-10 sm:-translate-y-2",
+              )}
+            >
               <div
                 className={cn(
                   "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-3.5 py-3.5 backdrop-blur",
@@ -690,24 +712,30 @@ function PodiumCard({
               >
                 <div className={cn("absolute inset-x-0 top-0 h-1", slot.accentClass)} />
                 <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl dark:bg-white/5" />
-
-                <div className="relative flex items-start justify-between gap-3">
-                  <span
+                {slot.rank === 1 ? (
+                  <div
                     className={cn(
-                      "text-[2.75rem] font-semibold leading-none tracking-[-0.08em] sm:text-5xl",
-                      rankTone,
+                      "absolute left-1/2 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
+                      slot.badgeClass,
                     )}
                   >
+                    <Crown className="h-3.5 w-3.5" />
+                    Destaque
+                  </div>
+                ) : null}
+
+                <div className="relative flex items-start justify-between gap-3">
+                  <span className={cn("leading-none", slot.rankClass)}>
                     {slot.label}
                   </span>
                   {slot.rank === 1 ? (
                     <Trophy
-                      className={cn("h-12 w-12 sm:h-14 sm:w-14", slot.iconClass)}
+                      className={cn("drop-shadow-sm", slot.iconClass)}
                       strokeWidth={1.5}
                     />
                   ) : (
                     <Medal
-                      className={cn("h-12 w-12 sm:h-14 sm:w-14", slot.iconClass)}
+                      className={cn("drop-shadow-sm", slot.iconClass)}
                       strokeWidth={1.5}
                     />
                   )}
@@ -715,27 +743,19 @@ function PodiumCard({
 
                 <div className="relative mt-3 space-y-1.5">
                   <p
-                    className={cn(
-                      "max-w-full break-words text-sm font-semibold leading-5 sm:text-[0.96rem]",
-                      themedTextTitleClass,
-                    )}
+                    className={cn("max-w-full break-words leading-5", slot.vendorClass)}
                   >
                     {displayVendor}
                   </p>
                   <div className="flex items-end justify-between gap-3">
                     <div>
-                      <p
-                        className={cn(
-                          "text-3xl font-light tracking-[-0.05em]",
-                          themedTextTitleClass,
-                        )}
-                      >
+                      <p className={slot.quantityClass}>
                         {item ? item.quantity.toLocaleString("pt-BR") : "-"}
                       </p>
                       <p
                         className={cn(
-                          "flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.18em]",
-                          themedTextMutedClass,
+                          "flex items-center gap-1",
+                          slot.metaClass,
                         )}
                       >
                         <span>
@@ -746,10 +766,7 @@ function PodiumCard({
                     </div>
                     <div className="text-right">
                       <p
-                        className={cn(
-                          "flex items-center justify-end gap-1 text-[9px] font-semibold uppercase tracking-[0.16em]",
-                          themedTextMutedClass,
-                        )}
+                        className={cn("flex items-center justify-end gap-1", slot.metaClass)}
                       >
                         <span>
                           {item
@@ -762,22 +779,20 @@ function PodiumCard({
                   </div>
 
                   <div
-                    className={cn(
-                      "mt-3 h-2 overflow-hidden rounded-full",
-                      "bg-black/5 dark:bg-white/10",
-                    )}
+                    className={cn("mt-3 h-2 overflow-hidden rounded-full", slot.footClass)}
                   >
-                    <div
-                      className={cn("h-full rounded-full", progressClass)}
-                      style={{ width: `${Math.min(100, share)}%` }}
-                    />
+                    <div className={cn("h-full rounded-full", slot.progressClass)} style={{ width: `${Math.min(100, share)}%` }} />
                   </div>
                 </div>
               </div>
               <div
                 className={cn(
                   "mt-2 h-2 w-16 rounded-full",
-                  slot.rank === 1 ? "bg-slate-300/80 dark:bg-slate-500/70" : "bg-slate-200 dark:bg-white/10",
+                  slot.rank === 1
+                    ? "bg-amber-300/80 dark:bg-amber-400/60"
+                    : slot.rank === 2
+                      ? "bg-slate-300/80 dark:bg-slate-500/70"
+                      : "bg-amber-200/80 dark:bg-amber-300/30",
                 )}
               />
             </div>

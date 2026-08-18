@@ -128,7 +128,6 @@ const emptyCatalogSources: SalesIntentionCatalogSources = {
   bandeira: [],
   regional: [],
   lojaVenda: [],
-  classificacao: [],
 };
 
 const emptyModelosDealerSources: SalesIntentionModelosDealerSources = {
@@ -688,16 +687,8 @@ export default function MarcaVeiculoRelatorioPage() {
   }, [enhancedSalesIntention, vehicleCatalogSources.versaoModelo]);
 
   const classificacaoOptions = useMemo(() => {
-    if (classificacaoViewOptions.length > 0) {
-      return classificacaoViewOptions;
-    }
-
-    if (catalogSources.classificacao.length > 0) {
-      return catalogSources.classificacao;
-    }
-
-    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Classificacao));
-  }, [catalogSources.classificacao, classificacaoViewOptions, enhancedSalesIntention]);
+    return classificacaoViewOptions;
+  }, [classificacaoViewOptions]);
 
   const latestAvailableDateInput = useMemo(() => {
     const latestDate = enhancedSalesIntention.reduce<Date | null>((latest, item) => {

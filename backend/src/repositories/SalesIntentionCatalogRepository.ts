@@ -140,8 +140,7 @@ function buildSources(combinations: SalesIntentionCatalogRecord[]): SalesIntenti
     tipoVenda: distinctValues(combinations, 'tipoVenda'),
     bandeira: distinctValues(combinations, 'bandeira'),
     regional: distinctValues(combinations, 'regional'),
-    lojaVenda: distinctValues(combinations, 'lojaVenda'),
-    classificacao: distinctValues(combinations, 'classificacao')
+    lojaVenda: distinctValues(combinations, 'lojaVenda')
   };
 }
 

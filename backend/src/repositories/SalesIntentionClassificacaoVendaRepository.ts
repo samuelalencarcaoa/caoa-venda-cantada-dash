@@ -2,11 +2,21 @@ import prisma from '../lib/prisma';
 import { withPrismaRetry } from '../utils/prismaResilience';
 
 const CLASSIFICACAO_VENDA_SQL = `
-  SELECT DISTINCT *
-  FROM [salesdb].[dbo].[VW_IntencaoVendas_ClassificacaoVenda]
+  SELECT DISTINCT classificacao
+  FROM (
+    SELECT NULLIF(
+      LTRIM(RTRIM(CAST([Descricao_Classificacao_Venda] AS NVARCHAR(200)))),
+      ''
+    ) AS classificacao
+    FROM [salesdb].[dbo].[VW_IntencaoVendas_ClassificacaoVenda]
+  ) AS source
+  WHERE classificacao IS NOT NULL
+  ORDER BY classificacao
 `;
 
-type ClassificacaoVendaRow = Record<string, unknown>;
+type ClassificacaoVendaRow = {
+  classificacao: string | null;
+};
 
 function compare(a: string, b: string): number {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
@@ -21,50 +31,20 @@ function normalizeIdentity(value: string) {
     .toLocaleUpperCase('pt-BR');
 }
 
-function normalizeText(value: unknown) {
+function normalizeText(value: string | null | undefined) {
   if (value === null || value === undefined) {
     return null;
   }
 
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? String(value).trim() || null : null;
-  }
-
-  if (value instanceof Date) {
-    const text = value.toISOString().trim();
-    return text ? text : null;
-  }
-
-  const text = String(value).trim();
-  return text ? text : null;
-}
-
-function pickClassificacaoValue(row: ClassificacaoVendaRow) {
-  const values = Object.entries(row)
-    .map(([key, value]) => ({
-      key: normalizeIdentity(key),
-      value: normalizeText(value)
-    }))
-    .filter((entry): entry is { key: string; value: string } => Boolean(entry.value));
-
-  if (values.length === 0) {
-    return null;
-  }
-
-  const preferredValue = values.find(({ key }) => key.includes('CLASSIFICACAO'))?.value;
-  return preferredValue ?? values[0].value;
+  const trimmed = value.trim().replace(/\s+/g, ' ');
+  return trimmed ? trimmed : null;
 }
 
 function normalizeRows(rows: ClassificacaoVendaRow[]) {
   const uniqueValues = new Map<string, string>();
 
   rows.forEach((row) => {
-    const classificacao = pickClassificacaoValue(row);
+    const classificacao = normalizeText(row.classificacao);
     if (!classificacao) {
       return;
     }

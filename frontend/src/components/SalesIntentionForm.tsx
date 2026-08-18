@@ -7,6 +7,7 @@ import { z } from 'zod';
 import useCurrentUser from '@/hooks/useCurrentUser';
 import {
   createSalesIntention,
+  fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
   fetchSalesIntentionModelosDealer,
   lookupSalesIntentionModelosDealerByPlate,
@@ -24,8 +25,7 @@ const emptyCatalogSources: SalesIntentionCatalogSources = {
   tipoVenda: [],
   bandeira: [],
   regional: [],
-  lojaVenda: [],
-  classificacao: []
+  lojaVenda: []
 };
 
 const emptyCatalogHierarchy: SalesIntentionCatalogHierarchyRecord[] = [];
@@ -543,8 +543,10 @@ export default function SalesIntentionForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [catalogData, setCatalogData] = useState<SalesIntentionCatalogResponse | null>(null);
   const [vehicleCatalogData, setVehicleCatalogData] = useState<SalesIntentionModelosDealerResponse | null>(null);
+  const [classificacaoViewOptions, setClassificacaoViewOptions] = useState<string[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
+  const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState>(defaultNotification);
   const yearOptions = useMemo(() => getYearOptions(), []);
   const lastPlateLookupRef = useRef('');
@@ -564,10 +566,12 @@ export default function SalesIntentionForm() {
     async function loadCatalogRows() {
       setIsCatalogLoading(true);
       setIsVehicleCatalogLoading(true);
+      setIsClassificacaoLoading(true);
       try {
-        const [rows, vehicleRows] = await Promise.allSettled([
+        const [rows, vehicleRows, classificacaoRows] = await Promise.allSettled([
           fetchSalesIntentionCatalogs(),
-          fetchSalesIntentionModelosDealer()
+          fetchSalesIntentionModelosDealer(),
+          fetchSalesIntentionClassificacoes()
         ]);
         if (!active) return;
         if (rows.status === 'fulfilled') {
@@ -578,7 +582,13 @@ export default function SalesIntentionForm() {
           setVehicleCatalogData(vehicleRows.value);
         }
 
-        if (rows.status === 'rejected' || vehicleRows.status === 'rejected') {
+        if (classificacaoRows.status === 'fulfilled') {
+          setClassificacaoViewOptions(classificacaoRows.value);
+        } else {
+          setClassificacaoViewOptions([]);
+        }
+
+        if (rows.status === 'rejected' || vehicleRows.status === 'rejected' || classificacaoRows.status === 'rejected') {
           openNotification(
             'error',
             'Não conseguimos carregar os campos',
@@ -589,6 +599,7 @@ export default function SalesIntentionForm() {
         if (active) {
           setIsCatalogLoading(false);
           setIsVehicleCatalogLoading(false);
+          setIsClassificacaoLoading(false);
         }
       }
     }
@@ -703,7 +714,7 @@ export default function SalesIntentionForm() {
             vehicleCatalogRows
           )
         : [],
-      classificacao: catalogSources.classificacao
+      classificacao: classificacaoViewOptions
     }),
     [
       catalogHierarchy,
@@ -713,6 +724,7 @@ export default function SalesIntentionForm() {
       formData.modelo,
       formData.regional,
       formData.tipoVenda,
+      classificacaoViewOptions,
       vehicleCatalogRows,
       vehicleCatalogSources
     ]
@@ -801,7 +813,7 @@ export default function SalesIntentionForm() {
   }, [formData.placa, showSeminovosFields]);
 
   const closeNotification = () => setNotification(defaultNotification);
-  const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
+  const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading || isClassificacaoLoading;
 
   const updateFormField = (name: keyof SalesIntentionFormData, rawValue: string) => {
     const nextValue =

@@ -548,11 +548,6 @@ export const openApiSpec = {
             type: 'array',
             items: { type: 'string' },
             example: ['D21-0713-RIBEIRAO PRETO', 'D21-7300-JOAO PESSOA']
-          },
-          classificacao: {
-            type: 'array',
-            items: { type: 'string' },
-            example: ['PCD', 'Varejo']
           }
         }
       },
