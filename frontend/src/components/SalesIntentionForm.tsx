@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { AlertCircle, CheckCircle2, CircleHelp, LoaderCircle, Search, TriangleAlert, X } from 'lucide-react';
 import { z } from 'zod';
 
@@ -274,88 +274,35 @@ function FieldTooltip({
 function FieldLabelWithTooltip({
   label,
   tooltip,
-  tooltipPlacement = 'top',
-  badge,
-  badgeTone = 'neutral'
+  tooltipPlacement = 'top'
 }: {
   label: string;
   tooltip: string;
   tooltipPlacement?: 'top' | 'right';
-  badge?: ReactNode;
-  badgeTone?: FieldBadgeTone;
 }) {
   return (
     <span className={fieldLabelRowClasses}>
-      <FieldLabelContent label={label} badge={badge} badgeTone={badgeTone} />
+      <span className={fieldLabelTextClasses}>{label}</span>
       <FieldTooltip text={tooltip} placement={tooltipPlacement} />
     </span>
   );
 }
 
-const fieldLabelRowClasses = 'inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 ';
+const fieldLabelRowClasses = 'inline-flex flex-wrap items-center gap-x-1.5 gap-y-1';
 const fieldLabelTextClasses =
   'min-w-0 text-base font-extrabold leading-tight tracking-[-0.02em] text-slate-950 dark:text-slate-50 sm:text-[1.0rem]';
-const fieldBadgeBaseClasses =
-  'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[7px] font-semibold uppercase tracking-[0.08em] leading-none sm:text-[10px]';
-const fieldBadgeToneClasses = {
-  auto: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-200',
-  dependency:
-    'border-sky-200 bg-sky-50 text-sky-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-100',
-  required:
-    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-100',
-  neutral: 'border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300'
-} as const;
-type FieldBadgeTone = keyof typeof fieldBadgeToneClasses;
-
-function FieldBadge({
-  children,
-  tone = 'neutral'
-}: {
-  children: ReactNode;
-  tone?: FieldBadgeTone;
-}) {
-  return <span className={`${fieldBadgeBaseClasses} ${fieldBadgeToneClasses[tone]}`}>{children}</span>;
-}
-
-function FieldLabelContent({
-  label,
-  badge,
-  badgeTone = 'neutral'
-}: {
-  label: string;
-  badge?: ReactNode;
-  badgeTone?: FieldBadgeTone;
-}) {
-  return (
-    <>
-      <span className={fieldLabelTextClasses}>{label}</span>
-      {badge ? <FieldBadge tone={badgeTone}>{badge}</FieldBadge> : null}
-    </>
-  );
-}
-
 function FieldLabel({
-  label,
-  badge,
-  badgeTone = 'neutral'
+  label
 }: {
   label: string;
-  badge?: ReactNode;
-  badgeTone?: FieldBadgeTone;
 }) {
-  return (
-    <span className={fieldLabelRowClasses}>
-      <FieldLabelContent label={label} badge={badge} badgeTone={badgeTone} />
-    </span>
-  );
+  return <span className={fieldLabelTextClasses}>{label}</span>;
 }
 
 function SearchableField({
   label,
   tooltip,
   tooltipPlacement = 'top',
-  badge,
-  badgeTone = 'neutral',
   value,
   options,
   placeholder,
@@ -366,8 +313,6 @@ function SearchableField({
   label: string;
   tooltip: string;
   tooltipPlacement?: 'top' | 'right';
-  badge?: ReactNode;
-  badgeTone?: FieldBadgeTone;
   value: string;
   options: string[];
   placeholder: string;
@@ -426,8 +371,6 @@ function SearchableField({
         label={label}
         tooltip={tooltip}
         tooltipPlacement={tooltipPlacement}
-        badge={badge}
-        badgeTone={badgeTone}
       />
       <div className="relative">
         <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
@@ -986,7 +929,7 @@ export default function SalesIntentionForm() {
       >
         <div className="grid gap-3 sm:gap-4 md:col-span-2 xl:col-span-8">
           <label className={labelClasses}>
-            <FieldLabel label="Proprietário" badge="Automático" badgeTone="auto" />
+            <FieldLabel label="Proprietário" />
             <input
               name="proprietario"
               value={formData.proprietario}
@@ -1001,7 +944,7 @@ export default function SalesIntentionForm() {
 
         <div className="grid gap-3 sm:gap-4 xl:col-span-4">
           <label className={labelClasses}>
-            <FieldLabel label="Tipo de venda" badge="Obrigatório" badgeTone="required" />
+            <FieldLabel label="Tipo de venda" />
             <select
               name="tipoVenda"
               value={formData.tipoVenda}
@@ -1022,7 +965,7 @@ export default function SalesIntentionForm() {
 
         <div className="grid gap-3 sm:gap-4 xl:col-span-3">
           <label className={labelClasses}>
-            <FieldLabel label="Bandeira" badge="Obrigatório" badgeTone="required" />
+            <FieldLabel label="Bandeira" />
             <select
               name="bandeira"
               value={formData.bandeira}
@@ -1046,8 +989,6 @@ export default function SalesIntentionForm() {
             <FieldLabelWithTooltip
               label="Regional"
               tooltip={regionalTooltipText}
-              badge="Depende da bandeira"
-              badgeTone="dependency"
             />
             <select
               name="regional"
@@ -1073,8 +1014,6 @@ export default function SalesIntentionForm() {
           <SearchableField
             label="Loja de Venda"
             tooltip={lojaVendaTooltipText}
-            badge="Depende da Regional"
-            badgeTone="dependency"
             value={formData.lojaVenda}
             options={filteredOptions.lojaVenda}
             placeholder={formData.regional ? 'Digite 1 caractere para buscar' : 'Escolha a regional primeiro'}
@@ -1093,7 +1032,7 @@ export default function SalesIntentionForm() {
         >
           {showSeminovosFields ? (
             <label className={`${labelClasses} md:col-span-1 xl:col-span-2`}>
-              <FieldLabel label="Placa" badge="SÓ seminovos" badgeTone="auto" />
+              <FieldLabel label="Placa" />
               <input
                 type="text"
                 name="placa"
@@ -1114,8 +1053,6 @@ export default function SalesIntentionForm() {
             <SearchableField
               label="Marca veículo"
               tooltip={vehicleTooltipText}
-              badge="Depende do tipo"
-              badgeTone="dependency"
               value={formData.marcaVeiculo}
               options={filteredOptions.marcaVeiculo}
               placeholder={formData.tipoVenda ? 'Digite 1 caractere para buscar' : 'Escolha o tipo de venda primeiro'}
@@ -1135,8 +1072,6 @@ export default function SalesIntentionForm() {
             <SearchableField
               label="Modelo"
               tooltip={modelTooltipText}
-              badge="Depende da marca"
-              badgeTone="dependency"
               value={formData.modelo}
               options={filteredOptions.modelo}
               placeholder={formData.marcaVeiculo ? 'Digite 1 caractere para buscar' : 'Escolha a marca primeiro'}
@@ -1152,8 +1087,6 @@ export default function SalesIntentionForm() {
             label="Versão"
             tooltip={versionTooltipText}
             tooltipPlacement="right"
-            badge="Depende do modelo"
-            badgeTone="dependency"
             value={formData.versao}
             options={filteredOptions.versao}
             placeholder={
@@ -1173,7 +1106,7 @@ export default function SalesIntentionForm() {
           <>
             <div className="grid gap-3 sm:gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-12 xl:grid-cols-12">
               <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
-                <FieldLabel label="Ano" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Ano" />
                 <select
                   name="ano"
                   value={formData.ano}
@@ -1191,7 +1124,7 @@ export default function SalesIntentionForm() {
                 {errors.ano ? <span className={errorTextClasses}>{errors.ano}</span> : null}
               </label>
               <label className={`${labelClasses} md:col-span-1 xl:col-span-4`}>
-                <FieldLabel label="Classificação" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Classificação" />
                 <select
                   name="classificacao"
                   value={formData.classificacao}
@@ -1210,7 +1143,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={`${labelClasses} md:col-span-1 xl:col-span-2`}>
-                <FieldLabel label="Quant." badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Quant." />
                 <input
                   type="number"
                   min={1}
@@ -1224,7 +1157,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
-                <FieldLabel label="Data e hora da solic" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Data e hora da solic" />
                 <input
                   type="datetime-local"
                   step={60}
@@ -1242,7 +1175,7 @@ export default function SalesIntentionForm() {
           <>
             <div className="grid gap-3 sm:gap-4 md:col-span-2 xl:col-span-4">
               <label className={labelClasses}>
-                <FieldLabel label="Classificação" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Classificação" />
                 <select
                   name="classificacao"
                   value={formData.classificacao}
@@ -1263,7 +1196,7 @@ export default function SalesIntentionForm() {
 
             <div className="grid gap-3 sm:gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-8">
               <label className={labelClasses}>
-                <FieldLabel label="Quantidade" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Quantidade" />
                 <input
                   type="number"
                   min={1}
@@ -1277,7 +1210,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={labelClasses}>
-                <FieldLabel label="Data e hora da solic" badge="Obrigatório" badgeTone="required" />
+                <FieldLabel label="Data e hora da solic" />
                 <input
                   type="datetime-local"
                   step={60}

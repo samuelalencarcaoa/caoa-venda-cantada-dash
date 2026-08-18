@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ReportErrorCard } from "@/components/report-error-card";
+import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { FilterSelectCard, TooltipIcon } from "@/components/sales-intention-filter-select-card";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import {
@@ -40,6 +41,7 @@ import {
   themedOutlineButtonClass,
   themedPageBackgroundClass,
   themedPageTextClass,
+  themedHeroClass,
   themedPanelClass,
   themedSoftCardClass,
   themedTextMutedClass,
@@ -103,14 +105,13 @@ const emptyVehicleCatalogRows: SalesIntentionModelosDealerRecord[] = [];
 const rankingDisplayOptions = [10, 20, 50, 100] as const;
 type RankingDisplayCount = (typeof rankingDisplayOptions)[number];
 
-const vendorHeroClass =
-  "rounded-[34px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] text-slate-900 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(15,23,42,0.82))] dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]";
-
 const vendorStatusChipClass =
-  "rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+  "rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium";
 
-const vendorFilterChipClass =
-  "inline-flex max-w-[18rem] items-center rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur truncate dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+const vendorFilterChipClass = cn(
+  themedChipClass,
+  "inline-flex max-w-[18rem] items-center normal-case tracking-normal truncate",
+);
 
 function toTitleCase(value: string) {
   if (!value) {
@@ -1717,7 +1718,7 @@ export default function VendedorRelatorioPage() {
     return (
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-          <section className={cn(vendorHeroClass, "h-[156px] animate-pulse")} />
+          <section className={cn(themedHeroClass, "h-[156px] animate-pulse")} />
 
           <section className={cn(themedPanelClass, "p-6")}>
             <div className="mb-6 h-6 w-40 animate-pulse rounded bg-slate-200/80 dark:bg-white/10" />
@@ -1754,8 +1755,8 @@ export default function VendedorRelatorioPage() {
     return (
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
-          <section className={cn(vendorHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-            <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-slate-500 dark:text-slate-400">
+          <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
+            <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
               Relatório
             </p>
             <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
@@ -1821,7 +1822,7 @@ export default function VendedorRelatorioPage() {
   return (
     <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
       <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-        <section className={cn(vendorHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
+        <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -1830,7 +1831,7 @@ export default function VendedorRelatorioPage() {
                 </h1>
                 <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca, modelo, versão e período." />
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80 dark:text-cyan-200/80">
                 <span className={vendorStatusChipClass}>
                   Atualizado: {lastUpdatedText}
                 </span>
@@ -1838,7 +1839,7 @@ export default function VendedorRelatorioPage() {
                   {isRefreshing ? "Atualizando..." : "Pronto"}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-sky-50/90 dark:text-cyan-50/90">
                 <span className={vendorStatusChipClass}>
                   {displayActivePeriodText}
                 </span>
@@ -2110,6 +2111,12 @@ export default function VendedorRelatorioPage() {
           chartKey={trendChartKey}
           chartSpec={fullscreenTrendChartSpec}
           onClose={() => setIsTrendFullscreenOpen(false)}
+        />
+
+        <SalesIntentionDataList
+          items={filteredItems}
+          exportFilePrefix="relatorio-vendedores"
+          className="mt-1 max-w-full"
         />
       </div>
     </main>

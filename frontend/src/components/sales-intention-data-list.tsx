@@ -33,6 +33,22 @@ const REPORT_COLUMNS: Array<keyof SalesIntentionReportRow> = [
   "Criado",
 ];
 
+const REPORT_COLUMN_LABELS: Record<keyof SalesIntentionReportRow, string> = {
+  ID: "ID",
+  Proprietario: "Prop.",
+  Tipo_Venda: "Tipo",
+  Bandeira: "Band.",
+  Loja_Venda: "Loja",
+  Marca_Veiculo: "Marca",
+  Versao: "Versão",
+  Classificacao: "Classif.",
+  Quantidade: "Qtd.",
+  Data_solicitacao: "Data",
+  Placa: "Placa",
+  Regional: "Reg.",
+  Criado: "Criado",
+};
+
 function normalizeLabel(value: string) {
   return value
     .normalize("NFD")
@@ -73,7 +89,7 @@ export function SalesIntentionDataList({
   className = "",
 }: SalesIntentionDataListProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<keyof SalesIntentionReportRow | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [editableItems, setEditableItems] = useState<SalesIntentionReportRow[]>(items);
@@ -309,12 +325,12 @@ export function SalesIntentionDataList({
   return (
     <div
       className={cn(
-        "mx-auto min-w-0 backdrop-blur",
+        "w-full min-w-0 backdrop-blur p-4 sm:p-5",
         themedPanelClass,
         className,
       )}
     >
-      <div className="border-b border-slate-200/80 bg-slate-50/80 px-3 py-3 dark:border-white/10 dark:bg-white/5 sm:px-4">
+      <div className="border-b border-slate-200/80 bg-slate-50/80 px-0 py-3 dark:border-white/10 dark:bg-white/5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-0.5">
             <p className={cn(themedTinyLabelClass, "tracking-[0.3em]")}>
@@ -329,7 +345,7 @@ export function SalesIntentionDataList({
           </div>
 
           <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+            <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
               <span className="font-medium">Itens por página</span>
               <select
                 className="bg-transparent text-[11px] font-medium text-slate-700 outline-none dark:text-slate-100"
@@ -343,13 +359,13 @@ export function SalesIntentionDataList({
                 ))}
               </select>
             </label>
-            <div className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+            <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
               Página {currentPage} de {totalPages}
             </div>
             <Button
               variant="outline"
               onClick={exportToExcel}
-              className={cn("h-8 rounded-full px-3 text-[11px] font-medium", themedOutlineButtonClass)}
+              className={cn("h-8 rounded-full px-2.5 text-[11px] font-medium", themedOutlineButtonClass)}
             >
               Baixar Excel
             </Button>
@@ -357,14 +373,14 @@ export function SalesIntentionDataList({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse text-[11px] leading-tight">
+      <div className="w-full">
+        <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
           <thead className="bg-slate-50/80 dark:bg-white/5">
             <tr>
               {REPORT_COLUMNS.map((key) => (
                 <th
                   key={key}
-                  className="border-b border-slate-200 px-2.5 py-2 text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400"
+                  className="border-b border-slate-200 px-1 py-2 align-top text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400"
                   aria-sort={
                     sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"
                   }
@@ -380,17 +396,17 @@ export function SalesIntentionDataList({
                       setSortKey(key);
                       setSortDir("asc");
                     }}
-                    className="inline-flex w-full items-center justify-between gap-2 text-left text-slate-500 transition hover:text-slate-900 focus:outline-none dark:text-slate-400 dark:hover:text-slate-100"
+                    className="inline-flex w-full items-start justify-between gap-2 text-left text-slate-500 transition hover:text-slate-900 focus:outline-none dark:text-slate-400 dark:hover:text-slate-100"
                     title={`Ordenar por ${key}`}
                   >
-                    <span>{key}</span>
-                    <span className="text-[0.6rem] font-medium">
+                    <span className="min-w-0 whitespace-nowrap">{REPORT_COLUMN_LABELS[key]}</span>
+                    <span className="shrink-0 text-[0.6rem] font-medium">
                       {sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
                     </span>
                   </button>
                 </th>
               ))}
-              <th className="border-b border-slate-200 px-2.5 py-2 text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
+              <th className="border-b border-slate-200 px-1 py-2 align-top text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
                 Ações
               </th>
             </tr>
@@ -419,7 +435,10 @@ export function SalesIntentionDataList({
                     const isQuantityField = key === "Quantidade";
 
                     return (
-                      <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-2.5 py-2 text-slate-700 dark:border-white/10 dark:text-slate-200">
+                      <td
+                        key={`${rowIndex}-${key}`}
+                        className="border-b border-slate-100 px-1 py-2 align-top whitespace-normal break-words text-slate-700 dark:border-white/10 dark:text-slate-200"
+                      >
                         {isEditing && isQuantityField ? (
                           <input
                             type="number"
@@ -431,7 +450,7 @@ export function SalesIntentionDataList({
                                 Quantidade: event.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
+                            className="w-full max-w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : isEditing && isDateField ? (
                           <input
@@ -444,15 +463,15 @@ export function SalesIntentionDataList({
                                 Data_solicitacao: event.target.value,
                               }))
                             }
-                            className="min-w-44 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
+                            className="w-full max-w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : (
                           display
                         )}
                       </td>
-                    );
-                  })}
-                  <td className="border-b border-slate-100 px-2.5 py-2 text-slate-700 dark:border-white/10 dark:text-slate-200">
+                  );
+                })}
+                  <td className="border-b border-slate-100 px-1 py-2 align-top text-slate-700 dark:border-white/10 dark:text-slate-200">
                     {isEditing ? (
                       <div className="flex items-center gap-0.5">
                         <Button
@@ -494,7 +513,7 @@ export function SalesIntentionDataList({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-3 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400 sm:px-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-0 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
         <div>
           {sortedItems.length === 0
             ? "Nenhum registro encontrado."
@@ -503,7 +522,7 @@ export function SalesIntentionDataList({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
           >
@@ -511,7 +530,7 @@ export function SalesIntentionDataList({
           </button>
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
           >

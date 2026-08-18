@@ -1001,7 +1001,7 @@ export default function DashboardV2Page() {
           <SalesIntentionDataList
             items={filteredSales}
             exportFilePrefix="dashboard-lista-dados"
-            className="mt-1 max-w-[1160px]"
+            className="mt-1 w-full max-w-none"
           />
         </section>
 

@@ -1399,7 +1399,7 @@ export default function MarcaVeiculoRelatorioPage() {
         <SalesIntentionDataList
           items={filteredItems}
           exportFilePrefix="relatorio-marca"
-          className="mt-1 max-w-[1160px]"
+          className="mt-1 max-w-full"
         />
       </div>
     </main>
