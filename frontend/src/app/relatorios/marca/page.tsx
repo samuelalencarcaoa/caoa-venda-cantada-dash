@@ -103,6 +103,8 @@ const buildLocalDateFromInput = (value: string, endOfDay = false) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const formatHourLabel = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+
 const sortUniqueOptions = (values: Array<string | null | undefined>) =>
   Array.from(
     new Set(
@@ -851,29 +853,50 @@ export default function MarcaVeiculoRelatorioPage() {
     if (isSingleDay) {
       const hourlyValues = Array.from({ length: 24 }, (_, hour) => ({
         time: hour,
-        label: `${String(hour).padStart(2, "0")}:00`,
+        label: formatHourLabel(hour),
         value: 0,
       }));
+      let firstHour = 24;
+      let lastHour = -1;
 
       filteredItems.forEach((item) => {
         const createdAt = parseReportDate(item.Criado);
         if (!createdAt) return;
+        if (formatInputDate(createdAt) !== startDate) return;
 
-        hourlyValues[createdAt.getHours()].value += Number(item.Quantidade) || 0;
+        const hour = createdAt.getHours();
+        hourlyValues[hour].value += Number(item.Quantidade) || 0;
+
+        if (hour < firstHour) {
+          firstHour = hour;
+        }
+
+        if (hour > lastHour) {
+          lastHour = hour;
+        }
       });
+
+      if (firstHour === 24 || lastHour < 0) {
+        return {
+          grainLabel: "Visão por hora",
+          values: [],
+        };
+      }
+
+      const windowStart = Math.max(0, firstHour - 1);
+      const windowEnd = Math.min(23, lastHour + 1);
+      const visibleValues = hourlyValues.slice(windowStart, windowEnd + 1);
 
       let accumulated = 0;
       return {
         grainLabel: "Visão por hora",
-        values: filteredItems.length
-          ? hourlyValues.map((item) => {
-              accumulated += item.value;
-              return {
-                ...item,
-                quantity: trendView === "acumulado" ? accumulated : item.value,
-              };
-            })
-          : [],
+        values: visibleValues.map((item) => {
+          accumulated += item.value;
+          return {
+            ...item,
+            quantity: trendView === "acumulado" ? accumulated : item.value,
+          };
+        }),
       };
     }
 

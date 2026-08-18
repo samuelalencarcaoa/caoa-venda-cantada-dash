@@ -97,6 +97,7 @@ type TrendView = (typeof trendOptions)[number]["value"];
 
 type TrendPoint = {
   label: string;
+  hour: number;
   vendor: string;
   quantity: number;
 };
@@ -192,6 +193,10 @@ function buildLocalDateFromInput(value: string, endOfDay = false) {
     endOfDay ? 999 : 0,
   );
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatHourLabel(hour: number) {
+  return `${String(hour).padStart(2, "0")}:00`;
 }
 
 function sortUniqueOptions(values: Array<string | null | undefined>) {
@@ -909,6 +914,7 @@ export default function VendedorRelatorioPage() {
     return "Período ativo: intervalo livre";
   }, [endDate, startDate, todayInput]);
 
+  const isSingleDayPeriod = Boolean(startDate && endDate && startDate === endDate);
   const displayActivePeriodText = activePeriodText.replace("Período ativo: ", "Período: ");
   const displayFallbackNotice = autoFallbackDate
     ? `Usando ${formatDisplayInputDate(autoFallbackDate)}`
@@ -1063,7 +1069,7 @@ export default function VendedorRelatorioPage() {
     return comparisonVendorOptions.slice(0, MAX_TREND_SERIES);
   }, [comparisonVendorOptions, selectedComparisonVendors]);
 
-  const trendChartKey = `${trendView}-${trendSeriesLabels.join("|")}`;
+  const trendChartKey = `${isSingleDayPeriod ? "hourly" : "daily"}-${trendView}-${trendSeriesLabels.join("|")}`;
 
   const trendChartData = useMemo<TrendPoint[]>(() => {
     if (trendSeriesLabels.length === 0) {
@@ -1071,6 +1077,100 @@ export default function VendedorRelatorioPage() {
     }
 
     const selectedSeries = new Set(trendSeriesLabels);
+    if (isSingleDayPeriod) {
+      const selectedDate = buildLocalDateFromInput(startDate);
+      if (!selectedDate) {
+        return [];
+      }
+
+      const grouped = new Map<
+        number,
+        { time: number; label: string; totals: Record<string, number> }
+      >();
+      let firstHour = 24;
+      let lastHour = -1;
+
+      filteredItems.forEach((item) => {
+        const vendor = item.Proprietario || "Sem vendedor";
+        if (!selectedSeries.has(vendor)) {
+          return;
+        }
+
+        const current = parseReportDate(item.Data_solicitacao);
+        if (!current || formatInputDate(current) !== startDate) {
+          return;
+        }
+
+        const hour = current.getHours();
+        const quantity = Number(item.Quantidade) || 0;
+        const currentGroup = grouped.get(hour) ?? {
+          time: new Date(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth(),
+            selectedDate.getDate(),
+            hour,
+          ).getTime(),
+          label: formatHourLabel(hour),
+          totals: {},
+        };
+
+        currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + quantity;
+        grouped.set(hour, currentGroup);
+
+        if (hour < firstHour) {
+          firstHour = hour;
+        }
+
+        if (hour > lastHour) {
+          lastHour = hour;
+        }
+      });
+
+      if (grouped.size === 0) {
+        return [];
+      }
+
+      const windowStart = Math.max(0, firstHour - 1);
+      const windowEnd = Math.min(23, lastHour + 1);
+      const cumulativeByVendor = new Map<string, number>(
+        trendSeriesLabels.map((vendor) => [vendor, 0]),
+      );
+
+      return Array.from({ length: windowEnd - windowStart + 1 }, (_, index) => windowStart + index)
+        .flatMap((hour) => {
+          const row =
+            grouped.get(hour) ?? {
+              time: new Date(
+                selectedDate.getFullYear(),
+                selectedDate.getMonth(),
+                selectedDate.getDate(),
+                hour,
+              ).getTime(),
+              label: formatHourLabel(hour),
+              totals: {},
+            };
+
+          return trendSeriesLabels.map((vendor) => {
+            const quantity = row.totals[vendor] || 0;
+            const nextQuantity =
+              trendView === "acumulado"
+                ? (cumulativeByVendor.get(vendor) || 0) + quantity
+                : quantity;
+
+            if (trendView === "acumulado") {
+              cumulativeByVendor.set(vendor, nextQuantity);
+            }
+
+            return {
+              label: row.label,
+              hour,
+              vendor,
+              quantity: nextQuantity,
+            };
+          });
+        });
+    }
+
     const grouped = new Map<string, { time: number; label: string; totals: Record<string, number> }>();
 
     filteredItems.forEach((item) => {
@@ -1116,12 +1216,25 @@ export default function VendedorRelatorioPage() {
 
           return {
             label: row.label,
+            hour: new Date(row.time).getHours(),
             vendor,
             quantity: nextQuantity,
           };
         }),
       );
-  }, [filteredItems, trendSeriesLabels, trendView]);
+  }, [filteredItems, isSingleDayPeriod, startDate, trendSeriesLabels, trendView]);
+
+  const trendHourRange = useMemo(() => {
+    if (!isSingleDayPeriod || trendChartData.length === 0) {
+      return null;
+    }
+
+    const hours = trendChartData.map((item) => item.hour);
+    return {
+      min: Math.min(...hours),
+      max: Math.max(...hours),
+    };
+  }, [isSingleDayPeriod, trendChartData]);
 
   const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
@@ -1132,7 +1245,7 @@ export default function VendedorRelatorioPage() {
           values: trendChartData,
         },
       ],
-      xField: "label",
+      xField: isSingleDayPeriod ? "hour" : "label",
       yField: "quantity",
       seriesField: "vendor",
       smooth: true,
@@ -1161,14 +1274,31 @@ export default function VendedorRelatorioPage() {
         },
       },
       axes: [
-        {
-          orient: "bottom",
-          label: {
-            autoRotate: false,
-            autoHide: true,
-            autoHideMethod: "greedy",
-          },
-        },
+        isSingleDayPeriod && trendHourRange
+          ? {
+              orient: "bottom",
+              type: "linear",
+              min: trendHourRange.min,
+              max: trendHourRange.max,
+              nice: false,
+              label: {
+                formatMethod: (text: string | string[]) => {
+                  const value = Number(Array.isArray(text) ? text[0] : text);
+
+                  return Number.isFinite(value)
+                    ? formatHourLabel(value)
+                    : String(Array.isArray(text) ? text[0] : text);
+                },
+              },
+            }
+          : {
+              orient: "bottom",
+              label: {
+                autoRotate: false,
+                autoHide: true,
+                autoHideMethod: "greedy",
+              },
+            },
         {
           orient: "left",
           label: {
@@ -1191,7 +1321,7 @@ export default function VendedorRelatorioPage() {
           title: { value: (datum) => datum?.vendor || "Série" },
           content: [
             {
-              key: "Data",
+              key: isSingleDayPeriod ? "Hora" : "Data",
               value: (datum) => datum?.label || "Período",
             },
             {
@@ -1208,7 +1338,7 @@ export default function VendedorRelatorioPage() {
       line: { style: { lineWidth: 2.5, curveType: "monotone" } },
       area: { visible: false },
     }),
-    [trendChartData, trendView],
+    [isSingleDayPeriod, trendChartData, trendHourRange, trendView],
   );
 
   const totalQuantity = useMemo(
@@ -1586,7 +1716,7 @@ export default function VendedorRelatorioPage() {
         <TrendFullscreenModal
           open={isTrendFullscreenOpen}
           title="Comparativo"
-          subtitle={`Visualização expandida em ${trendView === "acumulado" ? "acumulado" : "volume"} com os filtros atuais.`}
+          subtitle={`Visualização expandida em ${isSingleDayPeriod ? "horas" : trendView === "acumulado" ? "acumulado" : "volume"} com os filtros atuais.`}
           chartKey={trendChartKey}
           chartSpec={trendChartSpec}
           onClose={() => setIsTrendFullscreenOpen(false)}
