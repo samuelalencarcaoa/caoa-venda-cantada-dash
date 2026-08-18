@@ -1408,12 +1408,12 @@ export default function VendedorRelatorioPage() {
           return;
         }
 
-        const current = parseReportDate(item.Data_solicitacao);
-        if (!current || formatInputDate(current) !== startDate) {
+        const createdAt = parseReportDate(item.Criado);
+        if (!createdAt || formatInputDate(createdAt) !== startDate) {
           return;
         }
 
-        const hour = current.getHours();
+        const hour = createdAt.getHours();
         const quantity = Number(item.Quantidade) || 0;
         const currentGroup = grouped.get(hour) ?? {
           time: new Date(

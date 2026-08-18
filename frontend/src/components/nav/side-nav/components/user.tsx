@@ -54,7 +54,11 @@ function getAvatarColor(seed: string) {
   return `hsl(${hue}, 65%, 45%)`;
 }
 
-export default function User() {
+type UserProps = {
+  onNavigate?: () => void;
+};
+
+export default function User({ onNavigate }: UserProps) {
   const { data: session } = useSession();
   const [username, setUsername] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<{ displayName?: string; imageUrl?: string }>({});
@@ -130,7 +134,7 @@ export default function User() {
           </div>
         </div>
         <Button asChild className="w-full">
-          <Link href="/perfil">
+          <Link href="/perfil" onClick={onNavigate}>
             <UserRound className="h-4 w-4" />
             Ver perfil
           </Link>

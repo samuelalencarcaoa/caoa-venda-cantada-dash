@@ -380,14 +380,14 @@ export function SalesIntentionDataList({
             </div>
 
             <div className="w-full lg:justify-self-center">
-              <label className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+              <label className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
                 <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar em todas as colunas"
-                  className="min-w-0 flex-1 bg-transparent text-[11px] font-medium text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                  className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                   aria-label="Buscar na tabela detalhada"
                 />
                 <TooltipIcon text="Busca global em ID, proprietário, tipo de venda, bandeira, loja, marca, versão, classificação, quantidade, data, placa, regional e criado. Use mais de uma palavra para exigir todos os termos." />
@@ -406,10 +406,10 @@ export function SalesIntentionDataList({
             </div>
 
             <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center lg:justify-self-end">
-              <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+              <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
                 <span className="font-medium">Itens por página</span>
                 <select
-                  className="bg-transparent text-[11px] font-medium text-slate-700 outline-none dark:text-slate-100"
+                  className="bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-100"
                   value={itemsPerPage}
                   onChange={(event) => setItemsPerPage(Number(event.target.value))}
                 >
@@ -420,13 +420,13 @@ export function SalesIntentionDataList({
                   ))}
                 </select>
               </label>
-              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
                 Página {currentPage} de {totalPages}
               </div>
               <Button
                 variant="outline"
                 onClick={exportToExcel}
-                className={cn("h-8 rounded-full px-2.5 text-[11px] font-medium", themedOutlineButtonClass)}
+                className={cn("h-8 rounded-full px-2.5 text-xs font-medium", themedOutlineButtonClass)}
               >
                 Baixar Excel
               </Button>
@@ -437,7 +437,7 @@ export function SalesIntentionDataList({
       </div>
 
       <div className="w-full">
-        <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
+        <table className="w-full table-fixed border-collapse text-xs leading-tight">
           <thead className="bg-slate-50/80 dark:bg-white/5">
             <tr>
               {REPORT_COLUMNS.map((key) => (
@@ -526,7 +526,7 @@ export function SalesIntentionDataList({
                                 Data_solicitacao: event.target.value,
                               }))
                             }
-                            className="w-full max-w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
+                            className="w-full max-w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : (
                           display
