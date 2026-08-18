@@ -35,24 +35,26 @@ import {
 import { cn } from "@/lib/utils";
 
 const trendPalette = [
-  "#ec4899",  
-  "#0ea5e9",
-  "#f59e0b", 
-  "#6366f1",   
-  "#ef4444",
-  "#22d3ee",  
-  "#f97316",
-  "#14b8a6",
-  "#10b981",
-  "#8b5cf6",
+  "#7aa2d9",
+  "#6dbdc8",
+  "#d0a86c",
+  "#8b93de",
+  "#d28f9a",
+  "#75b8a8",
+  "#d69d74",
+  "#90aa7a",
+  "#b694d9",
+  "#d09a88",
 ] as const;
 
 const MAX_TREND_SERIES = 5;
-const TREND_CHART_HEIGHT_CLASS = "h-[273px]";
 const trendOptions = [
   { value: "volume", label: "Volume" },
   { value: "acumulado", label: "Acumulado" },
 ] as const;
+
+const rankingDisplayOptions = [10, 20, 50, 100] as const;
+type RankingDisplayCount = (typeof rankingDisplayOptions)[number];
 
 const vendorHeroClass =
   "rounded-[34px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] text-slate-900 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(15,23,42,0.82))] dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]";
@@ -385,6 +387,155 @@ function ChartCard({
   );
 }
 
+function RankingCard({
+  items,
+  totalQuantity,
+  visibleCount,
+  onVisibleCountChange,
+  onExport,
+  className,
+}: {
+  items: Array<{ vendor: string; proposals: number; quantity: number; avgPerProposal: number }>;
+  totalQuantity: number;
+  visibleCount: RankingDisplayCount;
+  onVisibleCountChange: (value: RankingDisplayCount) => void;
+  onExport: () => void;
+  className?: string;
+}) {
+  const visibleItems = items.slice(0, visibleCount);
+
+  return (
+    <article className={cn(themedCardClass, "flex h-full min-w-0 flex-col p-5", className)}>
+      <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+              Ranking de Vendedores
+            </h2>
+            <TooltipIcon text="Todos os vendedores ordenados por quantidade vendida no recorte atual." />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <span>Mostrar</span>
+            <select
+              value={String(visibleCount)}
+              onChange={(event) => onVisibleCountChange(Number(event.target.value) as RankingDisplayCount)}
+              className={cn(
+                "h-9 rounded-xl border px-2.5 text-xs outline-none transition focus:ring-2",
+                themedInputClass,
+              )}
+            >
+              {rankingDisplayOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onExport}
+            className={cn("h-8 text-xs", themedOutlineButtonClass)}
+          >
+            Exportar Excel
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/60 bg-background/50">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <table className="min-w-full divide-y divide-border text-left text-xs">
+            <thead className="sticky top-0 z-10 bg-muted/95 text-muted-foreground backdrop-blur">
+              <tr>
+                <th className="border-b border-border bg-background/95 px-3 py-2 font-medium">
+                  Vendedor
+                </th>
+                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
+                  Venda Cantada
+                </th>
+                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
+                  Quantidade
+                </th>
+                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
+                  Média/Proposta
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border bg-background">
+              {visibleItems.length ? (
+                visibleItems.map((row, idx) => {
+                  const position = idx + 1;
+                  let medal: ReactNode = null;
+
+                  if (position === 1) {
+                    medal = <Trophy size={16} className="mr-1 inline text-yellow-500" />;
+                  } else if (position === 2) {
+                    medal = <Medal size={16} className="mr-1 inline text-gray-500" />;
+                  } else if (position === 3) {
+                    medal = <Medal size={16} className="mr-1 inline text-orange-600" />;
+                  }
+
+                  return (
+                    <tr key={`${row.vendor}-${position}`} className="odd:bg-card">
+                      <td className={cn("px-3 py-2", themedTextStrongClass)}>
+                        {medal}
+                        {row.vendor}
+                      </td>
+                      <td className="px-3 py-2 text-right">{row.proposals}</td>
+                      <td className="px-3 py-2 text-right font-semibold">
+                        {row.quantity.toLocaleString("pt-BR")}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {row.avgPerProposal.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        })}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className={cn("px-3 py-8 text-center text-xs", themedTextMutedClass)}
+                  >
+                    Nenhum dado encontrado para os filtros selecionados.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <p className="text-muted-foreground">
+          Mostrando {visibleItems.length} de {items.length} vendedores
+        </p>
+        <p className="flex items-center gap-3 text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Trophy size={14} className="text-yellow-500" />
+            <span>1º</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <Medal size={14} className="text-gray-500" />
+            <span>2º</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <Medal size={14} className="text-orange-600" />
+            <span>3º</span>
+          </span>
+        </p>
+      </div>
+    </article>
+  );
+}
+
 function TrendVendorSelector({
   value,
   options,
@@ -620,12 +771,12 @@ function PodiumCard({
         "border-slate-300/60 bg-[linear-gradient(180deg,rgba(250,250,250,0.98),rgba(241,245,249,0.9))] text-slate-900 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.18)] dark:border-slate-200/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.78))] dark:text-slate-100 dark:shadow-[0_22px_54px_-38px_rgba(0,0,0,0.42)]",
       accentClass:
         "bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 dark:from-slate-500 dark:via-slate-400 dark:to-slate-500",
-      heightClass: "min-h-[176px]",
-      iconClass: "h-12 w-12 sm:h-14 sm:w-14 text-slate-400 dark:text-slate-300",
-      rankClass: "text-[3rem] font-black tracking-[-0.1em] text-slate-500 dark:text-slate-300",
-      vendorClass: "text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100",
-      quantityClass: "text-3xl sm:text-4xl font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
-      metaClass: "text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400",
+      heightClass: "min-h-[124px]",
+      iconClass: "h-9 w-9 sm:h-10 sm:w-10 text-slate-400 dark:text-slate-300",
+      rankClass: "text-[2.1rem] font-black tracking-[-0.1em] text-slate-500 dark:text-slate-300",
+      vendorClass: "text-[0.88rem] sm:text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100",
+      quantityClass: "text-[1.95rem] sm:text-[2.25rem] font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
+      metaClass: "text-[8px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400",
       progressClass: "bg-gradient-to-r from-slate-400 to-slate-300 dark:from-slate-400 dark:to-slate-500",
       footClass: "bg-slate-200/80 dark:bg-white/10",
     },
@@ -637,12 +788,12 @@ function PodiumCard({
         "border-amber-300/40 bg-[linear-gradient(180deg,rgba(255,251,235,0.98),rgba(255,249,220,0.92))] text-slate-950 shadow-[0_26px_72px_-42px_rgba(180,83,9,0.42)] ring-1 ring-amber-200/45 dark:border-amber-300/20 dark:bg-[linear-gradient(180deg,rgba(36,26,10,0.96),rgba(15,23,42,0.84))] dark:text-slate-100 dark:shadow-[0_28px_76px_-40px_rgba(251,191,36,0.26)] dark:ring-amber-300/20",
       accentClass:
         "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-200 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200",
-      heightClass: "min-h-[224px] sm:-translate-y-6",
-      iconClass: "h-16 w-16 sm:h-20 sm:w-20 text-amber-500 dark:text-amber-300",
-      rankClass: "text-[4rem] sm:text-[4.75rem] font-black tracking-[-0.14em] text-amber-500 dark:text-amber-300",
-      vendorClass: "text-xl sm:text-2xl font-semibold text-slate-950 dark:text-slate-50",
-      quantityClass: "text-5xl sm:text-6xl font-semibold tracking-[-0.1em] text-slate-950 dark:text-slate-50",
-      metaClass: "text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-200",
+      heightClass: "min-h-[157px] sm:-translate-y-4",
+      iconClass: "h-11 w-11 sm:h-14 sm:w-14 text-amber-500 dark:text-amber-300",
+      rankClass: "text-[2.8rem] sm:text-[3.4rem] font-black tracking-[-0.14em] text-amber-500 dark:text-amber-300",
+      vendorClass: "text-[1rem] sm:text-[1.18rem] font-semibold text-slate-950 dark:text-slate-50",
+      quantityClass: "text-[3.4rem] sm:text-[4rem] font-semibold tracking-[-0.1em] text-slate-950 dark:text-slate-50",
+      metaClass: "text-[8px] font-semibold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-200",
       progressClass: "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-200 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200",
       footClass: "bg-amber-200/80 dark:bg-amber-300/30",
       badgeClass:
@@ -656,12 +807,12 @@ function PodiumCard({
         "border-[#6b4124]/35 bg-[linear-gradient(180deg,rgba(241,226,213,0.96),rgba(211,169,127,0.9))] text-slate-900 shadow-[0_16px_42px_-34px_rgba(78,46,27,0.22)] dark:border-[#7b4a2a]/25 dark:bg-[linear-gradient(180deg,rgba(27,18,12,0.98),rgba(10,16,24,0.9))] dark:text-slate-100 dark:shadow-[0_20px_52px_-38px_rgba(0,0,0,0.48)]",
       accentClass:
         "bg-gradient-to-r from-[#4f301c] via-[#6b4124] to-[#8a5a35] dark:from-[#422718] dark:via-[#5d3820] dark:to-[#7b4a2a]",
-      heightClass: "min-h-[164px]",
-      iconClass: "h-12 w-12 sm:h-14 sm:w-14 text-[#6b4124] dark:text-[#b37a4a]",
-      rankClass: "text-[3rem] font-black tracking-[-0.1em] text-[#5d3820] dark:text-[#c58a55]",
-      vendorClass: "text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100",
-      quantityClass: "text-3xl sm:text-4xl font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
-      metaClass: "text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5d3820] dark:text-[#c58a55]",
+      heightClass: "min-h-[115px]",
+      iconClass: "h-9 w-9 sm:h-10 sm:w-10 text-[#6b4124] dark:text-[#b37a4a]",
+      rankClass: "text-[2.1rem] font-black tracking-[-0.1em] text-[#5d3820] dark:text-[#c58a55]",
+      vendorClass: "text-[0.88rem] sm:text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100",
+      quantityClass: "text-[1.95rem] sm:text-[2.25rem] font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
+      metaClass: "text-[8px] font-semibold uppercase tracking-[0.18em] text-[#5d3820] dark:text-[#c58a55]",
       progressClass: "bg-gradient-to-r from-[#4f301c] via-[#6b4124] to-[#8a5a35] dark:from-[#422718] dark:via-[#5d3820] dark:to-[#7b4a2a]",
       footClass: "bg-[#ae7647]/65 dark:bg-[#7b4a2a]/20",
       badgeClass: "",
@@ -689,7 +840,7 @@ function PodiumCard({
         </span>
       </div>
 
-      <div className="relative grid items-end gap-3 sm:grid-cols-[1fr_1.15fr_1fr]">
+      <div className="relative mx-auto grid w-full max-w-[1020px] items-end gap-3 sm:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)]">
         {podiumSlots.map((slot) => {
           const item = slot.item;
           const share = item && totalQuantity > 0 ? (item.quantity / totalQuantity) * 100 : 0;
@@ -705,7 +856,7 @@ function PodiumCard({
             >
               <div
                 className={cn(
-                  "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-3.5 py-3.5 backdrop-blur",
+                  "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-2.5 py-2.5 backdrop-blur sm:px-3 sm:py-3",
                   slot.baseClass,
                   slot.heightClass,
                 )}
@@ -741,13 +892,13 @@ function PodiumCard({
                   )}
                 </div>
 
-                <div className="relative mt-3 space-y-1.5">
+                <div className="relative mt-2.5 space-y-1">
                   <p
-                    className={cn("max-w-full break-words leading-5", slot.vendorClass)}
+                    className={cn("max-w-full break-words leading-4", slot.vendorClass)}
                   >
                     {displayVendor}
                   </p>
-                  <div className="flex items-end justify-between gap-3">
+                  <div className="flex items-end justify-between gap-2.5">
                     <div>
                       <p className={slot.quantityClass}>
                         {item ? item.quantity.toLocaleString("pt-BR") : "-"}
@@ -778,16 +929,14 @@ function PodiumCard({
                     </div>
                   </div>
 
-                  <div
-                    className={cn("mt-3 h-2 overflow-hidden rounded-full", slot.footClass)}
-                  >
+                  <div className={cn("mt-2.5 h-1.5 overflow-hidden rounded-full", slot.footClass)}>
                     <div className={cn("h-full rounded-full", slot.progressClass)} style={{ width: `${Math.min(100, share)}%` }} />
                   </div>
                 </div>
               </div>
               <div
                 className={cn(
-                  "mt-2 h-2 w-16 rounded-full",
+                  "mt-2 h-1.5 w-12 rounded-full",
                   slot.rank === 1
                     ? "bg-amber-300/80 dark:bg-amber-400/60"
                     : slot.rank === 2
@@ -822,10 +971,9 @@ export default function VendedorRelatorioPage() {
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [rankingVisibleCount, setRankingVisibleCount] = useState<RankingDisplayCount>(20);
   const [chartError, setChartError] = useState<string | null>(null);
 
-  const itemsPerPage = 25;
   const todayInput = useMemo(() => getTodayInputValue(), []);
 
   const vendorOptions = useMemo(
@@ -1274,9 +1422,10 @@ export default function VendedorRelatorioPage() {
         background: { visible: false },
         item: {
           label: {
+            formatMethod: (text: string | number) => formatVendorDisplayName(String(text)),
             style: {
               fill: "#64748b",
-              fontSize: 11,
+              fontSize: 14.5,
               fontWeight: 500,
             },
           },
@@ -1333,7 +1482,7 @@ export default function VendedorRelatorioPage() {
         trigger: ["hover", "click"],
         confine: true,
         mark: {
-          title: { value: (datum) => datum?.vendor || "Série" },
+          title: { value: (datum) => formatVendorDisplayName(String(datum?.vendor || "Série")) },
           content: [
             {
               key: isSingleDayPeriod ? "Hora" : "Data",
@@ -1348,9 +1497,16 @@ export default function VendedorRelatorioPage() {
       },
       point: {
         visible: true,
-        style: { size: 6, fill: "#ffffff", stroke: "#0ea5e9", lineWidth: 2 },
+        style: { size: 4, fill: "#f8fafc", stroke: "#94a3b8", lineWidth: 1.25 },
       },
-      line: { style: { lineWidth: 2.5, curveType: "monotone" } },
+      line: {
+        style: {
+          lineWidth: 1.4,
+          lineCap: "round",
+          lineJoin: "round",
+          curveType: "monotone",
+        },
+      },
       area: { visible: false },
     }),
     [isSingleDayPeriod, trendChartData, trendHourRange, trendView],
@@ -1374,23 +1530,6 @@ export default function VendedorRelatorioPage() {
       ).size,
     [filteredItems],
   );
-
-  const totalPages = Math.max(1, Math.ceil(vendorRanking.length / itemsPerPage));
-
-  const currentPageItems = useMemo(
-    () => vendorRanking.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
-    [currentPage, vendorRanking],
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [endDate, selectedBrand, selectedLojaVenda, selectedRegional, selectedVendor, startDate]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
 
   if (apiLoading) {
     return (
@@ -1490,7 +1629,6 @@ export default function VendedorRelatorioPage() {
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
     setEndDate(latestAvailableDateInput);
-    setCurrentPage(1);
     setChartError(null);
   };
 
@@ -1698,33 +1836,47 @@ export default function VendedorRelatorioPage() {
             </div>
           ) : null}
 
-          <ChartCard
-            title="Comparativo"
-            tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
-            hasData={trendChartData.length > 0}
-            headerRight={
-              <TrendVendorSelector
-                value={selectedComparisonVendors}
-                options={comparisonVendorOptions}
-                onChange={setSelectedComparisonVendors}
-                trendView={trendView}
-                onTrendViewChange={setTrendView}
-                onOpenFullscreen={
-                  trendChartData.length > 0 ? () => setIsTrendFullscreenOpen(true) : undefined
-                }
-                disabled={comparisonVendorOptions.length === 0}
-              />
-            }
-            contentClassName={TREND_CHART_HEIGHT_CLASS}
-          >
-            <VChart
-              key={trendChartKey}
-              spec={trendChartSpec}
-              onError={(err) =>
-                setChartError(err ? String(err) : "Não foi possível renderizar este gráfico.")
+          <div className="grid gap-4 xl:grid-cols-2 xl:items-stretch">
+            <ChartCard
+              title="Comparativo"
+              tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
+              hasData={trendChartData.length > 0}
+              className="h-full flex flex-col xl:h-[520px]"
+              headerRight={
+                <TrendVendorSelector
+                  value={selectedComparisonVendors}
+                  options={comparisonVendorOptions}
+                  onChange={setSelectedComparisonVendors}
+                  trendView={trendView}
+                  onTrendViewChange={setTrendView}
+                  onOpenFullscreen={
+                    trendChartData.length > 0 ? () => setIsTrendFullscreenOpen(true) : undefined
+                  }
+                  disabled={comparisonVendorOptions.length === 0}
+                />
               }
+              contentClassName="flex-1 min-h-0"
+            >
+              <VChart
+                key={trendChartKey}
+                spec={trendChartSpec}
+                className="h-full w-full"
+                style={{ height: "100%" }}
+                onError={(err) =>
+                  setChartError(err ? String(err) : "Não foi possível renderizar este gráfico.")
+                }
+              />
+            </ChartCard>
+
+            <RankingCard
+              items={vendorRanking}
+              totalQuantity={totalQuantity}
+              visibleCount={rankingVisibleCount}
+              onVisibleCountChange={setRankingVisibleCount}
+              onExport={exportToExcel}
+              className="h-full xl:h-[520px]"
             />
-          </ChartCard>
+          </div>
 
         </section>
 
@@ -1736,162 +1888,6 @@ export default function VendedorRelatorioPage() {
           chartSpec={trendChartSpec}
           onClose={() => setIsTrendFullscreenOpen(false)}
         />
-
-        <section className={cn(themedCardClass, "p-5")}>
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>
-                  Ranking de Vendedores
-                </h2>
-                <TooltipIcon text="Todos os vendedores ordenados por quantidade vendida no recorte atual." />
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={exportToExcel}
-              className={cn("h-8 text-xs", themedOutlineButtonClass)}
-            >
-              Exportar Excel
-            </Button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border text-left text-xs">
-              <thead className="bg-muted text-muted-foreground">
-                <tr>
-                  <th className="border-b border-border bg-background px-3 py-2 font-medium">
-                    Vendedor
-                  </th>
-                  <th className="border-b border-border bg-background px-3 py-2 text-right font-medium">
-                    Venda Cantada
-                  </th>
-                  <th className="border-b border-border bg-background px-3 py-2 text-right font-medium">
-                    Quantidade
-                  </th>
-                  <th className="border-b border-border bg-background px-3 py-2 text-right font-medium">
-                    Média/Proposta
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border bg-background">
-                {currentPageItems.length ? (
-                  currentPageItems.map((row, idx) => {
-                    const globalPosition = (currentPage - 1) * itemsPerPage + idx + 1;
-                    let medal: ReactNode = null;
-
-                    if (globalPosition === 1) {
-                      medal = <Trophy size={16} className="mr-1 inline text-yellow-500" />;
-                    } else if (globalPosition === 2) {
-                      medal = <Medal size={16} className="mr-1 inline text-gray-500" />;
-                    } else if (globalPosition === 3) {
-                      medal = <Medal size={16} className="mr-1 inline text-orange-600" />;
-                    }
-
-                    return (
-                      <tr key={`${row.vendor}-${globalPosition}`} className="odd:bg-card">
-                        <td className={cn("px-3 py-2", themedTextStrongClass)}>
-                          {medal}
-                          {row.vendor}
-                        </td>
-                        <td className="px-3 py-2 text-right">{row.proposals}</td>
-                        <td className="px-3 py-2 text-right font-semibold">
-                          {row.quantity.toLocaleString("pt-BR")}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {row.avgPerProposal.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 1,
-                          })}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className={cn("px-3 py-8 text-center text-xs", themedTextMutedClass)}
-                    >
-                      Nenhum dado encontrado para os filtros selecionados.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <p className="flex items-center gap-3 text-muted-foreground">
-              <span>Total de vendedores: {vendorRanking.length}</span>
-              <span className="flex items-center gap-3 border-l border-border pl-3">
-                <span className="flex items-center gap-1">
-                  <Trophy size={14} className="text-yellow-500" />
-                  <span>1º</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Medal size={14} className="text-gray-500" />
-                  <span>2º</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Medal size={14} className="text-orange-600" />
-                  <span>3º</span>
-                </span>
-              </span>
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={cn(
-                  "rounded-lg border px-2 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-50",
-                  themedOutlineButtonClass,
-                )}
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(1)}
-              >
-                Primeira
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  "rounded-lg border px-2 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-50",
-                  themedOutlineButtonClass,
-                )}
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-              >
-                Anterior
-              </button>
-              <span className="text-muted-foreground">
-                Página {currentPage} de {totalPages}
-              </span>
-              <button
-                type="button"
-                className={cn(
-                  "rounded-lg border px-2 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-50",
-                  themedOutlineButtonClass,
-                )}
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
-              >
-                Próxima
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  "rounded-lg border px-2 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-50",
-                  themedOutlineButtonClass,
-                )}
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(totalPages)}
-              >
-                Última
-              </button>
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );
