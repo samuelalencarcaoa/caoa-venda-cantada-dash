@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, CircleHelp, Crown, Maximize2, Medal, RefreshCw, Trophy, X } from "lucide-react";
+import { ChevronDown, Crown, Maximize2, Medal, RefreshCw, Trophy, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { VChart } from "@visactor/react-vchart";
@@ -15,9 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ReportErrorCard } from "@/components/report-error-card";
+import { FilterSelectCard, TooltipIcon } from "@/components/sales-intention-filter-select-card";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import {
+  fetchSalesIntentionClassificacoes,
+  fetchSalesIntentionCatalogs,
+  fetchSalesIntentionModelosDealer,
+} from "@/lib/salesIntentionApi";
 import {
   themedCardClass,
   themedInputClass,
@@ -33,6 +38,13 @@ import {
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
+import type {
+  SalesIntentionCatalogResponse,
+  SalesIntentionCatalogSources,
+  SalesIntentionModelosDealerRecord,
+  SalesIntentionModelosDealerResponse,
+  SalesIntentionModelosDealerSources,
+} from "@/lib/salesIntentionApi";
 
 const trendPalette = [
   "#7aa2d9",
@@ -52,6 +64,31 @@ const trendOptions = [
   { value: "volume", label: "Volume" },
   { value: "acumulado", label: "Acumulado" },
 ] as const;
+
+const tipoVendaLabels: Record<string, string> = {
+  NOVOS: "Novos",
+  SEMINOVOS: "Seminovos",
+};
+
+function formatTipoVendaLabel(value: string) {
+  return tipoVendaLabels[normalizeValue(value)] ?? value;
+}
+
+const emptyCatalogSources: SalesIntentionCatalogSources = {
+  tipoVenda: [],
+  bandeira: [],
+  regional: [],
+  lojaVenda: [],
+};
+
+const emptyModelosDealerSources: SalesIntentionModelosDealerSources = {
+  tipoVenda: [],
+  marca: [],
+  modelo: [],
+  versaoModelo: [],
+};
+
+const emptyVehicleCatalogRows: SalesIntentionModelosDealerRecord[] = [];
 
 const rankingDisplayOptions = [10, 20, 50, 100] as const;
 type RankingDisplayCount = (typeof rankingDisplayOptions)[number];
@@ -219,105 +256,6 @@ function matchesSelectedValues(selected: string[], value: string) {
   return (
     selected.length === 0 ||
     selected.some((option) => normalizeValue(option) === normalizeValue(value))
-  );
-}
-
-function TooltipIcon({ text }: { text: string }) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Ajuda: ${text}`}
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-500/10 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-cyan-300 dark:hover:bg-cyan-300/10 dark:hover:text-cyan-200"
-        >
-          <CircleHelp className="h-3.5 w-3.5" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="w-64 px-3 py-2 text-xs leading-5">
-        {text}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function FilterSelectCard({
-  label,
-  value,
-  options,
-  onChange,
-  tooltip,
-  disabled = false,
-}: {
-  label: string;
-  value: string[];
-  options: string[];
-  onChange: (value: string[]) => void;
-  tooltip: string;
-  disabled?: boolean;
-}) {
-  const displayValue =
-    value.length === 0
-      ? "Todos"
-      : value.length === 1
-        ? value[0]
-        : `${value.length} selecionados`;
-
-  const toggleOption = (option: string, checked: boolean) => {
-    if (checked) {
-      onChange([...new Set([...value, option])]);
-      return;
-    }
-
-    onChange(value.filter((item) => item !== option));
-  };
-
-  return (
-    <div className={cn(themedSoftCardClass, "min-w-0 rounded-2xl p-2.5")}>
-      <div className="flex items-center gap-1.5">
-        <p className={cn(themedTinyLabelClass, "truncate tracking-[0.18em]")}>{label}</p>
-        <TooltipIcon text={tooltip} />
-      </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={disabled}>
-          <button
-            type="button"
-            aria-label={`${label}: ${displayValue}`}
-            className={cn(
-              "mt-2 flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
-              themedInputClass,
-            )}
-          >
-            <span className="truncate">{displayValue}</span>
-            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0", themedTextMutedClass)} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          sideOffset={6}
-          className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] min-w-48 overflow-y-auto rounded-xl p-1.5"
-        >
-          <DropdownMenuLabel className="px-2 py-1 text-xs">{label}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={value.length === 0}
-            onCheckedChange={() => onChange([])}
-          >
-            Todos
-          </DropdownMenuCheckboxItem>
-          {options.map((option) => (
-            <DropdownMenuCheckboxItem
-              key={option}
-              checked={value.includes(option)}
-              onCheckedChange={(checked) => toggleOption(option, checked === true)}
-            >
-              {option}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
   );
 }
 
@@ -851,7 +789,7 @@ function PodiumCard({
               key={slot.rank}
               className={cn(
                 "flex min-w-0 flex-col items-center",
-                slot.rank === 1 && "relative z-10 sm:-translate-y-2",
+                slot.rank === 1 && "relative z-10",
               )}
             >
               <div
@@ -859,6 +797,7 @@ function PodiumCard({
                   "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-2.5 py-2.5 backdrop-blur sm:px-3 sm:py-3",
                   slot.baseClass,
                   slot.heightClass,
+                  slot.rank === 1 && "pt-8",
                 )}
               >
                 <div className={cn("absolute inset-x-0 top-0 h-1", slot.accentClass)} />
@@ -866,7 +805,7 @@ function PodiumCard({
                 {slot.rank === 1 ? (
                   <div
                     className={cn(
-                      "absolute left-1/2 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
+                      "absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
                       slot.badgeClass,
                     )}
                   >
@@ -875,7 +814,12 @@ function PodiumCard({
                   </div>
                 ) : null}
 
-                <div className="relative flex items-start justify-between gap-3">
+                <div
+                  className={cn(
+                    "relative flex justify-between gap-3",
+                    slot.rank === 1 ? "items-center" : "items-start",
+                  )}
+                >
                   <span className={cn("leading-none", slot.rankClass)}>
                     {slot.label}
                   </span>
@@ -961,10 +905,14 @@ export default function VendedorRelatorioPage() {
     refresh,
     lastUpdatedAt,
   } = useSalesIntentions(undefined, { searchAll: true });
-  const [selectedVendor, setSelectedVendor] = useState<string[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
+  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>([]);
+  const [selectedBandeira, setSelectedBandeira] = useState<string[]>([]);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedLojaVenda, setSelectedLojaVenda] = useState<string[]>([]);
+  const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string[]>([]);
+  const [selectedModelo, setSelectedModelo] = useState<string[]>([]);
+  const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
+  const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
   const [selectedComparisonVendors, setSelectedComparisonVendors] = useState<string[]>([]);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [isTrendFullscreenOpen, setIsTrendFullscreenOpen] = useState(false);
@@ -973,44 +921,130 @@ export default function VendedorRelatorioPage() {
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
   const [rankingVisibleCount, setRankingVisibleCount] = useState<RankingDisplayCount>(20);
   const [chartError, setChartError] = useState<string | null>(null);
+  const [catalogData, setCatalogData] = useState<SalesIntentionCatalogResponse | null>(null);
+  const [vehicleCatalogData, setVehicleCatalogData] = useState<SalesIntentionModelosDealerResponse | null>(null);
+  const [classificacaoViewOptions, setClassificacaoViewOptions] = useState<string[]>([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
+  const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
 
   const todayInput = useMemo(() => getTodayInputValue(), []);
 
-  const vendorOptions = useMemo(
-    () => sortUniqueOptions(enhancedSalesIntention.map((item) => item.Proprietario || "Sem vendedor")),
-    [enhancedSalesIntention],
-  );
-
-  const brandOptions = useMemo(
-    () => sortUniqueOptions(enhancedSalesIntention.map((item) => item.Marca_Veiculo || "Sem marca")),
-    [enhancedSalesIntention],
-  );
-
-  const regionalOptions = useMemo(
-    () => sortUniqueOptions(enhancedSalesIntention.map((item) => item.Regional || "Sem regional")),
-    [enhancedSalesIntention],
-  );
-
-  const lojaVendaOptions = useMemo(
-    () => sortUniqueOptions(enhancedSalesIntention.map((item) => item.Loja_Venda || "Sem loja")),
-    [enhancedSalesIntention],
-  );
-
   useEffect(() => {
-    setSelectedVendor((current) => current.filter((value) => vendorOptions.includes(value)));
-  }, [vendorOptions]);
+    let active = true;
 
-  useEffect(() => {
-    setSelectedBrand((current) => current.filter((value) => brandOptions.includes(value)));
-  }, [brandOptions]);
+    async function loadCatalogs() {
+      setIsCatalogLoading(true);
+      setIsVehicleCatalogLoading(true);
+      setIsClassificacaoLoading(true);
 
-  useEffect(() => {
-    setSelectedRegional((current) => current.filter((value) => regionalOptions.includes(value)));
-  }, [regionalOptions]);
+      try {
+        const [catalogResult, vehicleResult, classificacaoResult] = await Promise.allSettled([
+          fetchSalesIntentionCatalogs(),
+          fetchSalesIntentionModelosDealer(),
+          fetchSalesIntentionClassificacoes(),
+        ]);
 
-  useEffect(() => {
-    setSelectedLojaVenda((current) => current.filter((value) => lojaVendaOptions.includes(value)));
-  }, [lojaVendaOptions]);
+        if (!active) return;
+
+        if (catalogResult.status === "fulfilled") {
+          setCatalogData(catalogResult.value);
+        } else {
+          setCatalogData(null);
+        }
+
+        if (vehicleResult.status === "fulfilled") {
+          setVehicleCatalogData(vehicleResult.value);
+        } else {
+          setVehicleCatalogData(null);
+        }
+
+        if (classificacaoResult.status === "fulfilled") {
+          setClassificacaoViewOptions(classificacaoResult.value);
+        } else {
+          setClassificacaoViewOptions([]);
+        }
+      } finally {
+        if (active) {
+          setIsCatalogLoading(false);
+          setIsVehicleCatalogLoading(false);
+          setIsClassificacaoLoading(false);
+        }
+      }
+    }
+
+    void loadCatalogs();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const catalogSources = catalogData?.sources ?? emptyCatalogSources;
+  const vehicleCatalogSources = vehicleCatalogData?.sources ?? emptyModelosDealerSources;
+  const vehicleCatalogRows = vehicleCatalogData?.combinations ?? emptyVehicleCatalogRows;
+  const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading || isClassificacaoLoading;
+
+  const tipoVendaOptions = useMemo(() => {
+    const source =
+      vehicleCatalogSources.tipoVenda.length > 0
+        ? vehicleCatalogSources.tipoVenda
+        : catalogSources.tipoVenda;
+
+    if (source.length > 0) {
+      return source;
+    }
+
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Tipo_Venda));
+  }, [catalogSources.tipoVenda, enhancedSalesIntention, vehicleCatalogSources.tipoVenda]);
+
+  const bandeiraOptions = useMemo(() => {
+    if (catalogSources.bandeira.length > 0) {
+      return catalogSources.bandeira;
+    }
+
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Bandeira || "Sem Bandeira"));
+  }, [catalogSources.bandeira, enhancedSalesIntention]);
+
+  const regionalOptions = useMemo(() => {
+    if (catalogSources.regional.length > 0) {
+      return catalogSources.regional;
+    }
+
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Regional));
+  }, [catalogSources.regional, enhancedSalesIntention]);
+
+  const lojaVendaOptions = useMemo(() => {
+    if (catalogSources.lojaVenda.length > 0) {
+      return catalogSources.lojaVenda;
+    }
+
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Loja_Venda));
+  }, [catalogSources.lojaVenda, enhancedSalesIntention]);
+
+  const marcaVeiculoOptions = useMemo(() => {
+    if (vehicleCatalogSources.marca.length > 0) {
+      return vehicleCatalogSources.marca;
+    }
+
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Marca_Veiculo || "Sem Marca"));
+  }, [enhancedSalesIntention, vehicleCatalogSources.marca]);
+
+  const modeloOptions = useMemo(() => {
+    return vehicleCatalogSources.modelo;
+  }, [vehicleCatalogSources.modelo]);
+
+  const versaoOptions = useMemo(() => {
+    if (vehicleCatalogSources.versaoModelo.length > 0) {
+      return vehicleCatalogSources.versaoModelo;
+    }
+
+    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Versao));
+  }, [enhancedSalesIntention, vehicleCatalogSources.versaoModelo]);
+
+  const classificacaoOptions = useMemo(() => {
+    return classificacaoViewOptions;
+  }, [classificacaoViewOptions]);
 
   const latestAvailableDateInput = useMemo(() => {
     const latestDate = enhancedSalesIntention.reduce<Date | null>((latest, item) => {
@@ -1085,8 +1119,12 @@ export default function VendedorRelatorioPage() {
   const appliedFilterChips = useMemo(() => {
     const chips: string[] = [];
 
-    selectedVendor.forEach((value) => {
-      chips.push(`Vendedor: ${formatVendorDisplayName(value)}`);
+    selectedTipoVenda.forEach((value) => {
+      chips.push(`Tipo de venda: ${formatTipoVendaLabel(value)}`);
+    });
+
+    selectedBandeira.forEach((value) => {
+      chips.push(`Bandeira: ${value}`);
     });
 
     selectedRegional.forEach((value) => {
@@ -1097,8 +1135,20 @@ export default function VendedorRelatorioPage() {
       chips.push(`Loja: ${value}`);
     });
 
-    selectedBrand.forEach((value) => {
-      chips.push(`Marca: ${value}`);
+    selectedMarcaVeiculo.forEach((value) => {
+      chips.push(`Marca veículo: ${value}`);
+    });
+
+    selectedModelo.forEach((value) => {
+      chips.push(`Modelo: ${value}`);
+    });
+
+    selectedVersao.forEach((value) => {
+      chips.push(`Versão: ${value}`);
+    });
+
+    selectedClassificacao.forEach((value) => {
+      chips.push(`Classificação: ${value}`);
     });
 
     chips.push(displayActivePeriodText);
@@ -1106,10 +1156,14 @@ export default function VendedorRelatorioPage() {
     return chips;
   }, [
     displayActivePeriodText,
-    selectedBrand,
+    selectedBandeira,
+    selectedClassificacao,
     selectedLojaVenda,
+    selectedMarcaVeiculo,
+    selectedModelo,
     selectedRegional,
-    selectedVendor,
+    selectedTipoVenda,
+    selectedVersao,
   ]);
 
   const lastUpdatedText = lastUpdatedAt ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss") : "Carregando...";
@@ -1117,19 +1171,36 @@ export default function VendedorRelatorioPage() {
   const filteredItems = useMemo(
     () =>
       enhancedSalesIntention.filter((item) => {
-        const itemVendor = item.Proprietario || "Sem vendedor";
-        const itemBrand = item.Marca_Veiculo || "Sem marca";
-        const itemRegional = item.Regional || "Sem regional";
-        const itemLojaVenda = item.Loja_Venda || "Sem loja";
-        const itemDate = parseReportDate(item.Data_solicitacao);
+        const itemTipoVenda = item.Tipo_Venda || "";
+        const itemBandeira = item.Bandeira || "Sem Bandeira";
+        const itemRegional = item.Regional || "";
+        const itemLojaVenda = item.Loja_Venda || "";
+        const itemMarcaVeiculo = item.Marca_Veiculo || "Sem Marca";
+        const itemClassificacao = item.Classificacao || "";
+        const itemVersao = item.Versao || "";
+        const normalizedItemVersao = normalizeValue(itemVersao);
 
-        const matchesVendor = matchesSelectedValues(selectedVendor, itemVendor);
-        const matchesBrand = matchesSelectedValues(selectedBrand, itemBrand);
+        const matchesModelo =
+          selectedModelo.length === 0 ||
+          vehicleCatalogRows.some(
+            (row) =>
+              normalizeValue(row.tipoVenda) === normalizeValue(itemTipoVenda) &&
+              normalizeValue(row.marca) === normalizeValue(itemMarcaVeiculo) &&
+              matchesSelectedValues(selectedModelo, row.modelo) &&
+              normalizeValue(row.versaoModelo) === normalizedItemVersao,
+          );
+
+        const matchesTipoVenda = matchesSelectedValues(selectedTipoVenda, itemTipoVenda);
+        const matchesBandeira = matchesSelectedValues(selectedBandeira, itemBandeira);
         const matchesRegional = matchesSelectedValues(selectedRegional, itemRegional);
         const matchesLojaVenda = matchesSelectedValues(selectedLojaVenda, itemLojaVenda);
+        const matchesMarcaVeiculo = matchesSelectedValues(selectedMarcaVeiculo, itemMarcaVeiculo);
+        const matchesVersao = matchesSelectedValues(selectedVersao, itemVersao);
+        const matchesClassificacao = matchesSelectedValues(selectedClassificacao, itemClassificacao);
 
         let matchesDateRange = true;
         if (startDate || endDate) {
+          const itemDate = parseReportDate(item.Data_solicitacao);
           if (!itemDate) {
             return false;
           }
@@ -1155,16 +1226,31 @@ export default function VendedorRelatorioPage() {
           }
         }
 
-        return matchesVendor && matchesBrand && matchesRegional && matchesLojaVenda && matchesDateRange;
+        return (
+          matchesTipoVenda &&
+          matchesBandeira &&
+          matchesRegional &&
+          matchesLojaVenda &&
+          matchesMarcaVeiculo &&
+          matchesModelo &&
+          matchesVersao &&
+          matchesClassificacao &&
+          matchesDateRange
+        );
       }),
     [
       enhancedSalesIntention,
       endDate,
-      selectedBrand,
+      selectedBandeira,
+      selectedClassificacao,
       selectedLojaVenda,
+      selectedMarcaVeiculo,
+      selectedModelo,
       selectedRegional,
-      selectedVendor,
+      selectedTipoVenda,
+      selectedVersao,
       startDate,
+      vehicleCatalogRows,
     ],
   );
 
@@ -1621,10 +1707,14 @@ export default function VendedorRelatorioPage() {
   };
 
   const clearFilters = () => {
-    setSelectedVendor([]);
-    setSelectedBrand([]);
+    setSelectedTipoVenda([]);
+    setSelectedBandeira([]);
     setSelectedRegional([]);
     setSelectedLojaVenda([]);
+    setSelectedMarcaVeiculo([]);
+    setSelectedModelo([]);
+    setSelectedVersao([]);
+    setSelectedClassificacao([]);
     setSelectedComparisonVendors([]);
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
@@ -1642,7 +1732,7 @@ export default function VendedorRelatorioPage() {
                 <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
                   Análise de Vendedores
                 </h1>
-                <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de vendedor, regional, loja, marca e período." />
+                <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca, modelo, versão e período." />
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 <span className={vendorStatusChipClass}>
@@ -1686,7 +1776,7 @@ export default function VendedorRelatorioPage() {
                 <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
                   Filtros
                 </h2>
-                <TooltipIcon text="Use vendedor, regional, loja, marca e período para refinar o recorte." />
+                <TooltipIcon text="Use tipo de venda, bandeira, regional, loja, marca, modelo, versão, classificação e período para refinar o recorte." />
               </div>
             </div>
             <Button
@@ -1704,11 +1794,21 @@ export default function VendedorRelatorioPage() {
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <FilterSelectCard
-              label="Vendedor"
-              value={selectedVendor}
-              options={vendorOptions}
-              onChange={setSelectedVendor}
-              tooltip="Filtro aplicado por vendedor."
+              label="Tipo de venda"
+              value={selectedTipoVenda}
+              options={tipoVendaOptions}
+              onChange={setSelectedTipoVenda}
+              tooltip="Filtro aplicado por tipo de venda."
+              disabled={isOptionsLoading}
+              formatLabel={formatTipoVendaLabel}
+            />
+            <FilterSelectCard
+              label="Bandeira"
+              value={selectedBandeira}
+              options={bandeiraOptions}
+              onChange={setSelectedBandeira}
+              tooltip="Filtro aplicado por bandeira."
+              disabled={isOptionsLoading}
             />
             <FilterSelectCard
               label="Regional"
@@ -1716,23 +1816,50 @@ export default function VendedorRelatorioPage() {
               options={regionalOptions}
               onChange={setSelectedRegional}
               tooltip="Filtro aplicado por regional."
+              disabled={isOptionsLoading}
             />
             <FilterSelectCard
-              label="Loja"
+              label="Loja de Venda"
               value={selectedLojaVenda}
               options={lojaVendaOptions}
               onChange={setSelectedLojaVenda}
               tooltip="Filtro aplicado por loja de venda."
+              disabled={isOptionsLoading}
             />
             <FilterSelectCard
-              label="Marca"
-              value={selectedBrand}
-              options={brandOptions}
-              onChange={setSelectedBrand}
+              label="Marca veículo"
+              value={selectedMarcaVeiculo}
+              options={marcaVeiculoOptions}
+              onChange={setSelectedMarcaVeiculo}
               tooltip="Filtro aplicado por marca do veículo."
+              disabled={isOptionsLoading}
+            />
+            <FilterSelectCard
+              label="Modelo"
+              value={selectedModelo}
+              options={modeloOptions}
+              onChange={setSelectedModelo}
+              tooltip="Filtro aplicado por modelo."
+              disabled={isOptionsLoading}
+            />
+            <FilterSelectCard
+              label="Versão"
+              value={selectedVersao}
+              options={versaoOptions}
+              onChange={setSelectedVersao}
+              tooltip="Filtro aplicado por versão."
+              disabled={isOptionsLoading}
+            />
+            <FilterSelectCard
+              label="Classificação"
+              value={selectedClassificacao}
+              options={classificacaoOptions}
+              onChange={setSelectedClassificacao}
+              tooltip="Filtro aplicado por classificação."
+              disabled={isOptionsLoading}
             />
 
-            <div className={cn(themedSoftCardClass, "rounded-2xl p-2.5 sm:col-span-2 lg:col-span-1")}>
+            <div className={cn(themedSoftCardClass, "rounded-2xl p-2.5 sm:col-span-2")}>
               <div className="flex items-center gap-1.5">
                 <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Período</p>
                 <TooltipIcon text="Filtro aplicado por período da solicitação." />
