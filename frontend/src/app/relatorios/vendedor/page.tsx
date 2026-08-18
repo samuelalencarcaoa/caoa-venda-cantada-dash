@@ -1,10 +1,11 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, CircleHelp, Medal, RefreshCw, Trophy } from "lucide-react";
+import { ChevronDown, CircleHelp, Maximize2, Medal, RefreshCw, Trophy, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { VChart } from "@visactor/react-vchart";
-import type { IBarChartSpec, ILineChartSpec } from "@visactor/vchart";
+import type { ILineChartSpec } from "@visactor/vchart";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,14 +20,13 @@ import { ReportErrorCard } from "@/components/report-error-card";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import {
   themedCardClass,
-  themedHeroClass,
   themedInputClass,
+  themedChipClass,
   themedOutlineButtonClass,
   themedPageBackgroundClass,
   themedPageTextClass,
   themedPanelClass,
   themedSoftCardClass,
-  themedTextBodyClass,
   themedTextMutedClass,
   themedTextStrongClass,
   themedTextTitleClass,
@@ -34,13 +34,110 @@ import {
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
 
-const xAxisLabelStyle = {
-  angle: Math.PI / 4,
-  textAlign: "right" as const,
-  textBaseline: "middle" as const,
-  maxLineWidth: 120,
-  ellipsis: "...",
+const trendPalette = [
+  "#ec4899",  
+  "#0ea5e9",
+  "#f59e0b", 
+  "#6366f1",   
+  "#ef4444",
+  "#22d3ee",  
+  "#f97316",
+  "#14b8a6",
+  "#10b981",
+  "#8b5cf6",
+] as const;
+
+const MAX_TREND_SERIES = 5;
+const TREND_CHART_HEIGHT_CLASS = "h-[273px]";
+const trendOptions = [
+  { value: "volume", label: "Volume" },
+  { value: "acumulado", label: "Acumulado" },
+] as const;
+
+const vendorHeroClass =
+  "rounded-[34px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] text-slate-900 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(15,23,42,0.82))] dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]";
+
+const vendorStatusChipClass =
+  "rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+
+const vendorFilterChipClass =
+  "inline-flex max-w-[18rem] items-center rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur truncate dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+
+function toTitleCase(value: string) {
+  if (!value) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function formatVendorDisplayName(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || !trimmed.includes("@")) {
+    return trimmed || "Sem dados";
+  }
+
+  const localPart = trimmed.split("@")[0] ?? "";
+  const parts = localPart
+    .split(/[._-]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return trimmed;
+  }
+
+  const displayParts =
+    parts.length === 1 ? parts : parts.length === 2 ? parts : [parts[0], parts[parts.length - 1]];
+
+  return displayParts.map(toTitleCase).join(" ");
+}
+
+type TrendView = (typeof trendOptions)[number]["value"];
+
+type TrendPoint = {
+  label: string;
+  vendor: string;
+  quantity: number;
 };
+
+function ChartToggle({
+  options,
+  value,
+  onChange,
+}: {
+  options: ReadonlyArray<{ value: string; label: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div
+      className="inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5"
+      role="group"
+    >
+      {options.map((option) => {
+        const active = option.value === value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            className={cn(
+              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition sm:text-[11px]",
+              active
+                ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950"
+                : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100",
+            )}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function parseReportDate(value: string): Date | null {
   const [datePart, timePart = "00:00:00"] = value.trim().split(/\s+/);
@@ -220,46 +317,57 @@ function FilterSelectCard({
 function StatCard({
   label,
   value,
-  description,
+  tooltip,
 }: {
   label: string;
   value: string;
-  description: string;
+  tooltip: string;
 }) {
   return (
     <div className={cn(themedCardClass, "p-5")}>
-      <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>{label}</p>
+      <div className="flex items-center gap-1.5">
+        <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>{label}</p>
+        <TooltipIcon text={tooltip} />
+      </div>
       <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
         {value}
       </p>
-      <p className={cn("mt-2 text-xs", themedTextBodyClass)}>{description}</p>
     </div>
   );
 }
 
 function ChartCard({
   title,
-  description,
+  tooltip,
   children,
   hasData,
   className,
+  headerRight,
+  contentClassName,
 }: {
   title: string;
-  description: string;
+  tooltip: string;
   children: ReactNode;
   hasData: boolean;
   className?: string;
+  headerRight?: ReactNode;
+  contentClassName?: string;
 }) {
   return (
     <article className={cn(themedCardClass, "min-w-0 px-5 py-5", className)}>
-      <div className="mb-4">
-        <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
-          {title}
-        </h2>
-        <p className={cn("mt-1 text-xs", themedTextBodyClass)}>{description}</p>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+              {title}
+            </h2>
+            <TooltipIcon text={tooltip} />
+          </div>
+        </div>
+        {headerRight ? <div className="min-w-0 lg:max-w-[560px]">{headerRight}</div> : null}
       </div>
 
-      <div className="h-[300px] min-w-0">
+      <div className={cn("min-w-0", contentClassName ?? "h-[300px]")}>
         {hasData ? (
           children
         ) : (
@@ -267,6 +375,409 @@ function ChartCard({
             Nenhum dado no período.
           </p>
         )}
+      </div>
+    </article>
+  );
+}
+
+function TrendVendorSelector({
+  value,
+  options,
+  onChange,
+  trendView,
+  onTrendViewChange,
+  onOpenFullscreen,
+  disabled = false,
+  maxSelected = MAX_TREND_SERIES,
+}: {
+  value: string[];
+  options: string[];
+  onChange: (value: string[]) => void;
+  trendView: TrendView;
+  onTrendViewChange: (value: TrendView) => void;
+  onOpenFullscreen?: () => void;
+  disabled?: boolean;
+  maxSelected?: number;
+}) {
+  const hasOptions = options.length > 0;
+  const displayValue =
+    !hasOptions
+      ? "Sem vendedores"
+      : value.length === 0
+        ? "Top 5"
+        : value.length === 1
+          ? "1 vendedor"
+          : `${value.length} vendedores`;
+  const limitReached = value.length >= maxSelected;
+
+  const toggleOption = (option: string, checked: boolean) => {
+    if (checked) {
+      if (value.length >= maxSelected && !value.includes(option)) {
+        return;
+      }
+
+      onChange([...new Set([...value, option])]);
+      return;
+    }
+
+    onChange(value.filter((item) => item !== option));
+  };
+
+  return (
+    <div className={cn(themedSoftCardClass, "min-w-0 rounded-2xl p-3")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Comparativo</p>
+            <TooltipIcon
+              text={`Compare até ${maxSelected} vendedores em linhas separadas. Sem seleção, o gráfico usa os ${maxSelected} maiores do recorte.`}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={cn(themedChipClass, "whitespace-nowrap")}>{displayValue}</span>
+          {onOpenFullscreen ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onOpenFullscreen}
+              className="h-8 w-8 rounded-xl border border-slate-200/70 bg-white/80 text-slate-600 shadow-sm hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label="Abrir gráfico em tela cheia"
+              title="Abrir em tela cheia"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <ChartToggle
+          options={trendOptions}
+          value={trendView}
+          onChange={(value) => onTrendViewChange(value as TrendView)}
+        />
+      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={disabled}>
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              "mt-3 flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+              themedInputClass,
+            )}
+          >
+            <span className="truncate">{hasOptions ? "Selecionar" : "Sem dados"}</span>
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0", themedTextMutedClass)} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          sideOffset={6}
+          className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] min-w-56 overflow-y-auto rounded-xl p-1.5"
+        >
+          <DropdownMenuLabel className="px-2 py-1 text-xs">Vendedores</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            checked={value.length === 0}
+            onCheckedChange={() => onChange([])}
+          >
+            Top 5
+          </DropdownMenuCheckboxItem>
+          {options.map((option) => (
+            <DropdownMenuCheckboxItem
+              key={option}
+              checked={value.includes(option)}
+              disabled={limitReached && !value.includes(option)}
+              onCheckedChange={(checked) => toggleOption(option, checked === true)}
+            >
+              {option}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+function TrendFullscreenModal({
+  open,
+  title,
+  subtitle,
+  chartKey,
+  chartSpec,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  subtitle: string;
+  chartKey: string;
+  chartSpec: ILineChartSpec;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] bg-slate-950/70 p-3 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        aria-describedby="trend-fullscreen-description"
+        aria-labelledby="trend-fullscreen-title"
+        aria-modal="true"
+        className={cn(
+          themedPanelClass,
+          "flex h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden bg-white/95 text-slate-900 dark:bg-slate-950/95 dark:text-slate-100",
+        )}
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="flex items-start justify-between gap-4 px-5 py-4">
+          <div className="min-w-0">
+            <p className={cn(themedTinyLabelClass, "tracking-[0.22em]")}>Tela cheia</p>
+            <h3 id="trend-fullscreen-title" className={cn("mt-1 text-xl font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+              {title}
+            </h3>
+            <p id="trend-fullscreen-description" className={cn("mt-1 text-sm", themedTextMutedClass)}>
+              {subtitle}
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-9 w-9 rounded-xl border border-slate-200/70 bg-white/80 text-slate-600 shadow-sm hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            aria-label="Fechar visualização em tela cheia"
+            title="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex-1 min-h-0 px-4 pb-4">
+          <div className="h-full min-h-0 overflow-hidden rounded-[28px] border border-slate-200/70 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
+            <VChart key={chartKey} spec={chartSpec} className="h-full w-full" style={{ height: "100%" }} />
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function PodiumCard({
+  items,
+  totalQuantity,
+  className,
+}: {
+  items: Array<{ vendor: string; quantity: number; proposals: number }>;
+  totalQuantity: number;
+  className?: string;
+}) {
+  const topThree = items.slice(0, 3);
+  const podiumSlots = [
+    {
+      label: "2º",
+      rank: 2,
+      item: topThree[1],
+      baseClass:
+        "border-slate-200/60 bg-white/90 text-slate-900 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100",
+      accentClass: "bg-slate-300/60 dark:bg-slate-500/60",
+      heightClass: "min-h-[166px]",
+      iconClass: "text-slate-500/90 dark:text-slate-400/90",
+    },
+    {
+      label: "1º",
+      rank: 1,
+      item: topThree[0],
+      baseClass:
+        "border-slate-200/60 bg-slate-50/95 text-slate-900 shadow-[0_18px_48px_-36px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100 dark:shadow-[0_20px_54px_-38px_rgba(0,0,0,0.4)]",
+      accentClass: "bg-slate-400/60 dark:bg-slate-400/60",
+      heightClass: "min-h-[200px] sm:-translate-y-3",
+      iconClass: "text-slate-600/90 dark:text-slate-300/90",
+    },
+    {
+      label: "3º",
+      rank: 3,
+      item: topThree[2],
+      baseClass:
+        "border-slate-200/60 bg-white/85 text-slate-900 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-slate-950/75 dark:text-slate-100",
+      accentClass: "bg-slate-300/60 dark:bg-slate-500/60",
+      heightClass: "min-h-[154px]",
+      iconClass: "text-slate-500/90 dark:text-slate-400/90",
+    },
+  ] as const;
+
+  return (
+    <article
+      className={cn(themedCardClass, "relative min-w-0 overflow-hidden px-5 py-5", className)}
+    >
+      <div className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-slate-400/10 blur-3xl" />
+      <div className="absolute -right-14 top-8 h-40 w-40 rounded-full bg-slate-500/10 blur-3xl" />
+
+      <div className="relative mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+              Pódio
+            </h2>
+            <TooltipIcon text="Top 3 vendedores por volume absoluto após aplicar os filtros atuais." />
+          </div>
+        </div>
+        <span className={cn(themedChipClass, "whitespace-nowrap")}>
+          {totalQuantity.toLocaleString("pt-BR")} unidades
+        </span>
+      </div>
+
+      <div className="relative grid items-end gap-3 sm:grid-cols-[1fr_1.15fr_1fr]">
+        {podiumSlots.map((slot) => {
+          const item = slot.item;
+          const share = item && totalQuantity > 0 ? (item.quantity / totalQuantity) * 100 : 0;
+          const progressClass =
+            slot.rank === 1
+              ? "bg-slate-500 dark:bg-slate-300"
+              : slot.rank === 2
+                ? "bg-slate-400 dark:bg-slate-400"
+                : "bg-slate-300 dark:bg-slate-500";
+          const displayVendor = item ? formatVendorDisplayName(item.vendor) : "Sem dados";
+          const rankTone =
+            slot.rank === 1 ? "text-slate-600 dark:text-slate-300" : "text-slate-500 dark:text-slate-400";
+
+          return (
+            <div key={slot.rank} className="flex min-w-0 flex-col items-center">
+              <div
+                className={cn(
+                  "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-3.5 py-3.5 backdrop-blur",
+                  slot.baseClass,
+                  slot.heightClass,
+                )}
+              >
+                <div className={cn("absolute inset-x-0 top-0 h-1", slot.accentClass)} />
+                <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl dark:bg-white/5" />
+
+                <div className="relative flex items-start justify-between gap-3">
+                  <span
+                    className={cn(
+                      "text-[2.75rem] font-semibold leading-none tracking-[-0.08em] sm:text-5xl",
+                      rankTone,
+                    )}
+                  >
+                    {slot.label}
+                  </span>
+                  {slot.rank === 1 ? (
+                    <Trophy
+                      className={cn("h-12 w-12 sm:h-14 sm:w-14", slot.iconClass)}
+                      strokeWidth={1.5}
+                    />
+                  ) : (
+                    <Medal
+                      className={cn("h-12 w-12 sm:h-14 sm:w-14", slot.iconClass)}
+                      strokeWidth={1.5}
+                    />
+                  )}
+                </div>
+
+                <div className="relative mt-3 space-y-1.5">
+                  <p
+                    className={cn(
+                      "max-w-full break-words text-sm font-semibold leading-5 sm:text-[0.96rem]",
+                      themedTextTitleClass,
+                    )}
+                  >
+                    {displayVendor}
+                  </p>
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p
+                        className={cn(
+                          "text-3xl font-light tracking-[-0.05em]",
+                          themedTextTitleClass,
+                        )}
+                      >
+                        {item ? item.quantity.toLocaleString("pt-BR") : "-"}
+                      </p>
+                      <p
+                        className={cn(
+                          "flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.18em]",
+                          themedTextMutedClass,
+                        )}
+                      >
+                        <span>
+                          {item ? `${item.proposals.toLocaleString("pt-BR")} prop.` : "Sem posição"}
+                        </span>
+                        <TooltipIcon text="Quantidade de propostas no recorte atual." />
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={cn(
+                          "flex items-center justify-end gap-1 text-[9px] font-semibold uppercase tracking-[0.16em]",
+                          themedTextMutedClass,
+                        )}
+                      >
+                        <span>
+                          {item
+                            ? `${share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% vol.`
+                            : "Sem volume"}
+                        </span>
+                        <TooltipIcon text="Participação no volume total do recorte atual." />
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "mt-3 h-2 overflow-hidden rounded-full",
+                      "bg-black/5 dark:bg-white/10",
+                    )}
+                  >
+                    <div
+                      className={cn("h-full rounded-full", progressClass)}
+                      style={{ width: `${Math.min(100, share)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "mt-2 h-2 w-16 rounded-full",
+                  slot.rank === 1 ? "bg-slate-300/80 dark:bg-slate-500/70" : "bg-slate-200 dark:bg-white/10",
+                )}
+              />
+            </div>
+          );
+        })}
       </div>
     </article>
   );
@@ -285,6 +796,9 @@ export default function VendedorRelatorioPage() {
   const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedLojaVenda, setSelectedLojaVenda] = useState<string[]>([]);
+  const [selectedComparisonVendors, setSelectedComparisonVendors] = useState<string[]>([]);
+  const [trendView, setTrendView] = useState<TrendView>("volume");
+  const [isTrendFullscreenOpen, setIsTrendFullscreenOpen] = useState(false);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
@@ -395,13 +909,39 @@ export default function VendedorRelatorioPage() {
     return "Período ativo: intervalo livre";
   }, [endDate, startDate, todayInput]);
 
-  const fallbackNotice = useMemo(() => {
-    if (!autoFallbackDate) {
-      return null;
-    }
+  const displayActivePeriodText = activePeriodText.replace("Período ativo: ", "Período: ");
+  const displayFallbackNotice = autoFallbackDate
+    ? `Usando ${formatDisplayInputDate(autoFallbackDate)}`
+    : null;
+  const appliedFilterChips = useMemo(() => {
+    const chips: string[] = [];
 
-    return `Hoje sem dados, usando ${formatDisplayInputDate(autoFallbackDate)}`;
-  }, [autoFallbackDate]);
+    selectedVendor.forEach((value) => {
+      chips.push(`Vendedor: ${formatVendorDisplayName(value)}`);
+    });
+
+    selectedRegional.forEach((value) => {
+      chips.push(`Regional: ${value}`);
+    });
+
+    selectedLojaVenda.forEach((value) => {
+      chips.push(`Loja: ${value}`);
+    });
+
+    selectedBrand.forEach((value) => {
+      chips.push(`Marca: ${value}`);
+    });
+
+    chips.push(displayActivePeriodText);
+
+    return chips;
+  }, [
+    displayActivePeriodText,
+    selectedBrand,
+    selectedLojaVenda,
+    selectedRegional,
+    selectedVendor,
+  ]);
 
   const lastUpdatedText = lastUpdatedAt ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss") : "Carregando...";
 
@@ -491,189 +1031,135 @@ export default function VendedorRelatorioPage() {
       .sort((a, b) => b.quantity - a.quantity);
   }, [filteredItems]);
 
-  const brandData = useMemo(() => {
-    const brandMap = new Map<string, number>();
+  const comparisonVendorOptions = useMemo(
+    () => vendorRanking.map((item) => item.vendor),
+    [vendorRanking],
+  );
 
-    filteredItems.forEach((item) => {
-      const brand = item.Marca_Veiculo || "Sem marca";
-      const quantity = Number(item.Quantidade) || 0;
-      brandMap.set(brand, (brandMap.get(brand) || 0) + quantity);
+  useEffect(() => {
+    setSelectedComparisonVendors((current) => {
+      const next = current
+        .filter((value) => comparisonVendorOptions.includes(value))
+        .slice(0, MAX_TREND_SERIES);
+
+      if (
+        next.length === current.length &&
+        next.every((value, index) => value === current[index])
+      ) {
+        return current;
+      }
+
+      return next;
     });
+  }, [comparisonVendorOptions]);
 
-    return Array.from(brandMap.entries())
-      .map(([brand, quantity]) => ({ brand, quantity }))
-      .sort((a, b) => b.quantity - a.quantity);
-  }, [filteredItems]);
+  const trendSeriesLabels = useMemo(() => {
+    if (selectedComparisonVendors.length > 0) {
+      return selectedComparisonVendors
+        .filter((vendor) => comparisonVendorOptions.includes(vendor))
+        .slice(0, MAX_TREND_SERIES);
+    }
 
-  const versionData = useMemo(() => {
-    const versionMap = new Map<string, number>();
+    return comparisonVendorOptions.slice(0, MAX_TREND_SERIES);
+  }, [comparisonVendorOptions, selectedComparisonVendors]);
 
-    filteredItems.forEach((item) => {
-      const version = item.Versao || "Sem versão";
-      const quantity = Number(item.Quantidade) || 0;
-      versionMap.set(version, (versionMap.get(version) || 0) + quantity);
-    });
+  const trendChartKey = `${trendView}-${trendSeriesLabels.join("|")}`;
 
-    return Array.from(versionMap.entries())
-      .map(([version, quantity]) => ({ version, quantity }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 10);
-  }, [filteredItems]);
+  const trendChartData = useMemo<TrendPoint[]>(() => {
+    if (trendSeriesLabels.length === 0) {
+      return [];
+    }
 
-  const timeSeriesChartData = useMemo(() => {
-    const grouped = new Map<string, { time: number; label: string; quantity: number }>();
+    const selectedSeries = new Set(trendSeriesLabels);
+    const grouped = new Map<string, { time: number; label: string; totals: Record<string, number> }>();
 
     filteredItems.forEach((item) => {
+      const vendor = item.Proprietario || "Sem vendedor";
+      if (!selectedSeries.has(vendor)) {
+        return;
+      }
+
       const current = parseReportDate(item.Data_solicitacao);
       if (!current) {
         return;
       }
 
       const key = format(current, "yyyy-MM-dd");
-      const groupedItem = grouped.get(key);
       const quantity = Number(item.Quantidade) || 0;
-
-      grouped.set(key, {
+      const currentGroup = grouped.get(key) ?? {
         time: new Date(current.getFullYear(), current.getMonth(), current.getDate()).getTime(),
         label: format(current, "dd/MM/yy"),
-        quantity: (groupedItem?.quantity || 0) + quantity,
-      });
+        totals: {},
+      };
+
+      currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + quantity;
+      grouped.set(key, currentGroup);
     });
 
-    return Array.from(grouped.values()).sort((a, b) => a.time - b.time);
-  }, [filteredItems]);
+    const cumulativeByVendor = new Map<string, number>(
+      trendSeriesLabels.map((vendor) => [vendor, 0]),
+    );
 
-  const classificationData = useMemo(() => {
-    const grouped = new Map<string, number>();
+    return Array.from(grouped.values())
+      .sort((a, b) => a.time - b.time)
+      .flatMap((row) =>
+        trendSeriesLabels.map((vendor) => {
+          const quantity = row.totals[vendor] || 0;
+          const nextQuantity =
+            trendView === "acumulado"
+              ? (cumulativeByVendor.get(vendor) || 0) + quantity
+              : quantity;
 
-    filteredItems.forEach((item) => {
-      const classification = item.Classificacao || "Sem classificação";
-      const quantity = Number(item.Quantidade) || 0;
-      grouped.set(classification, (grouped.get(classification) || 0) + quantity);
-    });
+          if (trendView === "acumulado") {
+            cumulativeByVendor.set(vendor, nextQuantity);
+          }
 
-    return Array.from(grouped.entries())
-      .map(([classification, quantity]) => ({ classification, quantity }))
-      .sort((a, b) => b.quantity - a.quantity);
-  }, [filteredItems]);
+          return {
+            label: row.label,
+            vendor,
+            quantity: nextQuantity,
+          };
+        }),
+      );
+  }, [filteredItems, trendSeriesLabels, trendView]);
 
-  const storeData = useMemo(() => {
-    const grouped = new Map<string, number>();
-
-    filteredItems.forEach((item) => {
-      const store = item.Loja_Venda || "Sem loja";
-      const quantity = Number(item.Quantidade) || 0;
-      grouped.set(store, (grouped.get(store) || 0) + quantity);
-    });
-
-    return Array.from(grouped.entries())
-      .map(([store, quantity]) => ({ store, quantity }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 8);
-  }, [filteredItems]);
-
-  const brandChartSpec = useMemo<IBarChartSpec>(
-    () => ({
-      type: "bar",
-      data: [
-        {
-          id: "brandSales",
-          values: brandData,
-        },
-      ],
-      direction: "vertical",
-      xField: "brand",
-      yField: "quantity",
-      seriesField: "brand",
-      stack: false,
-      padding: [20, 20, 20, 20],
-      axes: [
-        {
-          orient: "bottom",
-          label: {
-            style: xAxisLabelStyle,
-          },
-        },
-        {
-          orient: "left",
-          label: {
-            formatMethod: (text: string | string[]) => String(text),
-          },
-        },
-      ],
-      tooltip: {
-        trigger: ["hover", "click"],
-      },
-      legends: {
-        visible: false,
-      },
-      bar: {
-        style: {
-          cornerRadius: [8, 8, 0, 0],
-        },
-      },
-    }),
-    [brandData],
-  );
-
-  const versionChartSpec = useMemo<IBarChartSpec>(
-    () => ({
-      type: "bar",
-      data: [
-        {
-          id: "versionSales",
-          values: versionData,
-        },
-      ],
-      direction: "vertical",
-      xField: "version",
-      yField: "quantity",
-      seriesField: "version",
-      stack: false,
-      padding: [20, 20, 20, 20],
-      axes: [
-        {
-          orient: "bottom",
-          label: {
-            style: xAxisLabelStyle,
-          },
-        },
-        {
-          orient: "left",
-          label: {
-            formatMethod: (text: string | string[]) => String(text),
-          },
-        },
-      ],
-      tooltip: {
-        trigger: ["hover", "click"],
-      },
-      legends: {
-        visible: false,
-      },
-      bar: {
-        style: {
-          cornerRadius: [8, 8, 0, 0],
-        },
-      },
-    }),
-    [versionData],
-  );
-
-  const timeSeriesChartSpec = useMemo<ILineChartSpec>(
+  const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
       type: "line",
       data: [
         {
-          id: "salesOverTime",
-          values: timeSeriesChartData,
+          id: "vendorTrend",
+          values: trendChartData,
         },
       ],
       xField: "label",
       yField: "quantity",
-      seriesField: "id",
+      seriesField: "vendor",
       smooth: true,
       padding: [20, 24, 42, 42],
+      color: [...trendPalette],
+      legends: {
+        visible: true,
+        orient: "bottom",
+        layout: "horizontal",
+        position: "middle",
+        background: { visible: false },
+        item: {
+          label: {
+            style: {
+              fill: "#64748b",
+              fontSize: 11,
+              fontWeight: 500,
+            },
+          },
+          shape: {
+            space: 6,
+            style: {
+              size: 8,
+            },
+          },
+        },
+      },
       axes: [
         {
           orient: "bottom",
@@ -686,8 +1172,15 @@ export default function VendedorRelatorioPage() {
         {
           orient: "left",
           label: {
-            formatMethod: (text: string | string[]) =>
-              Number(Array.isArray(text) ? text[0] : text).toLocaleString("pt-BR"),
+            formatMethod: (text: string | string[]) => {
+              const value = Number(Array.isArray(text) ? text[0] : text);
+
+              return Number.isFinite(value)
+                ? value.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 0,
+                  })
+                : String(Array.isArray(text) ? text[0] : text);
+            },
           },
         },
       ],
@@ -695,10 +1188,14 @@ export default function VendedorRelatorioPage() {
         trigger: ["hover", "click"],
         confine: true,
         mark: {
-          title: { value: (datum) => datum?.label || "Período" },
+          title: { value: (datum) => datum?.vendor || "Série" },
           content: [
             {
-              key: "Quantidade",
+              key: "Data",
+              value: (datum) => datum?.label || "Período",
+            },
+            {
+              key: trendView === "acumulado" ? "Volume acumulado" : "Volume",
               value: (datum) => Number(datum?.quantity || 0).toLocaleString("pt-BR"),
             },
           ],
@@ -706,100 +1203,12 @@ export default function VendedorRelatorioPage() {
       },
       point: {
         visible: true,
-        style: { size: 7, fill: "#22d3ee", stroke: "#ffffff", lineWidth: 2 },
+        style: { size: 6, fill: "#ffffff", stroke: "#0ea5e9", lineWidth: 2 },
       },
-      line: { style: { lineWidth: 3, curveType: "monotone" } },
-      area: { visible: true, style: { fillOpacity: 0.12 } },
+      line: { style: { lineWidth: 2.5, curveType: "monotone" } },
+      area: { visible: false },
     }),
-    [timeSeriesChartData],
-  );
-
-  const classificationChartSpec = useMemo<IBarChartSpec>(
-    () => ({
-      type: "bar",
-      data: [
-        {
-          id: "classificationSales",
-          values: classificationData,
-        },
-      ],
-      direction: "vertical",
-      xField: "classification",
-      yField: "quantity",
-      seriesField: "classification",
-      stack: false,
-      padding: [20, 20, 20, 20],
-      axes: [
-        {
-          orient: "bottom",
-          label: {
-            style: xAxisLabelStyle,
-          },
-        },
-        {
-          orient: "left",
-          label: {
-            formatMethod: (text: string | string[]) => String(text),
-          },
-        },
-      ],
-      tooltip: {
-        trigger: ["hover", "click"],
-      },
-      legends: {
-        visible: false,
-      },
-      bar: {
-        style: {
-          cornerRadius: [8, 8, 0, 0],
-        },
-      },
-    }),
-    [classificationData],
-  );
-
-  const storeChartSpec = useMemo<IBarChartSpec>(
-    () => ({
-      type: "bar",
-      data: [
-        {
-          id: "storeSales",
-          values: storeData,
-        },
-      ],
-      direction: "vertical",
-      xField: "store",
-      yField: "quantity",
-      seriesField: "store",
-      stack: false,
-      padding: [20, 20, 20, 20],
-      axes: [
-        {
-          orient: "bottom",
-          label: {
-            style: xAxisLabelStyle,
-          },
-        },
-        {
-          orient: "left",
-          label: {
-            formatMethod: (text: string | string[]) => String(text),
-          },
-        },
-      ],
-      tooltip: {
-        trigger: ["hover", "click"],
-      },
-      legends: {
-        visible: false,
-      },
-      bar: {
-        style: {
-          cornerRadius: [8, 8, 0, 0],
-        },
-      },
-    }),
-    [storeData],
+    [trendChartData, trendView],
   );
 
   const totalQuantity = useMemo(
@@ -842,7 +1251,7 @@ export default function VendedorRelatorioPage() {
     return (
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-          <section className={cn(themedHeroClass, "h-[156px] animate-pulse")} />
+          <section className={cn(vendorHeroClass, "h-[156px] animate-pulse")} />
 
           <section className={cn(themedPanelClass, "p-6")}>
             <div className="mb-6 h-6 w-40 animate-pulse rounded bg-slate-200/80 dark:bg-white/10" />
@@ -879,8 +1288,8 @@ export default function VendedorRelatorioPage() {
     return (
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
-          <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
+          <section className={cn(vendorHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-500 dark:text-slate-400">
               Relatório
             </p>
             <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
@@ -932,6 +1341,7 @@ export default function VendedorRelatorioPage() {
     setSelectedBrand([]);
     setSelectedRegional([]);
     setSelectedLojaVenda([]);
+    setSelectedComparisonVendors([]);
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
     setEndDate(latestAvailableDateInput);
@@ -942,31 +1352,30 @@ export default function VendedorRelatorioPage() {
   return (
     <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
       <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-        <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
+        <section className={cn(vendorHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-sky-100/80">
-                Relatório
-              </p>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
                   Análise de Vendedores
                 </h1>
-                <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de vendedor, marca, regional, loja e período." />
+                <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de vendedor, regional, loja, marca e período." />
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-100/80">
-                <span className="rounded-full bg-white/10 px-3 py-1">
-                  Última atualização: {lastUpdatedText}
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                <span className={vendorStatusChipClass}>
+                  Atualizado: {lastUpdatedText}
                 </span>
-                <span className="rounded-full bg-white/10 px-3 py-1">
-                  {isRefreshing ? "Atualizando..." : "Dados prontos"}
+                <span className={vendorStatusChipClass}>
+                  {isRefreshing ? "Atualizando..." : "Pronto"}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-sky-50/90">
-                <span className="rounded-full bg-white/10 px-3 py-1">{activePeriodText}</span>
-                {fallbackNotice ? (
-                  <span className="rounded-full bg-amber-400/20 px-3 py-1 text-amber-100">
-                    {fallbackNotice}
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                <span className={vendorStatusChipClass}>
+                  {displayActivePeriodText}
+                </span>
+                {displayFallbackNotice ? (
+                  <span className={vendorStatusChipClass}>
+                    {displayFallbackNotice}
                   </span>
                 ) : null}
               </div>
@@ -990,12 +1399,12 @@ export default function VendedorRelatorioPage() {
         <section className={cn(themedPanelClass, "p-4")}>
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
-                Filtros
-              </h2>
-              <p className={cn("text-xs", themedTextMutedClass)}>
-                Combine uma ou mais opções em qualquer campo.
-              </p>
+              <div className="flex items-center gap-1.5">
+                <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+                  Filtros
+                </h2>
+                <TooltipIcon text="Use vendedor, regional, loja, marca e período para refinar o recorte." />
+              </div>
             </div>
             <Button
               type="button"
@@ -1019,13 +1428,6 @@ export default function VendedorRelatorioPage() {
               tooltip="Filtro aplicado por vendedor."
             />
             <FilterSelectCard
-              label="Marca veículo"
-              value={selectedBrand}
-              options={brandOptions}
-              onChange={setSelectedBrand}
-              tooltip="Filtro aplicado por marca do veículo."
-            />
-            <FilterSelectCard
               label="Regional"
               value={selectedRegional}
               options={regionalOptions}
@@ -1033,11 +1435,18 @@ export default function VendedorRelatorioPage() {
               tooltip="Filtro aplicado por regional."
             />
             <FilterSelectCard
-              label="Loja de Venda"
+              label="Loja"
               value={selectedLojaVenda}
               options={lojaVendaOptions}
               onChange={setSelectedLojaVenda}
               tooltip="Filtro aplicado por loja de venda."
+            />
+            <FilterSelectCard
+              label="Marca"
+              value={selectedBrand}
+              options={brandOptions}
+              onChange={setSelectedBrand}
+              tooltip="Filtro aplicado por marca do veículo."
             />
 
             <div className={cn(themedSoftCardClass, "rounded-2xl p-2.5 sm:col-span-2 lg:col-span-1")}>
@@ -1085,42 +1494,56 @@ export default function VendedorRelatorioPage() {
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Vendas cantadas"
+            label="Vendas Cantadas"
             value={filteredItems.length.toLocaleString("pt-BR")}
-            description="Quantidade de intenções no recorte atual."
+            tooltip="Quantidade de intenções no recorte atual."
           />
           <StatCard
-            label="Quantidade total"
+            label="Volume"
             value={totalQuantity.toLocaleString("pt-BR")}
-            description="Soma das quantidades registradas."
+            tooltip="Soma das quantidades registradas."
           />
           <StatCard
-            label="Média por proposta"
+            label="Média"
             value={averageQuantityPerRecord.toLocaleString("pt-BR", {
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
             })}
-            description="Quantidade média por intenção filtrada."
+            tooltip="Quantidade média por intenção filtrada."
           />
           <StatCard
-            label="Marcas ativas"
+            label="Marcas"
             value={activeBrands.toLocaleString("pt-BR")}
-            description="Marcas com movimentação no recorte atual."
+            tooltip="Marcas com movimentação no recorte atual."
           />
         </section>
 
+        <PodiumCard items={vendorRanking.slice(0, 3)} totalQuantity={totalQuantity} />
+
         <section aria-labelledby="charts-section-title" className="space-y-4">
           <div className="px-1">
-            <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Análise executiva</p>
-            <h2
-              id="charts-section-title"
-              className={cn("mt-1 text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}
-            >
-              Visão detalhada por vendedor
-            </h2>
-            <p className={cn("mt-1 text-xs", themedTextBodyClass)}>
-              Acompanhe marcas, versões, tendência temporal e distribuição comercial no recorte atual.
-            </p>
+            <div className="flex items-center gap-1.5">
+              <h2
+                id="charts-section-title"
+                className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}
+              >
+                Visão por vendedor
+              </h2>
+              <TooltipIcon text="Consolida comparativo temporal, pódio e gráficos auxiliares no recorte atual." />
+            </div>
+          </div>
+
+          <div className={cn(themedSoftCardClass, "mx-1 rounded-2xl px-3 py-2")}>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+              <p className={cn(themedTinyLabelClass, "shrink-0 tracking-[0.2em]")}>Filtros aplicados</p>
+              <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+                {appliedFilterChips.map((chip, index) => (
+                  <span key={`${chip}-${index}`} className={vendorFilterChipClass} title={chip}>
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
           {chartError ? (
@@ -1130,92 +1553,54 @@ export default function VendedorRelatorioPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard
-              title="Marcas com mais Intenções de Vendas"
-              description="Top marcas no recorte filtrado."
-              hasData={brandData.length > 0}
-            >
-              <VChart
-                spec={brandChartSpec}
-                onError={(err) =>
-                  setChartError(
-                    err ? String(err) : "Não foi possível renderizar este gráfico.",
-                  )
+          <ChartCard
+            title="Comparativo"
+            tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
+            hasData={trendChartData.length > 0}
+            headerRight={
+              <TrendVendorSelector
+                value={selectedComparisonVendors}
+                options={comparisonVendorOptions}
+                onChange={setSelectedComparisonVendors}
+                trendView={trendView}
+                onTrendViewChange={setTrendView}
+                onOpenFullscreen={
+                  trendChartData.length > 0 ? () => setIsTrendFullscreenOpen(true) : undefined
                 }
+                disabled={comparisonVendorOptions.length === 0}
               />
-            </ChartCard>
+            }
+            contentClassName={TREND_CHART_HEIGHT_CLASS}
+          >
+            <VChart
+              key={trendChartKey}
+              spec={trendChartSpec}
+              onError={(err) =>
+                setChartError(err ? String(err) : "Não foi possível renderizar este gráfico.")
+              }
+            />
+          </ChartCard>
 
-            <ChartCard
-              title="Versões com mais Intenções de Vendas"
-              description="Top 10 versões/modelos no recorte filtrado."
-              hasData={versionData.length > 0}
-            >
-              <VChart
-                spec={versionChartSpec}
-                onError={(err) =>
-                  setChartError(
-                    err ? String(err) : "Não foi possível renderizar este gráfico.",
-                  )
-                }
-              />
-            </ChartCard>
-
-            <ChartCard
-              title="Evolução de Vendas"
-              description="Quantidade de intenções ao longo do tempo."
-              hasData={timeSeriesChartData.length > 0}
-              className="lg:col-span-2"
-            >
-              <VChart
-                spec={timeSeriesChartSpec}
-                onError={(err) =>
-                  setChartError(
-                    err ? String(err) : "Não foi possível renderizar este gráfico.",
-                  )
-                }
-              />
-            </ChartCard>
-
-            <ChartCard
-              title="Classificação das Intenções de Vendas"
-              description="Distribuição por classificação comercial."
-              hasData={classificationData.length > 0}
-            >
-              <VChart
-                spec={classificationChartSpec}
-                onError={(err) =>
-                  setChartError(
-                    err ? String(err) : "Não foi possível renderizar este gráfico.",
-                  )
-                }
-              />
-            </ChartCard>
-
-            <ChartCard
-              title="Lojas com mais Intenções de Vendas"
-              description="Top 8 lojas no recorte filtrado."
-              hasData={storeData.length > 0}
-            >
-              <VChart
-                spec={storeChartSpec}
-                onError={(err) =>
-                  setChartError(
-                    err ? String(err) : "Não foi possível renderizar este gráfico.",
-                  )
-                }
-              />
-            </ChartCard>
-          </div>
         </section>
+
+        <TrendFullscreenModal
+          open={isTrendFullscreenOpen}
+          title="Comparativo"
+          subtitle={`Visualização expandida em ${trendView === "acumulado" ? "acumulado" : "volume"} com os filtros atuais.`}
+          chartKey={trendChartKey}
+          chartSpec={trendChartSpec}
+          onClose={() => setIsTrendFullscreenOpen(false)}
+        />
 
         <section className={cn(themedCardClass, "p-5")}>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>Ranking de Vendedores</h2>
-              <p className={cn("text-xs", themedTextBodyClass)}>
-                Todos os vendedores ordenados por quantidade vendida no recorte atual.
-              </p>
+              <div className="flex items-center gap-1.5">
+                <h2 className={cn("text-base font-semibold", themedTextTitleClass)}>
+                  Ranking de Vendedores
+                </h2>
+                <TooltipIcon text="Todos os vendedores ordenados por quantidade vendida no recorte atual." />
+              </div>
             </div>
             <Button
               type="button"

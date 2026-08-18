@@ -3,6 +3,7 @@ import {
   SalesIntentionRepository,
   type SalesIntentionSearchFilters
 } from '../repositories/SalesIntentionRepository';
+import { isPrismaErrorCode } from '../utils/prismaResilience';
 
 export class SalesIntentionService {
   private repository = new SalesIntentionRepository();
@@ -24,20 +25,27 @@ export class SalesIntentionService {
   }
 
   public async update(id: number, payload: Partial<SalesIntentionPayload>) {
-    const record = await this.repository.findById(id);
-    if (!record) {
-      return null;
-    }
+    try {
+      return await this.repository.update(id, payload);
+    } catch (error) {
+      if (isPrismaErrorCode(error, 'P2025')) {
+        return null;
+      }
 
-    return this.repository.update(id, payload);
+      throw error;
+    }
   }
 
   public async remove(id: number) {
-    const record = await this.repository.findById(id);
-    if (!record) {
-      return false;
-    }
+    try {
+      await this.repository.delete(id);
+      return true;
+    } catch (error) {
+      if (isPrismaErrorCode(error, 'P2025')) {
+        return false;
+      }
 
-    return this.repository.delete(id);
+      throw error;
+    }
   }
 }

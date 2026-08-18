@@ -5,6 +5,7 @@ import {
   type SalesIntentionCatalogRecord,
   type SalesIntentionCatalogSources
 } from '../entities/SalesIntentionCatalog';
+import { withPrismaRetry } from '../utils/prismaResilience';
 
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -166,17 +167,19 @@ async function loadBundle(): Promise<SalesIntentionCatalogBundle> {
   }
 
   inFlightBundle = (async () => {
-    const rows = await prisma.salesIntentionOptionCombination.findMany({
-      select: {
-        tipoVenda: true,
-        bandeira: true,
-        regional: true,
-        lojaVenda: true,
-        marcaVeiculo: true,
-        versao: true,
-        classificacao: true
-      }
-    });
+    const rows = await withPrismaRetry(() =>
+      prisma.salesIntentionOptionCombination.findMany({
+        select: {
+          tipoVenda: true,
+          bandeira: true,
+          regional: true,
+          lojaVenda: true,
+          marcaVeiculo: true,
+          versao: true,
+          classificacao: true
+        }
+      })
+    );
 
     const combinations = normalizeCombinationRows(rows);
     const bundle = buildCatalogBundle(combinations);

@@ -6,6 +6,7 @@ import {
   type SalesIntentionModelosDealerRecord,
   type SalesIntentionModelosDealerRow
 } from '../entities/SalesIntentionModelosDealer';
+import { withPrismaRetry } from '../utils/prismaResilience';
 
 const MODELOS_DEALER_SQL = `
   SELECT DISTINCT
@@ -142,7 +143,9 @@ async function loadRows() {
   }
 
   inFlightBundle = (async () => {
-    const rows = await prisma.$queryRawUnsafe<SalesIntentionModelosDealerRow[]>(MODELOS_DEALER_SQL);
+    const rows = await withPrismaRetry(() =>
+      prisma.$queryRawUnsafe<SalesIntentionModelosDealerRow[]>(MODELOS_DEALER_SQL)
+    );
     const combinations = normalizeRows(rows);
     const bundle = buildBundle(combinations);
 
@@ -174,12 +177,14 @@ export class SalesIntentionModelosDealerRepository {
       return null;
     }
 
-    const rows = await prisma.$queryRaw<SalesIntentionModelosDealerLookupRow[]>`
-      SELECT TOP (1) *
-      FROM [salesdb].[dbo].[VW_IntencaoVendas_ModelosDealer]
-      WHERE REPLACE(REPLACE(UPPER(LTRIM(RTRIM(CAST([Placa] AS NVARCHAR(50))))), '-', ''), ' ', '') = ${normalizedPlate}
-      ORDER BY [Tipo_Venda], [Marca], [Modelo], [Versao_Modelo]
-    `;
+    const rows = await withPrismaRetry(() =>
+      prisma.$queryRaw<SalesIntentionModelosDealerLookupRow[]>`
+        SELECT TOP (1) *
+        FROM [salesdb].[dbo].[VW_IntencaoVendas_ModelosDealer]
+        WHERE REPLACE(REPLACE(UPPER(LTRIM(RTRIM(CAST([Placa] AS NVARCHAR(50))))), '-', ''), ' ', '') = ${normalizedPlate}
+        ORDER BY [Tipo_Venda], [Marca], [Modelo], [Versao_Modelo]
+      `
+    );
 
     const row = rows[0];
     if (!row) {

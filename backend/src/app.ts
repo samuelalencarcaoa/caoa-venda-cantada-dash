@@ -5,6 +5,7 @@ import salesIntentionModelosDealerRoutes from './routes/salesIntentionModelosDea
 import salesIntentionRoutes from './routes/salesIntentionRoutes';
 import { AppError } from './errors/AppError';
 import { getSwaggerHtml, openApiSpec } from './swagger';
+import { isPrismaPoolTimeoutError } from './utils/prismaResilience';
 
 const app = express();
 
@@ -26,6 +27,15 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
+
+  if (isPrismaPoolTimeoutError(err)) {
+    res.setHeader('Retry-After', '3');
+    res.status(503).json({
+      message: 'O banco de dados está temporariamente ocupado. Tente novamente em instantes.'
+    });
+    return;
+  }
+
   const statusCode = err instanceof AppError ? err.statusCode : 500;
   res.status(statusCode).json({ message: err.message || 'Erro interno do servidor.' });
 });
