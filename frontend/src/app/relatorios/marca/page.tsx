@@ -18,6 +18,7 @@ import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { format } from "date-fns";
 import { ChevronDown, CircleHelp, RefreshCw } from "lucide-react";
 import {
+  fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
   fetchSalesIntentionModelosDealer,
 } from "@/lib/salesIntentionApi";
@@ -561,8 +562,10 @@ export default function MarcaVeiculoRelatorioPage() {
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
   const [catalogData, setCatalogData] = useState<SalesIntentionCatalogResponse | null>(null);
   const [vehicleCatalogData, setVehicleCatalogData] = useState<SalesIntentionModelosDealerResponse | null>(null);
+  const [classificacaoViewOptions, setClassificacaoViewOptions] = useState<string[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
+  const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [rankingDimension, setRankingDimension] = useState<RankingDimension>("bandeira");
   const [compositionDimension, setCompositionDimension] =
@@ -576,11 +579,13 @@ export default function MarcaVeiculoRelatorioPage() {
     async function loadCatalogs() {
       setIsCatalogLoading(true);
       setIsVehicleCatalogLoading(true);
+      setIsClassificacaoLoading(true);
 
       try {
-        const [catalogResult, vehicleResult] = await Promise.allSettled([
+        const [catalogResult, vehicleResult, classificacaoResult] = await Promise.allSettled([
           fetchSalesIntentionCatalogs(),
           fetchSalesIntentionModelosDealer(),
+          fetchSalesIntentionClassificacoes(),
         ]);
 
         if (!active) return;
@@ -596,10 +601,17 @@ export default function MarcaVeiculoRelatorioPage() {
         } else {
           setVehicleCatalogData(null);
         }
+
+        if (classificacaoResult.status === "fulfilled") {
+          setClassificacaoViewOptions(classificacaoResult.value);
+        } else {
+          setClassificacaoViewOptions([]);
+        }
       } finally {
         if (active) {
           setIsCatalogLoading(false);
           setIsVehicleCatalogLoading(false);
+          setIsClassificacaoLoading(false);
         }
       }
     }
@@ -614,7 +626,7 @@ export default function MarcaVeiculoRelatorioPage() {
   const catalogSources = catalogData?.sources ?? emptyCatalogSources;
   const vehicleCatalogSources = vehicleCatalogData?.sources ?? emptyModelosDealerSources;
   const vehicleCatalogRows = vehicleCatalogData?.combinations ?? emptyVehicleCatalogRows;
-  const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading;
+  const isOptionsLoading = isCatalogLoading || isVehicleCatalogLoading || isClassificacaoLoading;
 
   const tipoVendaOptions = useMemo(() => {
     const source =
@@ -674,12 +686,16 @@ export default function MarcaVeiculoRelatorioPage() {
   }, [enhancedSalesIntention, vehicleCatalogSources.versaoModelo]);
 
   const classificacaoOptions = useMemo(() => {
+    if (classificacaoViewOptions.length > 0) {
+      return classificacaoViewOptions;
+    }
+
     if (catalogSources.classificacao.length > 0) {
       return catalogSources.classificacao;
     }
 
     return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Classificacao));
-  }, [catalogSources.classificacao, enhancedSalesIntention]);
+  }, [catalogSources.classificacao, classificacaoViewOptions, enhancedSalesIntention]);
 
   const latestAvailableDateInput = useMemo(() => {
     const latestDate = enhancedSalesIntention.reduce<Date | null>((latest, item) => {

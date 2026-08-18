@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express, { json, Request, Response, NextFunction } from 'express';
+import salesIntentionClassificacaoVendaRoutes from './routes/salesIntentionClassificacaoVendaRoutes';
 import salesIntentionCatalogRoutes from './routes/salesIntentionCatalogRoutes';
 import salesIntentionModelosDealerRoutes from './routes/salesIntentionModelosDealerRoutes';
 import salesIntentionRoutes from './routes/salesIntentionRoutes';
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(json());
 app.use('/sales-intentions', salesIntentionRoutes);
 app.use('/sales-intention-catalogs', salesIntentionCatalogRoutes);
+app.use('/sales-intention-classificacoes', salesIntentionClassificacaoVendaRoutes);
 app.use('/sales-intention-modelos-dealer', salesIntentionModelosDealerRoutes);
 app.get('/openapi.json', (_req: Request, res: Response) => {
   res.json(openApiSpec);

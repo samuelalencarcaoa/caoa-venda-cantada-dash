@@ -85,6 +85,8 @@ export type SalesIntentionModelosDealerResponse = {
   combinations: SalesIntentionModelosDealerRecord[];
 };
 
+export type SalesIntentionClassificacaoVendaResponse = string[];
+
 export type SalesIntentionModelosDealerLookupRecord = {
   marcaVeiculo: string | null;
   modelo: string | null;
@@ -245,6 +247,12 @@ export async function fetchSalesIntentionCatalogs(): Promise<SalesIntentionCatal
 
 export async function fetchSalesIntentionModelosDealer(): Promise<SalesIntentionModelosDealerResponse> {
   return fetchApi<SalesIntentionModelosDealerResponse>('/api/sales-intention-modelos-dealer', {
+    cache: 'no-store'
+  });
+}
+
+export async function fetchSalesIntentionClassificacoes(): Promise<SalesIntentionClassificacaoVendaResponse> {
+  return fetchApi<SalesIntentionClassificacaoVendaResponse>('/api/sales-intention-classificacoes', {
     cache: 'no-store'
   });
 }

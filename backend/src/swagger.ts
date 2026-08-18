@@ -418,6 +418,24 @@ export const openApiSpec = {
         }
       }
     },
+    '/sales-intention-classificacoes': {
+      get: {
+        tags: ['Sales Intention Catalogs'],
+        summary: 'Lista as opções do filtro Classificação da tela Relatórios / Marca com base na view VW_IntencaoVendas_ClassificacaoVenda',
+        responses: {
+          '200': {
+            description: 'Opções do filtro Classificação disponíveis na tela Relatórios / Marca',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/SalesIntentionClassificacaoVendaResponse'
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/sales-intention-modelos-dealer': {
       get: {
         tags: ['Sales Intention Modelos Dealer'],
@@ -561,6 +579,13 @@ export const openApiSpec = {
             }
           }
         }
+      },
+      SalesIntentionClassificacaoVendaResponse: {
+        type: 'array',
+        items: {
+          type: 'string'
+        },
+        example: ['PCD', 'Varejo', 'Frota']
       },
       SalesIntentionModelosDealerRecord: {
         type: 'object',
