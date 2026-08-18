@@ -192,7 +192,7 @@ function ChartToggle({ options, value, onChange }: {
             type="button"
             aria-pressed={active}
             className={cn(
-              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition sm:text-[11px]",
+              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition sm:text-[11px]",
               active
                 ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950"
                 : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100",
@@ -227,7 +227,7 @@ function MonitoringTrendChartCard({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               Ritmo das vendas cantadas
             </h2>
             <TooltipIcon text="Acompanha a evolução do volume no período. Alterne entre o movimento de cada intervalo e a visão acumulada." />
@@ -273,7 +273,7 @@ function MonitoringRankingChartCard({
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               Ranking operacional
             </h2>
             <TooltipIcon text="Identifica rapidamente onde o volume está concentrado. Escolha a dimensão que deseja acompanhar." />
@@ -301,7 +301,7 @@ function MonitoringRankingChartCard({
             <div key={item.label} title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
                 <span className={cn("truncate font-medium", themedTextStrongClass)}>{item.label}</span>
-                <span className={cn("rounded-full px-2 py-0.5 font-semibold", themedBadgeClass)}>
+                <span className={cn("rounded-full px-2 py-0.5 font-medium", themedBadgeClass)}>
                   {item.value.toLocaleString("pt-BR")}
                 </span>
               </div>
@@ -348,7 +348,7 @@ function MonitoringCompositionChartCard({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               Composição comercial
             </h2>
             <TooltipIcon text="Mostra como o volume total está distribuído por tipo de venda ou classificação comercial." />
@@ -378,7 +378,7 @@ function MonitoringCompositionChartCard({
                   <span className={cn("text-3xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
                     {total.toLocaleString("pt-BR")}
                   </span>
-                  <span className={cn("text-[9px] font-semibold uppercase tracking-[0.2em]", themedTextMutedClass)}>
+                  <span className={cn("text-[9px] font-medium uppercase tracking-[0.2em]", themedTextMutedClass)}>
                     Volume
                   </span>
                 </div>
@@ -400,7 +400,7 @@ function MonitoringCompositionChartCard({
                         <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", color.dot)} />
                         <span className="truncate">{item.label}</span>
                       </span>
-                      <span className={cn("shrink-0 font-semibold tabular-nums", themedTextTitleClass)}>
+                      <span className={cn("shrink-0 font-medium tabular-nums", themedTextTitleClass)}>
                         {item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
                       </span>
                     </div>
@@ -829,20 +829,53 @@ export default function MarcaVeiculoRelatorioPage() {
     };
   }, [endDate, filteredItems, startDate, trendView]);
 
+  const trendHourRange = useMemo(() => {
+    if (trendChartData.grainLabel !== "Visão por hora" || trendChartData.values.length === 0) {
+      return null;
+    }
+
+    const hours = trendChartData.values.map((item) => item.time);
+    return {
+      min: Math.min(...hours),
+      max: Math.max(...hours),
+    };
+  }, [trendChartData]);
+
   const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
       type: "line",
       data: [{ id: "monitoringTrend", values: trendChartData.values }],
-      xField: "label",
+      xField: trendChartData.grainLabel === "Visão por hora" ? "time" : "label",
       yField: "quantity",
       smooth: true,
       padding: [20, 24, 42, 42],
       color: ["#0ea5e9"],
       axes: [
-        {
-          orient: "bottom",
-          label: { autoRotate: false, autoHide: true, autoHideMethod: "greedy" },
-        },
+        trendHourRange
+          ? {
+              orient: "bottom",
+              type: "linear",
+              min: trendHourRange.min,
+              max: trendHourRange.max,
+              nice: false,
+              tick: {
+                tickStep: 1,
+                noDecimals: true,
+              },
+              label: {
+                formatMethod: (text: string | string[]) => {
+                  const value = Number(Array.isArray(text) ? text[0] : text);
+
+                  return Number.isFinite(value)
+                    ? formatHourLabel(value)
+                    : String(Array.isArray(text) ? text[0] : text);
+                },
+              },
+            }
+          : {
+              orient: "bottom",
+              label: { autoRotate: false, autoHide: true, autoHideMethod: "greedy" },
+            },
         {
           orient: "left",
           label: {
@@ -871,7 +904,7 @@ export default function MarcaVeiculoRelatorioPage() {
       line: { style: { lineWidth: 3, curveType: "monotone" } },
       area: { visible: true, style: { fillOpacity: 0.12 } },
     }),
-    [trendChartData.values, trendView],
+    [trendChartData, trendHourRange, trendView],
   );
 
   const rankingChartData = useMemo(() => {
@@ -1058,19 +1091,19 @@ export default function MarcaVeiculoRelatorioPage() {
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
           <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
+            <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
               Relatório
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
               Visão global por Marca de Veículo
             </h1>
           </section>
 
           <section className={cn(themedPanelClass, "border-rose-200 p-6 dark:border-rose-400/20")}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-rose-600 dark:text-rose-300">
+            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-rose-600 dark:text-rose-300">
               Falha ao carregar os dados
             </p>
-            <h2 className={cn("mt-2 text-2xl font-semibold", themedTextTitleClass)}>
+            <h2 className={cn("mt-2 text-2xl font-medium", themedTextTitleClass)}>
               Não conseguimos mostrar a visão de marca agora
             </h2>
             <p className={cn("mt-3 text-sm leading-6", themedTextBodyClass)}>{error}</p>
@@ -1090,16 +1123,16 @@ export default function MarcaVeiculoRelatorioPage() {
         <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-sky-100/80">
+              <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80">
                 Relatório
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                <h1 className="text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
                   Visão global por Marca de Veículo
                 </h1>
                 <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca e período." />
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-100/80">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80">
                 <span className="rounded-full bg-white/10 px-3 py-1">
                   Última atualização: {lastUpdatedText}
                 </span>
@@ -1107,7 +1140,7 @@ export default function MarcaVeiculoRelatorioPage() {
                   {isLoading ? "Atualizando..." : "Dados prontos"}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-sky-50/90">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-sky-50/90">
                 <span className="rounded-full bg-white/10 px-3 py-1">
                   {activePeriodText}
                 </span>
@@ -1123,7 +1156,7 @@ export default function MarcaVeiculoRelatorioPage() {
               type="button"
               variant="outline"
               onClick={() => void refresh({ silent: true })}
-              className={cn("h-10 shrink-0 rounded-full px-4 text-xs font-semibold", themedOutlineButtonClass)}
+              className={cn("h-10 shrink-0 rounded-full px-4 text-xs font-medium", themedOutlineButtonClass)}
             >
               <RefreshCw
                 className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -1136,7 +1169,7 @@ export default function MarcaVeiculoRelatorioPage() {
         <section className={cn(themedPanelClass, "p-4")}>
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+              <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
                 Filtros
               </h2>
               <p className={cn("text-xs", themedTextMutedClass)}>
@@ -1147,7 +1180,7 @@ export default function MarcaVeiculoRelatorioPage() {
               type="button"
               variant="outline"
               onClick={clearFilters}
-              className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-semibold", themedOutlineButtonClass)}
+              className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
             >
               Limpar filtros
             </Button>
@@ -1329,7 +1362,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Análise executiva</p>
             <h2
               id="charts-section-title"
-              className={cn("mt-1 text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}
+              className={cn("mt-1 text-lg font-medium tracking-[-0.02em]", themedTextTitleClass)}
             >
               Monitoramento das vendas cantadas
             </h2>
@@ -1366,7 +1399,7 @@ export default function MarcaVeiculoRelatorioPage() {
         <SalesIntentionDataList
           items={filteredItems}
           exportFilePrefix="relatorio-marca"
-          className="mt-1"
+          className="mt-1 max-w-[1160px]"
         />
       </div>
     </main>

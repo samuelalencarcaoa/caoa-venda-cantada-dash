@@ -1,9 +1,19 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, Crown, Maximize2, Medal, RefreshCw, Trophy, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+  Crown,
+  Maximize2,
+  Medal,
+  RefreshCw,
+  Trophy,
+  X,
+} from "lucide-react";
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { VChart } from "@visactor/react-vchart";
 import type { ILineChartSpec } from "@visactor/vchart";
 import { Button } from "@/components/ui/button";
@@ -47,16 +57,16 @@ import type {
 } from "@/lib/salesIntentionApi";
 
 const trendPalette = [
-  "#7aa2d9",
-  "#6dbdc8",
-  "#d0a86c",
-  "#8b93de",
-  "#d28f9a",
-  "#75b8a8",
-  "#d69d74",
-  "#90aa7a",
-  "#b694d9",
-  "#d09a88",
+  "#4f83cc",
+  "#2ca6c9",
+  "#c98a2d",
+  "#6c72d9",
+  "#cb6f82",
+  "#3eaa97",
+  "#cf7d3e",
+  "#79a35a",
+  "#9a6fd3",
+  "#c86d5a",
 ] as const;
 
 const MAX_TREND_SERIES = 5;
@@ -164,7 +174,7 @@ function ChartToggle({
             type="button"
             aria-pressed={active}
             className={cn(
-              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition sm:text-[11px]",
+              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition sm:text-[11px]",
               active
                 ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950"
                 : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100",
@@ -303,7 +313,7 @@ function ChartCard({
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               {title}
             </h2>
             <TooltipIcon text={tooltip} />
@@ -340,14 +350,32 @@ function RankingCard({
   onExport: () => void;
   className?: string;
 }) {
-  const visibleItems = items.slice(0, visibleCount);
+  const [currentPage, setCurrentPage] = useState(1);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const totalPages = Math.max(1, Math.ceil(items.length / visibleCount));
+  const visibleItems = useMemo(
+    () => items.slice((currentPage - 1) * visibleCount, currentPage * visibleCount),
+    [currentPage, items, visibleCount],
+  );
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [items, visibleCount]);
+
+  useEffect(() => {
+    tableScrollRef.current?.scrollTo({ top: 0 });
+  }, [currentPage, visibleCount]);
 
   return (
     <article className={cn(themedCardClass, "flex h-full min-w-0 flex-col p-5", className)}>
       <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+            <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
               Ranking de Vendedores
             </h2>
             <TooltipIcon text="Todos os vendedores ordenados por quantidade vendida no recorte atual." />
@@ -385,7 +413,7 @@ function RankingCard({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/60 bg-background/50">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={tableScrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <table className="min-w-full divide-y divide-border text-left text-xs">
             <thead className="sticky top-0 z-10 bg-muted/95 text-muted-foreground backdrop-blur">
               <tr>
@@ -406,7 +434,7 @@ function RankingCard({
             <tbody className="divide-y divide-border bg-background">
               {visibleItems.length ? (
                 visibleItems.map((row, idx) => {
-                  const position = idx + 1;
+                  const position = (currentPage - 1) * visibleCount + idx + 1;
                   let medal: ReactNode = null;
 
                   if (position === 1) {
@@ -424,7 +452,7 @@ function RankingCard({
                         {row.vendor}
                       </td>
                       <td className="px-3 py-2 text-right">{row.proposals}</td>
-                      <td className="px-3 py-2 text-right font-semibold">
+                      <td className="px-3 py-2 text-right font-medium">
                         {row.quantity.toLocaleString("pt-BR")}
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -451,10 +479,44 @@ function RankingCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="mt-3 flex flex-col gap-3 text-xs xl:flex-row xl:items-center xl:justify-between">
         <p className="text-muted-foreground">
           Mostrando {visibleItems.length} de {items.length} vendedores
         </p>
+
+        <div className="flex flex-wrap items-center gap-2 xl:justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={currentPage <= 1}
+            className={cn("h-8 w-8 rounded-full p-0 text-[11px] font-medium", themedOutlineButtonClass)}
+            aria-label="Página anterior"
+            title="Página anterior"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <span
+            className={cn(
+              "min-w-20 rounded-full border px-3 py-1 text-center text-[11px] font-medium tabular-nums",
+              themedChipClass,
+            )}
+          >
+            {currentPage}/{totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={currentPage >= totalPages}
+            className={cn("h-8 w-8 rounded-full p-0 text-[11px] font-medium", themedOutlineButtonClass)}
+            aria-label="Próxima página"
+            title="Próxima página"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+
         <p className="flex items-center gap-3 text-muted-foreground">
           <span className="flex items-center gap-1">
             <Trophy size={14} className="text-yellow-500" />
@@ -650,7 +712,7 @@ function TrendFullscreenModal({
         aria-modal="true"
         className={cn(
           themedPanelClass,
-          "flex h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden bg-white/95 text-slate-900 dark:bg-slate-950/95 dark:text-slate-100",
+          "flex h-[calc(100dvh-1.5rem)] w-full flex-col overflow-visible bg-white/95 text-slate-900 dark:bg-slate-950/95 dark:text-slate-100",
         )}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
@@ -658,7 +720,7 @@ function TrendFullscreenModal({
         <div className="flex items-start justify-between gap-4 px-5 py-4">
           <div className="min-w-0">
             <p className={cn(themedTinyLabelClass, "tracking-[0.22em]")}>Tela cheia</p>
-            <h3 id="trend-fullscreen-title" className={cn("mt-1 text-xl font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+            <h3 id="trend-fullscreen-title" className={cn("mt-1 text-xl font-medium tracking-[-0.02em]", themedTextTitleClass)}>
               {title}
             </h3>
             <p id="trend-fullscreen-description" className={cn("mt-1 text-sm", themedTextMutedClass)}>
@@ -680,7 +742,7 @@ function TrendFullscreenModal({
         </div>
 
         <div className="flex-1 min-h-0 px-4 pb-4">
-          <div className="h-full min-h-0 overflow-hidden rounded-[28px] border border-slate-200/70 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
+          <div className="h-full min-h-0 overflow-visible rounded-[28px] border border-slate-200/70 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
             <VChart key={chartKey} spec={chartSpec} className="h-full w-full" style={{ height: "100%" }} />
           </div>
         </div>
@@ -709,12 +771,12 @@ function PodiumCard({
         "border-slate-300/60 bg-[linear-gradient(180deg,rgba(250,250,250,0.98),rgba(241,245,249,0.9))] text-slate-900 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.18)] dark:border-slate-200/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.78))] dark:text-slate-100 dark:shadow-[0_22px_54px_-38px_rgba(0,0,0,0.42)]",
       accentClass:
         "bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 dark:from-slate-500 dark:via-slate-400 dark:to-slate-500",
-      heightClass: "min-h-[124px]",
-      iconClass: "h-9 w-9 sm:h-10 sm:w-10 text-slate-400 dark:text-slate-300",
-      rankClass: "text-[2.1rem] font-black tracking-[-0.1em] text-slate-500 dark:text-slate-300",
-      vendorClass: "text-[0.88rem] sm:text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100",
-      quantityClass: "text-[1.95rem] sm:text-[2.25rem] font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
-      metaClass: "text-[8px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400",
+      heightClass: "min-h-[96px]",
+      iconClass: "h-6 w-6 sm:h-7 sm:w-7 text-slate-400 dark:text-slate-300",
+      rankClass: "text-[1.8rem] font-medium tracking-[-0.1em] text-slate-500 dark:text-slate-300",
+      vendorClass: "text-[0.8rem] sm:text-[0.9rem] font-medium text-slate-900 dark:text-slate-100",
+      quantityClass: "text-[1.6rem] sm:text-[2rem] font-medium tracking-[-0.06em] text-slate-900 dark:text-slate-100",
+      metaClass: "text-[8px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400",
       progressClass: "bg-gradient-to-r from-slate-400 to-slate-300 dark:from-slate-400 dark:to-slate-500",
       footClass: "bg-slate-200/80 dark:bg-white/10",
     },
@@ -723,51 +785,51 @@ function PodiumCard({
       rank: 1,
       item: topThree[0],
       baseClass:
-        "border-amber-300/40 bg-[linear-gradient(180deg,rgba(255,251,235,0.98),rgba(255,249,220,0.92))] text-slate-950 shadow-[0_26px_72px_-42px_rgba(180,83,9,0.42)] ring-1 ring-amber-200/45 dark:border-amber-300/20 dark:bg-[linear-gradient(180deg,rgba(36,26,10,0.96),rgba(15,23,42,0.84))] dark:text-slate-100 dark:shadow-[0_28px_76px_-40px_rgba(251,191,36,0.26)] dark:ring-amber-300/20",
+        "border-amber-200/35 bg-[linear-gradient(180deg,rgba(250,246,236,0.97),rgba(244,236,215,0.9))] text-slate-950 shadow-[0_22px_60px_-46px_rgba(180,120,20,0.28)] ring-1 ring-amber-100/55 dark:border-amber-200/15 dark:bg-[linear-gradient(180deg,rgba(31,24,16,0.96),rgba(15,23,42,0.84))] dark:text-slate-100 dark:shadow-[0_22px_60px_-44px_rgba(251,191,36,0.18)] dark:ring-amber-200/15",
       accentClass:
-        "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-200 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200",
-      heightClass: "min-h-[157px] sm:-translate-y-4",
-      iconClass: "h-11 w-11 sm:h-14 sm:w-14 text-amber-500 dark:text-amber-300",
-      rankClass: "text-[2.8rem] sm:text-[3.4rem] font-black tracking-[-0.14em] text-amber-500 dark:text-amber-300",
-      vendorClass: "text-[1rem] sm:text-[1.18rem] font-semibold text-slate-950 dark:text-slate-50",
-      quantityClass: "text-[3.4rem] sm:text-[4rem] font-semibold tracking-[-0.1em] text-slate-950 dark:text-slate-50",
-      metaClass: "text-[8px] font-semibold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-200",
-      progressClass: "bg-gradient-to-r from-amber-400 via-amber-300 to-amber-200 dark:from-amber-300 dark:via-amber-400 dark:to-amber-200",
-      footClass: "bg-amber-200/80 dark:bg-amber-300/30",
+        "bg-gradient-to-r from-amber-300 via-amber-200 to-amber-100 dark:from-amber-200 dark:via-amber-300 dark:to-amber-200",
+      heightClass: "min-h-[118px] sm:-translate-y-1",
+      iconClass: "h-7 w-7 sm:h-9 sm:w-9 text-amber-400 dark:text-amber-200",
+      rankClass: "text-[2.2rem] sm:text-[2.8rem] font-medium tracking-[-0.14em] text-amber-500 dark:text-amber-200",
+      vendorClass: "text-[0.88rem] sm:text-[1.02rem] font-medium text-slate-950 dark:text-slate-50",
+      quantityClass: "text-[2.5rem] sm:text-[3.1rem] font-medium tracking-[-0.1em] text-slate-950 dark:text-slate-50",
+      metaClass: "text-[8px] font-medium uppercase tracking-[0.22em] text-amber-600 dark:text-amber-200",
+      progressClass: "bg-gradient-to-r from-amber-300 via-amber-200 to-amber-100 dark:from-amber-200 dark:via-amber-300 dark:to-amber-200",
+      footClass: "bg-amber-100/75 dark:bg-amber-300/25",
       badgeClass:
-        "border-amber-300/50 bg-amber-100/95 text-amber-800 shadow-[0_12px_24px_-18px_rgba(180,83,9,0.45)] dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-200",
+        "border-amber-200/50 bg-amber-50/90 text-amber-700 shadow-[0_10px_20px_-18px_rgba(180,83,9,0.28)] dark:border-amber-200/20 dark:bg-amber-200/10 dark:text-amber-100",
     },
     {
       label: "3º",
       rank: 3,
       item: topThree[2],
       baseClass:
-        "border-[#6b4124]/35 bg-[linear-gradient(180deg,rgba(241,226,213,0.96),rgba(211,169,127,0.9))] text-slate-900 shadow-[0_16px_42px_-34px_rgba(78,46,27,0.22)] dark:border-[#7b4a2a]/25 dark:bg-[linear-gradient(180deg,rgba(27,18,12,0.98),rgba(10,16,24,0.9))] dark:text-slate-100 dark:shadow-[0_20px_52px_-38px_rgba(0,0,0,0.48)]",
+        "border-[#a67c57]/28 bg-[linear-gradient(180deg,rgba(248,239,231,0.96),rgba(231,214,198,0.9))] text-slate-900 shadow-[0_16px_38px_-34px_rgba(124,84,52,0.18)] dark:border-[#8c5c3a]/20 dark:bg-[linear-gradient(180deg,rgba(24,18,14,0.98),rgba(10,16,24,0.9))] dark:text-slate-100 dark:shadow-[0_18px_46px_-38px_rgba(0,0,0,0.42)]",
       accentClass:
-        "bg-gradient-to-r from-[#4f301c] via-[#6b4124] to-[#8a5a35] dark:from-[#422718] dark:via-[#5d3820] dark:to-[#7b4a2a]",
-      heightClass: "min-h-[115px]",
-      iconClass: "h-9 w-9 sm:h-10 sm:w-10 text-[#6b4124] dark:text-[#b37a4a]",
-      rankClass: "text-[2.1rem] font-black tracking-[-0.1em] text-[#5d3820] dark:text-[#c58a55]",
-      vendorClass: "text-[0.88rem] sm:text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100",
-      quantityClass: "text-[1.95rem] sm:text-[2.25rem] font-semibold tracking-[-0.06em] text-slate-900 dark:text-slate-100",
-      metaClass: "text-[8px] font-semibold uppercase tracking-[0.18em] text-[#5d3820] dark:text-[#c58a55]",
-      progressClass: "bg-gradient-to-r from-[#4f301c] via-[#6b4124] to-[#8a5a35] dark:from-[#422718] dark:via-[#5d3820] dark:to-[#7b4a2a]",
-      footClass: "bg-[#ae7647]/65 dark:bg-[#7b4a2a]/20",
+        "bg-gradient-to-r from-[#8c5c3a] via-[#a7724e] to-[#c18a5c] dark:from-[#6f492f] dark:via-[#8c5c3a] dark:to-[#a7724e]",
+      heightClass: "min-h-[90px]",
+      iconClass: "h-6 w-6 sm:h-7 sm:w-7 text-[#8c5c3a] dark:text-[#d0a079]",
+      rankClass: "text-[1.8rem] font-medium tracking-[-0.1em] text-[#7a5335] dark:text-[#d0a079]",
+      vendorClass: "text-[0.8rem] sm:text-[0.9rem] font-medium text-slate-900 dark:text-slate-100",
+      quantityClass: "text-[1.6rem] sm:text-[2rem] font-medium tracking-[-0.06em] text-slate-900 dark:text-slate-100",
+      metaClass: "text-[8px] font-medium uppercase tracking-[0.18em] text-[#7a5335] dark:text-[#d0a079]",
+      progressClass: "bg-gradient-to-r from-[#8c5c3a] via-[#a7724e] to-[#c18a5c] dark:from-[#6f492f] dark:via-[#8c5c3a] dark:to-[#a7724e]",
+      footClass: "bg-[#c79a72]/55 dark:bg-[#8c5c3a]/18",
       badgeClass: "",
     },
   ] as const;
 
   return (
     <article
-      className={cn(themedCardClass, "relative min-w-0 overflow-hidden px-5 py-5", className)}
+      className={cn(themedCardClass, "relative min-w-0 overflow-hidden px-3 py-3", className)}
     >
       <div className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-slate-400/10 blur-3xl" />
       <div className="absolute -right-14 top-8 h-40 w-40 rounded-full bg-slate-500/10 blur-3xl" />
 
-      <div className="relative mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="relative mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               Pódio
             </h2>
             <TooltipIcon text="Top 3 vendedores por volume absoluto após aplicar os filtros atuais." />
@@ -778,7 +840,7 @@ function PodiumCard({
         </span>
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[1020px] items-end gap-3 sm:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)]">
+      <div className="relative mx-auto grid w-full max-w-[880px] items-end gap-4 sm:gap-5 sm:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)]">
         {podiumSlots.map((slot) => {
           const item = slot.item;
           const share = item && totalQuantity > 0 ? (item.quantity / totalQuantity) * 100 : 0;
@@ -794,10 +856,10 @@ function PodiumCard({
             >
               <div
                 className={cn(
-                  "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-2.5 py-2.5 backdrop-blur sm:px-3 sm:py-3",
+                  "relative flex w-full flex-1 flex-col overflow-hidden rounded-3xl border px-1 py-1 backdrop-blur sm:px-1.5 sm:py-1.5",
                   slot.baseClass,
                   slot.heightClass,
-                  slot.rank === 1 && "pt-8",
+                  slot.rank === 1 && "pt-5",
                 )}
               >
                 <div className={cn("absolute inset-x-0 top-0 h-1", slot.accentClass)} />
@@ -805,7 +867,7 @@ function PodiumCard({
                 {slot.rank === 1 ? (
                   <div
                     className={cn(
-                      "absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
+                      "absolute left-1/2 top-1 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.22em]",
                       slot.badgeClass,
                     )}
                   >
@@ -816,7 +878,7 @@ function PodiumCard({
 
                 <div
                   className={cn(
-                    "relative flex justify-between gap-3",
+                    "relative flex justify-between gap-2",
                     slot.rank === 1 ? "items-center" : "items-start",
                   )}
                 >
@@ -836,13 +898,13 @@ function PodiumCard({
                   )}
                 </div>
 
-                <div className="relative mt-2.5 space-y-1">
+                <div className="relative mt-2 space-y-0.5">
                   <p
                     className={cn("max-w-full break-words leading-4", slot.vendorClass)}
                   >
                     {displayVendor}
                   </p>
-                  <div className="flex items-end justify-between gap-2.5">
+                  <div className="flex items-end justify-between gap-2">
                     <div>
                       <p className={slot.quantityClass}>
                         {item ? item.quantity.toLocaleString("pt-BR") : "-"}
@@ -873,14 +935,14 @@ function PodiumCard({
                     </div>
                   </div>
 
-                  <div className={cn("mt-2.5 h-1.5 overflow-hidden rounded-full", slot.footClass)}>
+                  <div className={cn("mt-2 h-1 overflow-hidden rounded-full", slot.footClass)}>
                     <div className={cn("h-full rounded-full", slot.progressClass)} style={{ width: `${Math.min(100, share)}%` }} />
                   </div>
                 </div>
               </div>
               <div
                 className={cn(
-                  "mt-2 h-1.5 w-12 rounded-full",
+                  "mt-1.5 h-1 w-10 rounded-full",
                   slot.rank === 1
                     ? "bg-amber-300/80 dark:bg-amber-400/60"
                     : slot.rank === 2
@@ -1531,6 +1593,10 @@ export default function VendedorRelatorioPage() {
               min: trendHourRange.min,
               max: trendHourRange.max,
               nice: false,
+              tick: {
+                tickStep: 1,
+                noDecimals: true,
+              },
               label: {
                 formatMethod: (text: string | string[]) => {
                   const value = Number(Array.isArray(text) ? text[0] : text);
@@ -1583,19 +1649,49 @@ export default function VendedorRelatorioPage() {
       },
       point: {
         visible: true,
-        style: { size: 4, fill: "#f8fafc", stroke: "#94a3b8", lineWidth: 1.25 },
+        style: { size: 4.5, fill: "#ffffff", stroke: "#64748b", lineWidth: 1.4 },
       },
       line: {
         style: {
-          lineWidth: 1.4,
+          lineWidth: 2.3,
           lineCap: "round",
           lineJoin: "round",
           curveType: "monotone",
+          strokeOpacity: 0.98,
         },
       },
       area: { visible: false },
     }),
     [isSingleDayPeriod, trendChartData, trendHourRange, trendView],
+  );
+
+  const fullscreenTrendChartSpec = useMemo<ILineChartSpec>(
+    () => ({
+      ...trendChartSpec,
+      tooltip: {
+        ...(trendChartSpec.tooltip ?? {}),
+        activeType: "dimension",
+        confine: false,
+      },
+      crosshair: {
+        followTooltip: {
+          dimension: true,
+        },
+        xField: {
+          visible: true,
+          line: {
+            visible: true,
+            style: {
+              stroke: "#94a3b8",
+              strokeOpacity: 0.45,
+              lineWidth: 1,
+              lineDash: [4, 4],
+            },
+          },
+        },
+      },
+    }),
+    [trendChartSpec],
   );
 
   const totalQuantity = useMemo(
@@ -1659,10 +1755,10 @@ export default function VendedorRelatorioPage() {
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
           <section className={cn(vendorHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-500 dark:text-slate-400">
+            <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-slate-500 dark:text-slate-400">
               Relatório
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
               Análise de Vendedores
             </h1>
           </section>
@@ -1729,12 +1825,12 @@ export default function VendedorRelatorioPage() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                <h1 className="text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
                   Análise de Vendedores
                 </h1>
                 <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca, modelo, versão e período." />
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 <span className={vendorStatusChipClass}>
                   Atualizado: {lastUpdatedText}
                 </span>
@@ -1742,7 +1838,7 @@ export default function VendedorRelatorioPage() {
                   {isRefreshing ? "Atualizando..." : "Pronto"}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">
                 <span className={vendorStatusChipClass}>
                   {displayActivePeriodText}
                 </span>
@@ -1759,7 +1855,7 @@ export default function VendedorRelatorioPage() {
               variant="outline"
               onClick={() => void refresh({ silent: true })}
               className={cn(
-                "h-10 shrink-0 rounded-full px-4 text-xs font-semibold",
+                "h-10 shrink-0 rounded-full px-4 text-xs font-medium",
                 themedOutlineButtonClass,
               )}
             >
@@ -1773,7 +1869,7 @@ export default function VendedorRelatorioPage() {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h2 className={cn("text-base font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+                <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
                   Filtros
                 </h2>
                 <TooltipIcon text="Use tipo de venda, bandeira, regional, loja, marca, modelo, versão, classificação e período para refinar o recorte." />
@@ -1784,7 +1880,7 @@ export default function VendedorRelatorioPage() {
               variant="outline"
               onClick={clearFilters}
               className={cn(
-                "h-8 shrink-0 rounded-full px-3 text-xs font-semibold",
+                "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
                 themedOutlineButtonClass,
               )}
             >
@@ -1935,7 +2031,7 @@ export default function VendedorRelatorioPage() {
             <div className="flex items-center gap-1.5">
               <h2
                 id="charts-section-title"
-                className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}
+                className={cn("text-lg font-medium tracking-[-0.02em]", themedTextTitleClass)}
               >
                 Visão por vendedor
               </h2>
@@ -1958,7 +2054,7 @@ export default function VendedorRelatorioPage() {
 
           {chartError ? (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-50">
-              <p className="font-semibold">Falha ao renderizar o gráfico</p>
+              <p className="font-medium">Falha ao renderizar o gráfico</p>
               <p className="mt-1">{chartError}</p>
             </div>
           ) : null}
@@ -2012,7 +2108,7 @@ export default function VendedorRelatorioPage() {
           title="Comparativo"
           subtitle={`Visualização expandida em ${isSingleDayPeriod ? "horas" : trendView === "acumulado" ? "acumulado" : "volume"} com os filtros atuais.`}
           chartKey={trendChartKey}
-          chartSpec={trendChartSpec}
+          chartSpec={fullscreenTrendChartSpec}
           onClose={() => setIsTrendFullscreenOpen(false)}
         />
       </div>

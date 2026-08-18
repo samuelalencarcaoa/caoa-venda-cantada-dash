@@ -309,30 +309,30 @@ export function SalesIntentionDataList({
   return (
     <div
       className={cn(
-        "min-w-0 backdrop-blur",
+        "mx-auto min-w-0 backdrop-blur",
         themedPanelClass,
         className,
       )}
     >
-      <div className="border-b border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-white/10 dark:bg-white/5 sm:px-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <p className={cn(themedTinyLabelClass, "tracking-[0.34em]")}>
+      <div className="border-b border-slate-200/80 bg-slate-50/80 px-3 py-3 dark:border-white/10 dark:bg-white/5 sm:px-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-0.5">
+            <p className={cn(themedTinyLabelClass, "tracking-[0.3em]")}>
               Tabela detalhada
             </p>
-            <h2 className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+            <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
               Lista de dados
             </h2>
-            <p className={cn("text-sm", themedTextBodyClass)}>
+            <p className={cn("text-xs", themedTextBodyClass)}>
               Exibindo {currentPageItems.length} de {sortedItems.length} registros filtrados
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
+            <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
               <span className="font-medium">Itens por página</span>
               <select
-                className="bg-transparent text-sm font-semibold text-slate-700 outline-none dark:text-slate-100"
+                className="bg-transparent text-[11px] font-medium text-slate-700 outline-none dark:text-slate-100"
                 value={itemsPerPage}
                 onChange={(event) => setItemsPerPage(Number(event.target.value))}
               >
@@ -343,13 +343,13 @@ export function SalesIntentionDataList({
                 ))}
               </select>
             </label>
-            <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+            <div className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
               Página {currentPage} de {totalPages}
             </div>
             <Button
               variant="outline"
               onClick={exportToExcel}
-              className={cn("h-10 rounded-full px-4 text-xs font-semibold", themedOutlineButtonClass)}
+              className={cn("h-8 rounded-full px-3 text-[11px] font-medium", themedOutlineButtonClass)}
             >
               Baixar Excel
             </Button>
@@ -358,13 +358,13 @@ export function SalesIntentionDataList({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse text-xs">
+        <table className="min-w-full border-collapse text-[11px] leading-tight">
           <thead className="bg-slate-50/80 dark:bg-white/5">
             <tr>
               {REPORT_COLUMNS.map((key) => (
                 <th
                   key={key}
-                  className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500 dark:border-white/10 dark:text-slate-400"
+                  className="border-b border-slate-200 px-2.5 py-2 text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400"
                   aria-sort={
                     sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"
                   }
@@ -384,13 +384,13 @@ export function SalesIntentionDataList({
                     title={`Ordenar por ${key}`}
                   >
                     <span>{key}</span>
-                    <span className="text-[0.65rem] font-bold">
+                    <span className="text-[0.6rem] font-medium">
                       {sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
                     </span>
                   </button>
                 </th>
               ))}
-              <th className="border-b border-slate-200 px-3 py-3 text-left font-semibold text-slate-500 dark:border-white/10 dark:text-slate-400">
+              <th className="border-b border-slate-200 px-2.5 py-2 text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
                 Ações
               </th>
             </tr>
@@ -419,7 +419,7 @@ export function SalesIntentionDataList({
                     const isQuantityField = key === "Quantidade";
 
                     return (
-                      <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-3 py-2.5 text-slate-700 dark:border-white/10 dark:text-slate-200">
+                      <td key={`${rowIndex}-${key}`} className="border-b border-slate-100 px-2.5 py-2 text-slate-700 dark:border-white/10 dark:text-slate-200">
                         {isEditing && isQuantityField ? (
                           <input
                             type="number"
@@ -431,7 +431,7 @@ export function SalesIntentionDataList({
                                 Quantidade: event.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : isEditing && isDateField ? (
                           <input
@@ -444,7 +444,7 @@ export function SalesIntentionDataList({
                                 Data_solicitacao: event.target.value,
                               }))
                             }
-                            className="min-w-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
+                            className="min-w-44 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10"
                           />
                         ) : (
                           display
@@ -452,9 +452,9 @@ export function SalesIntentionDataList({
                       </td>
                     );
                   })}
-                  <td className="border-b border-slate-100 px-3 py-2.5 text-slate-700 dark:border-white/10 dark:text-slate-200">
+                  <td className="border-b border-slate-100 px-2.5 py-2 text-slate-700 dark:border-white/10 dark:text-slate-200">
                     {isEditing ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -494,7 +494,7 @@ export function SalesIntentionDataList({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 px-4 py-4 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-3 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400 sm:px-4">
         <div>
           {sortedItems.length === 0
             ? "Nenhum registro encontrado."
