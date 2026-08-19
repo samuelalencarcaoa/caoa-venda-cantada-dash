@@ -11,15 +11,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useHydration } from "@/hooks/use-hydration";
+import { cn } from "@/lib/utils";
 
 export function ThemeToggle() {
-  const { setTheme, theme } = useTheme();
+  const { setTheme, theme, resolvedTheme } = useTheme();
   const hydrated = useHydration();
+  const activeTheme = resolvedTheme ?? theme;
+  const isDarkTheme = activeTheme === "dark";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn(
+            "relative rounded-full border shadow-lg transition-colors",
+            isDarkTheme
+              ? "!border-slate-200 !bg-white !text-slate-900 hover:!bg-slate-50 dark:!border-slate-200 dark:!bg-white dark:!text-slate-900 dark:hover:!bg-slate-50"
+              : "!border-slate-900/80 !bg-slate-950 !text-white hover:!bg-slate-900 dark:!border-slate-900/80 dark:!bg-slate-950 dark:!text-white dark:hover:!bg-slate-900",
+          )}
+        >
           <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           {hydrated && theme === "system" && <AutoThemeBadge />}

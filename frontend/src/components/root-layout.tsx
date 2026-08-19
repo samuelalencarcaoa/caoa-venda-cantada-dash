@@ -39,9 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   }, [isSideNavCollapsed]);
 
   return (
-    <div className="flex min-h-[100dvh]">
+    <div className="flex min-h-[100dvh] min-w-0">
       <GlobalRequestLoading />
-      <div className="fixed right-4 top-4 z-50 sm:right-6 sm:top-5">
+      <div className="fixed right-3 top-3 z-50 sm:right-4 sm:top-4 tablet:right-6 tablet:top-5">
         <ThemeToggle />
       </div>
       {!hideSideNav && (
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <div
         className={cn(
           "flex min-w-0 flex-grow flex-col",
-          hideSideNav ? "min-h-[100dvh]" : "overflow-auto",
+          hideSideNav ? "min-h-[100dvh]" : "overflow-x-hidden overflow-y-auto",
         )}
       >
         {children}

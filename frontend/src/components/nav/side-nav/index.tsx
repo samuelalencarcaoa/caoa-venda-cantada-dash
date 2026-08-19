@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftToLine, ArrowRightToLine, LogOut } from "lucide-react";
+import { ArrowLeftToLine, ArrowRightToLine, LogOut, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
@@ -80,13 +80,13 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
       <button
         type="button"
         className={cn(
-          "fixed left-0 top-12 z-50 rounded-r-md bg-slate-900 px-2 py-1.5 text-slate-50 shadow-md hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 tablet:hidden",
-          "transition-transform duration-300 ease-in-out",
+          "fixed left-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-950/90 text-slate-100 shadow-lg backdrop-blur-md transition-transform duration-300 ease-in-out hover:bg-slate-900 dark:border-white/10 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 tablet:hidden",
           isOpen ? "translate-x-56" : "translate-x-0",
         )}
+        aria-label={isOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
         onClick={() => setIsOpen(!isOpen)}
       >
-        {isOpen ? <ArrowLeftToLine size={16} /> : <ArrowRightToLine size={16} />}
+        {isOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
       {onToggleCollapse ? (
         <button
@@ -103,7 +103,7 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
       ) : null}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex h-[100dvh] w-56 shrink-0 flex-col justify-between border-r border-border bg-slate-100 shadow-xl shadow-slate-950/10 dark:bg-slate-900 dark:shadow-slate-950/30",
+          "fixed inset-y-0 left-0 z-40 flex h-[100dvh] w-56 shrink-0 flex-col justify-between overflow-y-auto overscroll-contain border-r border-border bg-slate-100 shadow-xl shadow-slate-950/10 dark:bg-slate-900 dark:shadow-slate-950/30",
           "transition-all duration-300 ease-in-out",
           isOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0",
           isOpen ? "pointer-events-auto" : "pointer-events-none",

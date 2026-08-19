@@ -9,7 +9,7 @@ const Container = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "max-w-8xl mx-auto w-full px-6 tablet:px-10 desktop:px-14",
+        "mx-auto w-full max-w-8xl px-4 sm:px-6 tablet:px-8 desktop:px-12",
         className,
       )}
       {...props}

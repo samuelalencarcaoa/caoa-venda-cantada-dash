@@ -1,7 +1,8 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   endOfDay,
   endOfMonth,
@@ -12,10 +13,25 @@ import {
   subMonths,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CircleHelp, RefreshCw } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  CircleHelp,
+  Clock3,
+  Crown,
+  Database,
+  Flag,
+  NotebookText,
+  RefreshCw,
+  Target,
+  TrendingUp,
+  X,
+  UserRound,
+} from "lucide-react";
 
 import BrandLogo from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
@@ -56,14 +72,20 @@ type CountItem = { label: string; value: number };
 
 function TooltipIcon({ text }: { text: string }) {
   return (
-    <button
-      type="button"
-      aria-label={text}
-      title={text}
-      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sky-500 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-cyan-300 dark:hover:text-cyan-200"
-    >
-      <CircleHelp className="h-4 w-4" />
-    </button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={text}
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sky-500 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 touch-manipulation dark:text-cyan-300 dark:hover:text-cyan-200"
+        >
+          <CircleHelp className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={6} className="w-64 px-3 py-2 text-xs leading-5">
+        {text}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -92,7 +114,7 @@ function PeriodPill({
         "inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30",
         uppercase && "uppercase tracking-[0.24em]",
         active
-          ? "border-slate-900 bg-slate-900 text-white shadow-sm shadow-slate-900/10 dark:border-cyan-400 dark:bg-cyan-500 dark:text-slate-950 dark:shadow-cyan-400/20"
+          ? "border-cyan-400 bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-400/20 dark:border-slate-900 dark:bg-slate-900 dark:text-white dark:shadow-slate-900/10"
           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white",
         className,
       )}
@@ -108,15 +130,17 @@ function DateField({
   onChange,
   min,
   max,
+  className = "",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   min?: string;
   max?: string;
+  className?: string;
 }) {
   return (
-    <label className={cn("flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm", themedTextBodyClass, "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/70")}>
+    <label className={cn("flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm", themedTextBodyClass, "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/70", className)}>
       <span className="shrink-0">{label}</span>
       <input
         type="date"
@@ -205,6 +229,24 @@ function capitalizeText(value: string) {
   }
 
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatOrdinal(value: number) {
+  return `${value}º`;
+}
+
+function getBrandBadgeLabel(brand: string) {
+  const parts = brand
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return brand.slice(0, 4).toUpperCase();
+  }
+
+  const lastPart = parts[parts.length - 1] ?? brand;
+  return lastPart.slice(0, 4).toUpperCase();
 }
 
 function formatInputDateLabel(value: string) {
@@ -353,12 +395,14 @@ function PeriodNoDataModal({
 function BrandTotalCard({
   value,
   brand,
+  className = "",
 }: {
   value: number;
   brand: string;
+  className?: string;
 }) {
   return (
-    <DashboardCard className="min-h-[168px] px-5 py-5">
+    <DashboardCard className={cn("min-h-[168px] px-5 py-5", className)}>
       <div className="flex h-full flex-col justify-between gap-3">
         <div className="flex items-center justify-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
@@ -386,16 +430,18 @@ function RankingCard({
   data,
   contextLabel,
   tooltip,
+  className = "",
 }: {
   title: string;
   data: CountItem[];
   contextLabel?: string;
   tooltip?: string;
+  className?: string;
 }) {
   const max = data[0]?.value || 1;
 
   return (
-    <DashboardCard className="min-h-[276px] px-5 py-5">
+    <DashboardCard className={cn("min-h-[276px] px-5 py-5", className)}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -448,15 +494,128 @@ function RankingCard({
   );
 }
 
+function MobileMetricCard({
+  icon,
+  value,
+  label,
+  helper,
+  valueClassName = "",
+}: {
+  icon: ReactNode;
+  value: ReactNode;
+  label: string;
+  helper?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <DashboardCard className="min-h-[128px] px-4 py-4">
+      <div className="flex h-full flex-col justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-emerald-400">{icon}</div>
+          {helper ? (
+            <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]", themedChipClass)}>
+              {helper}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="space-y-1">
+          <p className={cn("text-3xl font-medium leading-none tracking-[-0.05em]", themedTextTitleClass, valueClassName)}>
+            {value}
+          </p>
+          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.22em]", themedTextMutedClass)}>
+            {label}
+          </p>
+        </div>
+      </div>
+    </DashboardCard>
+  );
+}
+
+function MobileBrandCard({
+  brand,
+  value,
+  active,
+  onClick,
+  buttonRef,
+}: {
+  brand: string;
+  value: number;
+  active: boolean;
+  onClick: () => void;
+  buttonRef?: (element: HTMLButtonElement | null) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      ref={buttonRef}
+      onClick={onClick}
+      className={cn(
+        "flex h-[198px] w-[160px] shrink-0 snap-center flex-col justify-between rounded-[24px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition dark:text-slate-100",
+        active
+          ? "border-cyan-400/80 bg-white text-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_18px_30px_-20px_rgba(15,23,42,0.18)] dark:border-cyan-400/90 dark:bg-slate-950/90 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_18px_30px_-20px_rgba(34,211,238,0.35)]"
+          : "border-slate-200 bg-white text-slate-900 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_18px_50px_-38px_rgba(0,0,0,0.35)] dark:hover:border-white/20 dark:hover:bg-white/5",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-2">
+          <span
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
+              active
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
+                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+            )}
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            {getBrandBadgeLabel(brand)}
+          </span>
+          <p
+            className={cn(
+              "min-h-[2.5rem] whitespace-normal text-[13px] font-semibold uppercase tracking-[0.22em] leading-tight",
+              "text-slate-900 dark:text-slate-100",
+            )}
+          >
+            {brand}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "mt-1 h-2.5 w-2.5 rounded-full",
+            active
+              ? "bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]"
+              : "bg-slate-400 dark:bg-slate-500",
+          )}
+        />
+      </div>
+
+      <div className="flex flex-1 flex-col justify-end">
+        <p className="text-4xl font-light leading-none tracking-[-0.06em] text-slate-900 dark:text-slate-100">
+          {value.toLocaleString("pt-BR")}
+        </p>
+        <p
+          className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400"
+        >
+          Total de vendas cantadas
+        </p>
+      </div>
+    </button>
+  );
+}
+
 export default function DashboardV2Page() {
   const [referenceDate] = useState(() => new Date());
+  const [selectedMobileBrand, setSelectedMobileBrand] = useState("CAOA CHERY");
   const [period, setPeriod] = useState<PeriodType>("dia");
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isNoDataModalOpen, setIsNoDataModalOpen] = useState(false);
+  const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [lastAutoOpenedNoticeKey, setLastAutoOpenedNoticeKey] = useState<string | null>(null);
+  const mobileBrandRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const monthQuickFilters = useMemo(
     () =>
@@ -596,8 +755,10 @@ export default function DashboardV2Page() {
     setLastAutoOpenedNoticeKey(periodNoDataNotice.key);
   }, [lastAutoOpenedNoticeKey, periodNoDataNotice]);
 
+  const isAnyModalOpen = isNoDataModalOpen || isDetailedTableModalOpen;
+
   useEffect(() => {
-    if (!isNoDataModalOpen) {
+    if (!isAnyModalOpen) {
       return;
     }
 
@@ -607,7 +768,23 @@ export default function DashboardV2Page() {
     return () => {
       document.body.style.overflow = originalOverflow;
     };
-  }, [isNoDataModalOpen]);
+  }, [isAnyModalOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      mobileBrandRefs.current[selectedMobileBrand]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedMobileBrand]);
 
   const activePeriodText = useMemo(() => {
     if (period === "mes") {
@@ -744,10 +921,300 @@ export default function DashboardV2Page() {
     [seminovosSales],
   );
 
+  const mobileBrandRankings = useMemo(
+    () => [...brandTotals].sort((a, b) => b.value - a.value),
+    [brandTotals],
+  );
+
+  const selectedMobileBrandStats = useMemo(
+    () =>
+      brandTotals.find((brand) => brand.brand === selectedMobileBrand) ?? {
+        brand: selectedMobileBrand,
+        value: 0,
+      },
+    [brandTotals, selectedMobileBrand],
+  );
+
+  const selectedMobileBrandSales = useMemo(
+    () => filteredSales.filter((item) => matchesBrand(item, selectedMobileBrand)),
+    [filteredSales, selectedMobileBrand],
+  );
+
+  const selectedMobileBrandModelData = useMemo(
+    () =>
+      topTenWithOthers(
+        groupCounts(
+          selectedMobileBrandSales,
+          selectedMobileBrand === "SEMINOVOS" ? "Marca_Veiculo" : "Versao",
+        ),
+      ),
+    [selectedMobileBrand, selectedMobileBrandSales],
+  );
+
+  const selectedMobileBrandStoreData = useMemo(
+    () => topTenWithOthers(groupCounts(selectedMobileBrandSales, "Loja_Venda")),
+    [selectedMobileBrandSales],
+  );
+
+  const selectedMobileBrandRegionData = useMemo(
+    () => topTenWithOthers(groupCounts(selectedMobileBrandSales, "Regional")),
+    [selectedMobileBrandSales],
+  );
+
+  const selectedMobileBrandRank = mobileBrandRankings.findIndex(
+    (brand) => brand.brand === selectedMobileBrand,
+  );
+  const selectedMobileBrandTotal = selectedMobileBrandStats.value;
+  const selectedMobileBrandPosition = selectedMobileBrandRank >= 0 ? selectedMobileBrandRank + 1 : 0;
+  const selectedMobileBrandShare = totalProposals > 0
+    ? (selectedMobileBrandTotal / totalProposals) * 100
+    : 0;
+
+  function DetailedTableModal() {
+    if (!isDetailedTableModalOpen) {
+      return null;
+    }
+
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[9999] overflow-hidden bg-slate-950/90 backdrop-blur-md"
+        onClick={() => setIsDetailedTableModalOpen(false)}
+        role="presentation"
+      >
+        <div
+          className="relative flex h-[100dvh] w-full flex-col overflow-hidden"
+          onClick={(event) => event.stopPropagation()}
+          role="presentation"
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setIsDetailedTableModalOpen(false)}
+            className="absolute right-3 top-3 z-20 shrink-0 border-white/10 bg-slate-950/85 text-white shadow-lg backdrop-blur hover:bg-slate-900 dark:border-white/10 dark:bg-slate-950/85 dark:text-white dark:hover:bg-slate-900"
+            aria-label="Fechar tabela detalhada"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+
+          <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3 pt-14">
+            <div className="mx-auto flex h-full min-h-0 w-full max-w-[920px]">
+              <SalesIntentionDataList
+                items={filteredSales}
+                exportFilePrefix="dashboard-lista-dados-mobile"
+                className="h-full min-h-0"
+              />
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
+  function MobileDashboardView() {
+    return (
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col gap-4 px-4 pb-8 pt-4">
+        <header className={cn(themedHeroClass, "space-y-4 rounded-[28px] px-4 py-4")}>
+          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
+            <div aria-hidden="true" className="h-11 w-11" />
+            <BrandLogo
+              variant="header"
+              className="mx-auto h-10 w-[150px] sm:h-12 sm:w-[180px]"
+            />
+            <Link
+              href="/perfil"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
+              aria-label="Abrir perfil"
+            >
+              <UserRound className="h-5 w-5" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.04em]">
+                  Painel de Vendas Cantadas
+                </h1>
+              </div>
+              <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 phone:grid-cols-2">
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">Última atualização: {lastUpdatedText}</span>
+              </div>
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <Database className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">{isRefreshing ? "Atualizando..." : "Dados prontos"}</span>
+              </div>
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <NotebookText className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">Último registro: {lastRecordText}</span>
+              </div>
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">{activePeriodText}</span>
+              </div>
+            </div>
+
+            {fallbackNotice ? (
+              <div className="rounded-full border border-amber-400/20 bg-amber-400/12 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+                {fallbackNotice}
+              </div>
+            ) : null}
+          </div>
+        </header>
+
+        {periodNoDataNotice ? (
+          <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-50">
+            <div className="flex flex-col gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{periodNoDataNotice.title}</p>
+                <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-100">
+                  {periodNoDataNotice.message}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNoDataModalOpen(true)}
+                className="shrink-0 border-amber-200 bg-white text-amber-900 hover:bg-amber-50 hover:text-amber-950 dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-50 dark:hover:bg-amber-500/10 dark:hover:text-white"
+              >
+                Ver detalhes
+              </Button>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-50">
+            Não conseguimos carregar os dados agora. Tente atualizar e, se o problema continuar, volte em alguns instantes.
+          </div>
+        ) : null}
+
+        <section className="space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Flag className="h-4 w-4 text-cyan-500 dark:text-cyan-300" />
+            <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
+              Visão por bandeira
+            </p>
+          </div>
+
+          <div
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Visão por bandeira"
+            style={{
+              paddingInline: "max(1rem, calc(50% - 80px))",
+            }}
+          >
+            {brandTotals.map((brand) => (
+              <MobileBrandCard
+                key={brand.brand}
+                brand={brand.brand}
+                value={brand.value}
+                active={selectedMobileBrand === brand.brand}
+                buttonRef={(element) => {
+                  mobileBrandRefs.current[brand.brand] = element;
+                }}
+                onClick={() => setSelectedMobileBrand(brand.brand)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                <p className={cn("truncate text-[13px] font-semibold uppercase tracking-[0.18em]", themedTextTitleClass)}>
+                  {selectedMobileBrand}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <MobileMetricCard
+              icon={<BarChart3 className="h-5 w-5 text-emerald-400" />}
+              value={selectedMobileBrandTotal.toLocaleString("pt-BR")}
+              label="Total de vendas cantadas"
+            />
+            <MobileMetricCard
+              icon={<Crown className="h-5 w-5 text-amber-400" />}
+              value={selectedMobileBrandPosition ? formatOrdinal(selectedMobileBrandPosition) : "--"}
+              label="Posição geral"
+            />
+            <MobileMetricCard
+              icon={<TrendingUp className="h-5 w-5 text-emerald-400" />}
+              value={`${selectedMobileBrandShare.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`}
+              label="Participação no período"
+            />
+            <MobileMetricCard
+              icon={<Target className="h-5 w-5 text-cyan-400" />}
+              value="--"
+              label="Meta do dia"
+              helper="Sem meta"
+              valueClassName="text-slate-400 dark:text-slate-500"
+            />
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0">
+              <p className={cn("text-[11px] font-semibold uppercase tracking-[0.32em]", themedTextTitleClass)}>
+                Destaques - {selectedMobileBrand}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <RankingCard
+              title="Venda Cantada x Modelo"
+              data={selectedMobileBrandModelData}
+              contextLabel={selectedMobileBrand}
+              tooltip="Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+            />
+            <RankingCard
+              title="Venda Cantada x Lojas"
+              data={selectedMobileBrandStoreData}
+              contextLabel={selectedMobileBrand}
+              tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
+            />
+            <RankingCard
+              title="Venda Cantada x Região"
+              data={selectedMobileBrandRegionData}
+              contextLabel={selectedMobileBrand}
+              tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+            />
+          </div>
+        </section>
+
+        <Button
+          type="button"
+          variant="default"
+          size="lg"
+          onClick={() => setIsDetailedTableModalOpen(true)}
+          className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
+        >
+          <NotebookText className="h-4 w-4" />
+          Abrir tabela detalhada
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
-      <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-        <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
+    <main className={cn("min-h-[100dvh] overflow-x-hidden", themedPageBackgroundClass, themedPageTextClass)}>
+      <div className="tablet:hidden">
+        <MobileDashboardView />
+        <DetailedTableModal />
+      </div>
+      <div className="hidden tablet:block">
+        <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4 p-3 sm:p-5">
+          <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
           <div className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_minmax(340px,430px)] xl:items-start">
             <div className="flex items-start">
               <BrandLogo
@@ -1013,6 +1480,7 @@ export default function DashboardV2Page() {
             onRefresh={() => void refresh({ silent: true })}
           />
         ) : null}
+      </div>
       </div>
     </main>
   );

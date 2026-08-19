@@ -3,7 +3,7 @@
 import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { AlertTriangle, Check, Pencil, Search, X } from "lucide-react";
+import { AlertTriangle, Check, Download, Pencil, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
@@ -359,14 +359,14 @@ export function SalesIntentionDataList({
   return (
     <div
       className={cn(
-        "w-full min-w-0 backdrop-blur p-4 sm:p-5",
+        "flex h-full min-h-0 w-full min-w-0 flex-col backdrop-blur p-4 sm:p-5",
         themedPanelClass,
         className,
       )}
     >
-      <div className="border-b border-slate-200/80 bg-slate-50/80 px-0 py-3 dark:border-white/10 dark:bg-white/5">
-        <div className="space-y-3">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)_auto] lg:items-center">
+      <div className="shrink-0 border-b border-slate-200/80 bg-slate-50/80 px-0 py-3 dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5">
               <p className={cn(themedTinyLabelClass, "tracking-[0.3em]")}>
                 Tabela detalhada
@@ -379,7 +379,21 @@ export function SalesIntentionDataList({
               </p>
             </div>
 
-            <div className="w-full lg:justify-self-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={exportToExcel}
+              className={cn("shrink-0 rounded-full", themedOutlineButtonClass)}
+              aria-label="Baixar Excel"
+              title="Baixar Excel"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="w-full">
               <label className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
                 <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
                 <input
@@ -405,8 +419,8 @@ export function SalesIntentionDataList({
               </label>
             </div>
 
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center lg:justify-self-end">
-              <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+            <div className="flex items-center gap-2 lg:justify-self-end">
+              <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm whitespace-nowrap dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
                 <span className="font-medium">Itens por página</span>
                 <select
                   className="bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-100"
@@ -420,24 +434,17 @@ export function SalesIntentionDataList({
                   ))}
                 </select>
               </label>
-              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-500 shadow-sm whitespace-nowrap dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
                 Página {currentPage} de {totalPages}
               </div>
-              <Button
-                variant="outline"
-                onClick={exportToExcel}
-                className={cn("h-8 rounded-full px-2.5 text-xs font-medium", themedOutlineButtonClass)}
-              >
-                Baixar Excel
-              </Button>
             </div>
           </div>
-
         </div>
       </div>
 
-      <div className="w-full">
-        <table className="w-full table-fixed border-collapse text-xs leading-tight">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="w-full overflow-x-auto">
+        <table className="min-w-[1080px] w-full table-fixed border-collapse text-xs leading-tight">
           <thead className="bg-slate-50/80 dark:bg-white/5">
             <tr>
               {REPORT_COLUMNS.map((key) => (
@@ -532,8 +539,8 @@ export function SalesIntentionDataList({
                           display
                         )}
                       </td>
-                  );
-                })}
+                    );
+                  })}
                   <td className="border-b border-slate-100 px-1 py-2 align-top text-slate-700 dark:border-white/10 dark:text-slate-200">
                     {isEditing ? (
                       <div className="flex items-center gap-0.5">
@@ -574,18 +581,19 @@ export function SalesIntentionDataList({
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 px-0 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
+      <div className="shrink-0 flex flex-col gap-3 border-t border-slate-200/80 px-0 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {sortedItems.length === 0
             ? "Nenhum registro encontrado."
             : `Mostrando ${currentPageItems.length} registros nesta página.`}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
           >
@@ -593,7 +601,7 @@ export function SalesIntentionDataList({
           </button>
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
           >

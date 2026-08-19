@@ -60,9 +60,12 @@ export default function TopNav({ title: _title, className }: TopNavProps) {
 
   return (
     <Container className={className}>
-      <div className="flex h-16 items-center justify-between border-b border-border">
+      <div className="flex min-h-16 items-center justify-between gap-3 border-b border-border py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center text-sm text-muted-foreground">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex min-w-0 items-center text-xs text-muted-foreground sm:text-sm"
+          >
             <ol className="flex min-w-0 flex-wrap items-center gap-2">
               {items.map((item, index) => {
                 const isLast = index === items.length - 1;

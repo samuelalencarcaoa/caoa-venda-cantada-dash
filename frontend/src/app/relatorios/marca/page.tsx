@@ -7,8 +7,9 @@ import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { Button } from "@/components/ui/button";
 import { FilterSelectCard, TooltipIcon } from "@/components/sales-intention-filter-select-card";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
+import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
 import { format } from "date-fns";
-import { RefreshCw } from "lucide-react";
+import { NotebookText, RefreshCw, SlidersHorizontal } from "lucide-react";
 import {
   fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
@@ -180,7 +181,7 @@ function ChartToggle({ options, value, onChange }: {
 }) {
   return (
     <div
-      className="inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5"
+      className="inline-flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5"
       role="group"
     >
       {options.map((option) => {
@@ -223,7 +224,7 @@ function MonitoringTrendChartCard({
   grainLabel: string;
 }) {
   return (
-    <article className={cn(themedCardClass, "min-w-0 px-5 py-5")}>
+    <article className={cn(themedCardClass, "min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -269,8 +270,8 @@ function MonitoringRankingChartCard({
   const dimensionLabel = rankingOptions.find((option) => option.value === dimension)?.label;
 
   return (
-    <article className={cn(themedCardClass, "min-h-[400px] min-w-0 px-5 py-5")}>
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <article className={cn(themedCardClass, "min-h-[400px] min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
@@ -287,7 +288,7 @@ function MonitoringRankingChartCard({
         </span>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 min-w-0">
         <ChartToggle
           options={rankingOptions}
           value={dimension}
@@ -344,7 +345,7 @@ function MonitoringCompositionChartCard({
     : "conic-gradient(#e2e8f0 0 100%)";
 
   return (
-    <article className={cn(themedCardClass, "min-h-[400px] min-w-0 px-5 py-5")}>
+    <article className={cn(themedCardClass, "min-h-[400px] min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -364,21 +365,21 @@ function MonitoringCompositionChartCard({
         />
       </div>
 
-      <div className="grid min-h-[306px] items-center gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
+      <div className="grid min-h-[306px] grid-cols-[minmax(92px,104px)_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
         {data.length ? (
           <>
             <div className="flex justify-center">
               <div
                 aria-label={`Distribuição de ${total.toLocaleString("pt-BR")} vendas cantadas`}
-                className="relative h-40 w-40 rounded-full shadow-inner"
+                className="relative h-24 w-24 rounded-full shadow-inner sm:h-40 sm:w-40"
                 role="img"
                 style={{ background: donutBackground }}
               >
                 <div className="absolute inset-[23%] flex flex-col items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-950">
-                  <span className={cn("text-3xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+                  <span className={cn("text-xl font-light tracking-[-0.05em] sm:text-3xl", themedTextTitleClass)}>
                     {total.toLocaleString("pt-BR")}
                   </span>
-                  <span className={cn("text-[9px] font-medium uppercase tracking-[0.2em]", themedTextMutedClass)}>
+                  <span className={cn("text-[8px] font-medium uppercase tracking-[0.2em] sm:text-[9px]", themedTextMutedClass)}>
                     Volume
                   </span>
                 </div>
@@ -458,6 +459,8 @@ export default function MarcaVeiculoRelatorioPage() {
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
   const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [rankingDimension, setRankingDimension] = useState<RankingDimension>("bandeira");
   const [compositionDimension, setCompositionDimension] =
@@ -1118,7 +1121,7 @@ export default function MarcaVeiculoRelatorioPage() {
     );
   }
   return (
-    <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
+    <main className={cn("min-h-[100dvh] overflow-x-hidden p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
       <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
         <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -1166,7 +1169,27 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <section className={cn(themedPanelClass, "p-4")}>
+        <div className="sticky top-3 z-30 tablet:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsMobileFiltersOpen((current) => !current)}
+            aria-expanded={isMobileFiltersOpen}
+            aria-controls="marca-filters-panel"
+            className={cn(
+              "h-12 w-full rounded-full px-4 text-sm font-medium shadow-sm",
+              themedOutlineButtonClass,
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+          </Button>
+        </div>
+
+        <section
+          id="marca-filters-panel"
+          className={cn(themedPanelClass, "p-4", isMobileFiltersOpen ? "block" : "hidden tablet:block")}
+        >
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
@@ -1304,12 +1327,12 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className={cn(themedCardClass, "p-5")}>
+        <section className="grid grid-cols-1 gap-3 phone:grid-cols-2 xl:grid-cols-4">
+          <div className={cn(themedCardClass, "p-4 sm:p-5")}>
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
               Volume total
             </p>
-            <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+            <p className={cn("mt-3 text-3xl font-light tracking-[-0.05em] sm:text-4xl", themedTextTitleClass)}>
               {totalQuantity.toLocaleString("pt-BR")}
             </p>
             <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
@@ -1317,11 +1340,11 @@ export default function MarcaVeiculoRelatorioPage() {
             </p>
           </div>
 
-          <div className={cn(themedCardClass, "p-5")}>
+          <div className={cn(themedCardClass, "p-4 sm:p-5")}>
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
               Intenções registradas
             </p>
-            <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+            <p className={cn("mt-3 text-3xl font-light tracking-[-0.05em] sm:text-4xl", themedTextTitleClass)}>
               {filteredItems.length.toLocaleString("pt-BR")}
             </p>
             <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
@@ -1329,11 +1352,11 @@ export default function MarcaVeiculoRelatorioPage() {
             </p>
           </div>
 
-          <div className={cn(themedCardClass, "p-5")}>
+          <div className={cn(themedCardClass, "p-4 sm:p-5")}>
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
               Média por intenção
             </p>
-            <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+            <p className={cn("mt-3 text-3xl font-light tracking-[-0.05em] sm:text-4xl", themedTextTitleClass)}>
               {averageQuantityPerRecord.toLocaleString("pt-BR", {
                 minimumFractionDigits: 1,
                 maximumFractionDigits: 1,
@@ -1344,11 +1367,11 @@ export default function MarcaVeiculoRelatorioPage() {
             </p>
           </div>
 
-          <div className={cn(themedCardClass, "p-5")}>
+          <div className={cn(themedCardClass, "p-4 sm:p-5")}>
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>
               Marcas ativas
             </p>
-            <p className={cn("mt-3 text-4xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+            <p className={cn("mt-3 text-3xl font-light tracking-[-0.05em] sm:text-4xl", themedTextTitleClass)}>
               {activeBrands.toLocaleString("pt-BR")}
             </p>
             <p className={cn("mt-2 text-xs", themedTextBodyClass)}>
@@ -1396,10 +1419,30 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <SalesIntentionDataList
+        <Button
+          type="button"
+          variant="default"
+          size="lg"
+          onClick={() => setIsDetailedTableModalOpen(true)}
+          className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)] tablet:hidden"
+        >
+          <NotebookText className="h-4 w-4" />
+          Abrir tabela detalhada
+        </Button>
+
+        <div className="hidden tablet:block">
+          <SalesIntentionDataList
+            items={filteredItems}
+            exportFilePrefix="relatorio-marca"
+            className="mt-1 max-w-full"
+          />
+        </div>
+
+        <MobileDetailedTableModal
+          open={isDetailedTableModalOpen}
           items={filteredItems}
-          exportFilePrefix="relatorio-marca"
-          className="mt-1 max-w-full"
+          exportFilePrefix="relatorio-marca-mobile"
+          onClose={() => setIsDetailedTableModalOpen(false)}
         />
       </div>
     </main>

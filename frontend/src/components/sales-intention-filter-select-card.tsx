@@ -25,7 +25,7 @@ export function TooltipIcon({ text }: { text: string }) {
         <button
           type="button"
           aria-label={`Ajuda: ${text}`}
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-500/10 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-cyan-300 dark:hover:bg-cyan-300/10 dark:hover:text-cyan-200"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-500/10 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 touch-manipulation dark:text-cyan-300 dark:hover:bg-cyan-300/10 dark:hover:text-cyan-200"
         >
           <CircleHelp className="h-3.5 w-3.5" />
         </button>

@@ -20,6 +20,7 @@ import {
   type SalesIntentionModelosDealerSources
 } from '@/lib/salesIntentionApi';
 import type { SalesIntentionPayload } from '@/types/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const emptyCatalogSources: SalesIntentionCatalogSources = {
   tipoVenda: [],
@@ -242,32 +243,26 @@ function FieldTooltip({
   text: string;
   placement?: 'top' | 'right';
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const tooltipPositionClasses =
-    placement === 'right'
-      ? 'left-full top-0 ml-2 -translate-x-0'
-      : 'bottom-full left-1/2 mb-2 -translate-x-1/2';
-
   return (
-    <span className="relative inline-flex shrink-0">
-      <button
-        type="button"
-        aria-label={text}
-        aria-expanded={isOpen}
-        className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 dark:text-slate-500 dark:hover:text-cyan-300"
-        onClick={() => setIsOpen((current) => !current)}
-        onBlur={() => setIsOpen(false)}
-      >
-        <CircleHelp className="h-4 w-4" />
-        <span
-          className={`pointer-events-none absolute z-20 w-64 max-w-[calc(100vw-2rem)] whitespace-pre-line rounded-2xl border border-slate-200 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-white shadow-xl transition duration-150 dark:border-white/10 dark:bg-slate-900 ${
-            isOpen ? 'opacity-100' : 'opacity-0'
-          } ${tooltipPositionClasses}`}
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={text}
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 touch-manipulation dark:text-slate-500 dark:hover:text-cyan-300"
         >
-          {text}
-        </span>
-      </button>
-    </span>
+        <CircleHelp className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align={placement === 'right' ? 'start' : 'center'}
+        side={placement === 'right' ? 'right' : 'top'}
+        sideOffset={8}
+        className="w-64 max-w-[calc(100vw-1rem)] px-3 py-2 text-xs leading-5"
+      >
+        {text}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1157,7 +1152,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={`${labelClasses} md:col-span-1 xl:col-span-3`}>
-                <FieldLabel label="Data e hora da solic" />
+                <FieldLabel label="Data e hora da solicitação" />
                 <input
                   type="datetime-local"
                   step={60}
@@ -1210,7 +1205,7 @@ export default function SalesIntentionForm() {
               </label>
 
               <label className={labelClasses}>
-                <FieldLabel label="Data e hora da solic" />
+                <FieldLabel label="Data e hora da solicitação" />
                 <input
                   type="datetime-local"
                   step={60}
