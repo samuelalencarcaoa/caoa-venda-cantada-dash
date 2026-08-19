@@ -13,6 +13,16 @@ let cachedBundle: SalesIntentionCatalogBundle | null = null;
 let cachedBundleExpiresAt = 0;
 let inFlightBundle: Promise<SalesIntentionCatalogBundle> | null = null;
 
+type SalesCompanyViewRow = {
+  bandeira: string | null;
+  regional: string | null;
+  lojaVenda: string | null;
+};
+
+type SalesClassificationViewRow = {
+  classificacao: string | null;
+};
+
 function compare(a: string, b: string): number {
   return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
 }
@@ -105,7 +115,7 @@ function distinctValues<T extends Record<string, string>>(rows: T[], key: keyof 
 }
 
 function normalizeHierarchyRows(
-  rows: SalesIntentionCatalogRecord[]
+  rows: Array<{ bandeira: string; regional: string; lojaVenda: string }>
 ): SalesIntentionCatalogHierarchyRecord[] {
   const uniqueHierarchy = new Map<string, SalesIntentionCatalogHierarchyRecord>();
 
@@ -145,12 +155,22 @@ function buildSources(combinations: SalesIntentionCatalogRecord[]): SalesIntenti
 }
 
 function buildCatalogBundle(
-  combinations: SalesIntentionCatalogRecord[]
+  combinations: SalesIntentionCatalogRecord[],
+  hierarchy: SalesIntentionCatalogHierarchyRecord[],
+  classifications: string[]
 ): SalesIntentionCatalogBundle {
+  const catalogSources = buildSources(combinations);
+
   return {
     version: 3,
-    sources: buildSources(combinations),
-    hierarchy: normalizeHierarchyRows(combinations),
+    sources: {
+      ...catalogSources,
+      bandeira: distinctValues(hierarchy, 'bandeira'),
+      regional: distinctValues(hierarchy, 'regional'),
+      lojaVenda: distinctValues(hierarchy, 'lojaVenda'),
+      classificacao: classifications
+    },
+    hierarchy,
     combinations
   };
 }
@@ -166,7 +186,11 @@ async function loadBundle(): Promise<SalesIntentionCatalogBundle> {
   }
 
   inFlightBundle = (async () => {
+<<<<<<< Updated upstream
     const rows = await withPrismaRetry(() =>
+=======
+    const [rows, companyRows, classificationRows] = await Promise.all([
+>>>>>>> Stashed changes
       prisma.salesIntentionOptionCombination.findMany({
         select: {
           tipoVenda: true,
@@ -177,11 +201,47 @@ async function loadBundle(): Promise<SalesIntentionCatalogBundle> {
           versao: true,
           classificacao: true
         }
+<<<<<<< Updated upstream
       })
     );
+=======
+      }),
+      prisma.$queryRaw<SalesCompanyViewRow[]>`
+        SELECT DISTINCT
+          [Empresa_MarcaDescricao] AS [bandeira],
+          [Regional_Vendas] AS [regional],
+          [Empresa_NomeFantasia] AS [lojaVenda]
+        FROM [dbo].[VW_IntencaoVendas_Empresa]
+        WHERE [Empresa_MarcaDescricao] IS NOT NULL
+          AND [Regional_Vendas] IS NOT NULL
+          AND [Empresa_NomeFantasia] IS NOT NULL
+      `,
+      prisma.$queryRaw<SalesClassificationViewRow[]>`
+        SELECT DISTINCT
+          [Descricao_Classificacao_Venda] AS [classificacao]
+        FROM [dbo].[VW_IntencaoVendas_ClassificacaoVenda]
+        WHERE [Descricao_Classificacao_Venda] IS NOT NULL
+      `
+    ]);
+>>>>>>> Stashed changes
 
     const combinations = normalizeCombinationRows(rows);
-    const bundle = buildCatalogBundle(combinations);
+    const hierarchy = normalizeHierarchyRows(
+      companyRows.map((row) => ({
+        bandeira: row.bandeira ?? '',
+        regional: row.regional ?? '',
+        lojaVenda: row.lojaVenda ?? ''
+      }))
+    );
+    const classifications = Array.from(
+      new Map(
+        classificationRows
+          .map((row) => row.classificacao?.trim() ?? '')
+          .filter(Boolean)
+          .map((value) => [normalizeIdentity(value), value])
+      ).values()
+    ).sort(compare);
+    const bundle = buildCatalogBundle(combinations, hierarchy, classifications);
 
     cachedBundle = bundle;
     cachedBundleExpiresAt = Date.now() + CATALOG_CACHE_TTL_MS;

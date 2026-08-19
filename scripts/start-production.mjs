@@ -4,8 +4,8 @@ import { resolve } from 'node:path';
 import { createConnection } from 'node:net';
 
 const isWindows = process.platform === 'win32';
-const pnpm = isWindows ? (process.env.ComSpec ?? 'cmd.exe') : 'pnpm';
-const pnpmPrefix = isWindows ? ['/d', '/s', '/c', 'pnpm'] : [];
+const pnpm = 'pnpm';
+const pnpmPrefix = [];
 const envFile = resolve(process.env.ENV_FILE ?? '.env.production');
 
 function getPnpmArgs(args) {
@@ -47,7 +47,8 @@ function run(args) {
     const child = spawn(pnpm, getPnpmArgs(args), {
       stdio: 'inherit',
       env: environment,
-      windowsHide: true
+      windowsHide: true,
+      shell: isWindows
     });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
@@ -109,7 +110,8 @@ try {
       {
         stdio: 'inherit',
         env: environment,
-        windowsHide: true
+        windowsHide: true,
+        shell: isWindows
       }
     );
     runningChildren.push(api);
@@ -126,26 +128,62 @@ try {
 
     await waitForApi();
   }
-  const web = spawn(
-    pnpm,
-    getPnpmArgs(['--filter', 'caoa-venda-cantada-web', 'start']),
-    {
-      stdio: 'inherit',
+  const webDir = resolve(process.cwd(), 'frontend');
+  const webEntry = resolve(webDir, 'server.mjs');
+
+  let webRestartAttempts = 0;
+  const maxWebRestarts = 5;
+
+  function removeRunningChild(child) {
+    const idx = runningChildren.indexOf(child);
+    if (idx !== -1) runningChildren.splice(idx, 1);
+  }
+
+  function spawnWeb() {
+    const web = spawn(process.execPath, [webEntry], {
+      stdio: ['inherit', 'pipe', 'pipe'],
       env: environment,
-      windowsHide: true
-    }
-  );
-  runningChildren.push(web);
-  web.once('error', (error) => {
-    console.error(error);
-    stop(1);
-  });
-  web.once('exit', (code) => {
-    if (!stopping) {
-      console.error(`O frontend foi encerrado inesperadamente (codigo ${code}).`);
+      windowsHide: true,
+      cwd: webDir
+    });
+
+    web.stdout?.on('data', (chunk) => {
+      const text = String(chunk);
+      process.stdout.write(`[web stdout] ${text}`);
+      if (text.includes('Frontend rodando') || text.includes('server module loaded successfully')) {
+        webRestartAttempts = 0;
+      }
+    });
+    web.stderr?.on('data', (chunk) => {
+      process.stderr.write(`[web stderr] ${chunk}`);
+    });
+
+    runningChildren.push(web);
+
+    web.once('error', (error) => {
+      console.error(error);
+      removeRunningChild(web);
       stop(1);
-    }
-  });
+    });
+
+    web.once('exit', (code) => {
+      removeRunningChild(web);
+      if (!stopping) {
+        console.error(`O frontend foi encerrado inesperadamente (codigo ${code}).`);
+        webRestartAttempts += 1;
+        if (webRestartAttempts <= maxWebRestarts) {
+          console.log(`Reiniciando frontend (tentativa ${webRestartAttempts}/${maxWebRestarts}) em 1s...`);
+          setTimeout(() => spawnWeb(), 1000);
+        } else {
+          console.error('Limite de reinicios do frontend atingido. Encerrando aplicacao.');
+          stop(1);
+        }
+      }
+    });
+  }
+
+  // start frontend process directly
+  spawnWeb();
 
   const apiWatchdog = setInterval(async () => {
     if (!(await isApiAvailable())) {
@@ -155,8 +193,15 @@ try {
     }
   }, 10_000);
   apiWatchdog.unref();
+  const frontendProtocol = environment.FRONTEND_TLS_ENABLED === 'true' ? 'https' : 'http';
+  const frontendPort = environment.FRONTEND_PORT ?? '3003';
+  console.log(
+    `Aplicacao em producao: frontend em ${frontendProtocol}://localhost:${frontendPort} e API em http://localhost:4000.`
+  );
 
-  console.log('Aplicacao em producao: frontend em http://localhost:3003 e API em http://localhost:4000.');
+  // Keep this process alive to manage child processes and watchdogs.
+  // `stop()` will call `process.exit()` when a child exits or on signals.
+  await new Promise(() => {});
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   stop(1);
