@@ -150,7 +150,8 @@ function buildSources(combinations: SalesIntentionCatalogRecord[]): SalesIntenti
     tipoVenda: distinctValues(combinations, 'tipoVenda'),
     bandeira: distinctValues(combinations, 'bandeira'),
     regional: distinctValues(combinations, 'regional'),
-    lojaVenda: distinctValues(combinations, 'lojaVenda')
+    lojaVenda: distinctValues(combinations, 'lojaVenda'),
+    classificacao: []
   };
 }
 
@@ -186,26 +187,20 @@ async function loadBundle(): Promise<SalesIntentionCatalogBundle> {
   }
 
   inFlightBundle = (async () => {
-<<<<<<< Updated upstream
-    const rows = await withPrismaRetry(() =>
-=======
     const [rows, companyRows, classificationRows] = await Promise.all([
->>>>>>> Stashed changes
-      prisma.salesIntentionOptionCombination.findMany({
-        select: {
-          tipoVenda: true,
-          bandeira: true,
-          regional: true,
-          lojaVenda: true,
-          marcaVeiculo: true,
-          versao: true,
-          classificacao: true
-        }
-<<<<<<< Updated upstream
-      })
-    );
-=======
-      }),
+      withPrismaRetry(() =>
+        prisma.salesIntentionOptionCombination.findMany({
+          select: {
+            tipoVenda: true,
+            bandeira: true,
+            regional: true,
+            lojaVenda: true,
+            marcaVeiculo: true,
+            versao: true,
+            classificacao: true
+          }
+        })
+      ),
       prisma.$queryRaw<SalesCompanyViewRow[]>`
         SELECT DISTINCT
           [Empresa_MarcaDescricao] AS [bandeira],
@@ -223,7 +218,6 @@ async function loadBundle(): Promise<SalesIntentionCatalogBundle> {
         WHERE [Descricao_Classificacao_Venda] IS NOT NULL
       `
     ]);
->>>>>>> Stashed changes
 
     const combinations = normalizeCombinationRows(rows);
     const hierarchy = normalizeHierarchyRows(

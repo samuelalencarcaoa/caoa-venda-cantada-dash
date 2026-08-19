@@ -29,6 +29,7 @@ export type SalesIntentionCatalogSources = {
   bandeira: string[];
   regional: string[];
   lojaVenda: string[];
+  classificacao: string[];
 };
 
 export type SalesIntentionCatalogBundle = {
