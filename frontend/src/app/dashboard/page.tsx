@@ -1068,6 +1068,114 @@ export default function DashboardV2Page() {
           </div>
         </header>
 
+        <DashboardCard className="border-white/20 bg-white/95 px-4 py-4 text-slate-900 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <p className={cn(themedTinyLabelClass, "tracking-[0.34em]")}>Período</p>
+                <TooltipIcon text="Escolha entre a visão por mês, por dia ou intervalo personalizado." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {periodOptions.map((option) => (
+                <PeriodPill
+                  key={option.key}
+                  active={period === option.key}
+                  onClick={() => setPeriod(option.key)}
+                  className={cn(
+                    "w-full px-3 py-2.5 text-[11px]",
+                    option.key === "intervalo" && "col-span-2",
+                  )}
+                >
+                  {option.label}
+                </PeriodPill>
+              ))}
+            </div>
+
+            {period === "mes" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
+                      Atalhos do mês
+                    </p>
+                    <TooltipIcon text="Selecione um mês para aplicar o recorte rapidamente." />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {monthQuickFilters.map((item) => (
+                    <PeriodPill
+                      key={item.offset}
+                      active={selectedMonthOffset === item.offset}
+                      onClick={() => setSelectedMonthOffset(item.offset)}
+                      title={item.title}
+                      className="px-3 py-2 text-[10px] shadow-none"
+                      uppercase={false}
+                    >
+                      {item.label}
+                    </PeriodPill>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {period === "dia" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
+                      Atalhos do dia
+                    </p>
+                    <TooltipIcon text="Volte alguns dias de forma rápida sem abrir o calendário." />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dayQuickFilters.map((item) => (
+                    <PeriodPill
+                      key={item.offset}
+                      active={selectedDayOffset === item.offset}
+                      onClick={() => setSelectedDayOffset(item.offset)}
+                      title={item.title}
+                      className="px-3 py-2 text-[10px] shadow-none"
+                      uppercase={false}
+                    >
+                      {item.label}
+                    </PeriodPill>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {period === "intervalo" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
+                    Intervalo personalizado
+                  </p>
+                  <TooltipIcon text="Escolha uma data inicial e uma data final para filtrar o período." />
+                </div>
+                <div className="grid grid-cols-1 gap-2 phone:grid-cols-2">
+                  <DateField
+                    label="De"
+                    value={startDate}
+                    onChange={setStartDate}
+                    max={endDate || undefined}
+                    className="w-full"
+                  />
+                  <DateField
+                    label="Até"
+                    value={endDate}
+                    onChange={setEndDate}
+                    min={startDate || undefined}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </DashboardCard>
+
         {periodNoDataNotice ? (
           <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-50">
             <div className="flex flex-col gap-3">
