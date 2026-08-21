@@ -90,6 +90,10 @@ const trendOptions = [
   { value: "volume", label: "Volume" },
   { value: "acumulado", label: "Acumulado" },
 ] as const;
+const trendMetricOptions = [
+  { value: "total", label: "Total" },
+  { value: "quant", label: "Quant." },
+] as const;
 
 const tipoVendaLabels: Record<string, string> = {
   NOVOS: "Novos",
@@ -158,6 +162,7 @@ function formatVendorDisplayName(value: string) {
 }
 
 type TrendView = (typeof trendOptions)[number]["value"];
+type TrendMetric = (typeof trendMetricOptions)[number]["value"];
 
 type TrendPoint = {
   label: string;
@@ -344,6 +349,18 @@ function buildLocalDateFromInput(value: string, endOfDay = false) {
 
 function formatHourLabel(hour: number) {
   return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function getTrendMetricLabel(metric: TrendMetric) {
+  return metric === "total" ? "Total" : "Quant.";
+}
+
+function getTrendMetricItemValue(item: SalesIntentionReportRow, metric: TrendMetric) {
+  if (metric === "total") {
+    return 1;
+  }
+
+  return Number(item.Quantidade) || 0;
 }
 
 function formatTrendTooltipDate(time: number, isSingleDayPeriod: boolean) {
@@ -608,17 +625,21 @@ function matchesVendorReportFilters(
 function TrendComparisonRail({
   series,
   trendView,
+  trendMetric,
   hiddenSeries,
   onToggleSeriesVisibility,
 }: {
   series: TrendSeriesSummary[];
   trendView: TrendView;
+  trendMetric: TrendMetric;
   hiddenSeries: string[];
   onToggleSeriesVisibility: (vendor: string) => void;
 }) {
   if (series.length === 0) {
     return null;
   }
+
+  const metricLabel = getTrendMetricLabel(trendMetric);
 
   return (
     <div className="flex h-full min-h-[250px] flex-col gap-3 tablet:hidden">
@@ -686,7 +707,7 @@ function TrendComparisonRail({
 
               <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1">
                 <p className={cn("text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
-                  Total
+                  {metricLabel}
                 </p>
                 <p className={cn("text-right text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
                   {item.averageLabel}
@@ -1055,6 +1076,8 @@ function TrendVendorSelector({
   onChange,
   trendView,
   onTrendViewChange,
+  trendMetric,
+  onTrendMetricChange,
   onOpenFullscreen,
   disabled = false,
   maxSelected = MAX_TREND_SERIES,
@@ -1064,6 +1087,8 @@ function TrendVendorSelector({
   onChange: (value: string[]) => void;
   trendView: TrendView;
   onTrendViewChange: (value: TrendView) => void;
+  trendMetric: TrendMetric;
+  onTrendMetricChange: (value: TrendMetric) => void;
   onOpenFullscreen?: () => void;
   disabled?: boolean;
   maxSelected?: number;
@@ -1129,6 +1154,14 @@ function TrendVendorSelector({
         />
       </div>
 
+      <div className="mt-2">
+        <ChartToggle
+          options={trendMetricOptions}
+          value={trendMetric}
+          onChange={(value) => onTrendMetricChange(value as TrendMetric)}
+        />
+      </div>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={disabled}>
           <button
@@ -1175,15 +1208,18 @@ function TrendVendorSelector({
 function TrendFullscreenSeriesRail({
   series,
   trendView,
+  trendMetric,
   hiddenSeries,
   onToggleSeriesVisibility,
 }: {
   series: TrendSeriesSummary[];
   trendView: TrendView;
+  trendMetric: TrendMetric;
   hiddenSeries: string[];
   onToggleSeriesVisibility: (vendor: string) => void;
 }) {
   const summaryLabel = trendView === "acumulado" ? "Acumulado" : "Volume";
+  const metricLabel = getTrendMetricLabel(trendMetric);
   const rankedSeries = [...series].sort((a, b) => b.currentTotal - a.currentTotal);
   const maxTotal = rankedSeries[0]?.currentTotal || 1;
   const topSeries = rankedSeries[0];
@@ -1284,7 +1320,7 @@ function TrendFullscreenSeriesRail({
 
                   <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1">
                     <p className={cn("text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
-                      Total de vendas cantadas
+                      {metricLabel}
                     </p>
                     <p className={cn("text-right text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
                       {item.averageLabel}
@@ -1331,6 +1367,7 @@ function TrendFullscreenModal({
   filterChips,
   hiddenSeries,
   onToggleSeriesVisibility,
+  trendMetric,
   tooltipParentElementId,
   chartKey,
   chartSpec,
@@ -1345,6 +1382,7 @@ function TrendFullscreenModal({
   filterChips: string[];
   hiddenSeries: string[];
   onToggleSeriesVisibility: (vendor: string) => void;
+  trendMetric: TrendMetric;
   tooltipParentElementId: string;
   chartKey: string;
   chartSpec: ILineChartSpec;
@@ -1501,6 +1539,7 @@ function TrendFullscreenModal({
           <TrendFullscreenSeriesRail
             series={series}
             trendView={trendView}
+            trendMetric={trendMetric}
             hiddenSeries={hiddenSeries}
             onToggleSeriesVisibility={onToggleSeriesVisibility}
           />
@@ -1733,6 +1772,7 @@ export default function VendedorRelatorioPage() {
   const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
   const [selectedComparisonVendors, setSelectedComparisonVendors] = useState<string[]>([]);
   const [trendView, setTrendView] = useState<TrendView>("volume");
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>("quant");
   const [isTrendFullscreenOpen, setIsTrendFullscreenOpen] = useState(false);
   const [hiddenTrendSeries, setHiddenTrendSeries] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
@@ -2168,26 +2208,26 @@ export default function VendedorRelatorioPage() {
 
     filteredItems.forEach((item) => {
       const vendor = item.Proprietario || "Sem vendedor";
-      const quantity = Number(item.Quantidade) || 0;
-      grouped.set(vendor, (grouped.get(vendor) || 0) + quantity);
+      const metricValue = getTrendMetricItemValue(item, trendMetric);
+      grouped.set(vendor, (grouped.get(vendor) || 0) + metricValue);
     });
 
     return grouped;
-  }, [filteredItems]);
+  }, [filteredItems, trendMetric]);
 
   const previousVendorTotals = useMemo(() => {
     const grouped = new Map<string, number>();
 
     previousPeriodItems.forEach((item) => {
       const vendor = item.Proprietario || "Sem vendedor";
-      const quantity = Number(item.Quantidade) || 0;
-      grouped.set(vendor, (grouped.get(vendor) || 0) + quantity);
+      const metricValue = getTrendMetricItemValue(item, trendMetric);
+      grouped.set(vendor, (grouped.get(vendor) || 0) + metricValue);
     });
 
     return grouped;
-  }, [previousPeriodItems]);
+  }, [previousPeriodItems, trendMetric]);
 
-  const trendChartKey = `${isSingleDayPeriod ? "hourly" : "daily"}-${trendView}-${trendSeriesLabels.join("|")}-${hiddenTrendSeriesSignature || "all"}`;
+  const trendChartKey = `${isSingleDayPeriod ? "hourly" : "daily"}-${trendView}-${trendMetric}-${trendSeriesLabels.join("|")}-${hiddenTrendSeriesSignature || "all"}`;
 
   const trendChartData = useMemo<TrendPoint[]>(() => {
     if (trendSeriesLabels.length === 0) {
@@ -2220,7 +2260,7 @@ export default function VendedorRelatorioPage() {
         }
 
         const hour = createdAt.getHours();
-        const quantity = Number(item.Quantidade) || 0;
+        const metricValue = getTrendMetricItemValue(item, trendMetric);
         const currentGroup = grouped.get(hour) ?? {
           time: new Date(
             selectedDate.getFullYear(),
@@ -2232,7 +2272,7 @@ export default function VendedorRelatorioPage() {
           totals: {},
         };
 
-        currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + quantity;
+        currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + metricValue;
         grouped.set(hour, currentGroup);
 
         if (hour < firstHour) {
@@ -2269,11 +2309,11 @@ export default function VendedorRelatorioPage() {
             };
 
           return trendSeriesLabels.map((vendor) => {
-            const quantity = row.totals[vendor] || 0;
+            const metricValue = row.totals[vendor] || 0;
             const nextQuantity =
               trendView === "acumulado"
-                ? (cumulativeByVendor.get(vendor) || 0) + quantity
-                : quantity;
+                ? (cumulativeByVendor.get(vendor) || 0) + metricValue
+                : metricValue;
 
             if (trendView === "acumulado") {
               cumulativeByVendor.set(vendor, nextQuantity);
@@ -2304,14 +2344,14 @@ export default function VendedorRelatorioPage() {
       }
 
       const key = format(current, "yyyy-MM-dd");
-      const quantity = Number(item.Quantidade) || 0;
+      const metricValue = getTrendMetricItemValue(item, trendMetric);
       const currentGroup = grouped.get(key) ?? {
         time: new Date(current.getFullYear(), current.getMonth(), current.getDate()).getTime(),
         label: format(current, "dd/MM/yy"),
         totals: {},
       };
 
-      currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + quantity;
+      currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + metricValue;
       grouped.set(key, currentGroup);
     });
 
@@ -2323,11 +2363,11 @@ export default function VendedorRelatorioPage() {
       .sort((a, b) => a.time - b.time)
       .flatMap((row) =>
         trendSeriesLabels.map((vendor) => {
-          const quantity = row.totals[vendor] || 0;
+          const metricValue = row.totals[vendor] || 0;
           const nextQuantity =
             trendView === "acumulado"
-              ? (cumulativeByVendor.get(vendor) || 0) + quantity
-              : quantity;
+              ? (cumulativeByVendor.get(vendor) || 0) + metricValue
+              : metricValue;
 
           if (trendView === "acumulado") {
             cumulativeByVendor.set(vendor, nextQuantity);
@@ -2342,7 +2382,7 @@ export default function VendedorRelatorioPage() {
           };
         }),
     );
-  }, [filteredItems, isSingleDayPeriod, startDate, trendSeriesLabels, trendView]);
+  }, [filteredItems, isSingleDayPeriod, startDate, trendMetric, trendSeriesLabels, trendView]);
 
   const trendSeriesSummaries = useMemo<TrendSeriesSummary[]>(() => {
     const grouped = new Map<string, TrendPoint[]>();
@@ -3008,6 +3048,8 @@ export default function VendedorRelatorioPage() {
                   onChange={setSelectedComparisonVendors}
                   trendView={trendView}
                   onTrendViewChange={setTrendView}
+                  trendMetric={trendMetric}
+                  onTrendMetricChange={setTrendMetric}
                   onOpenFullscreen={
                     trendChartData.length > 0 ? () => setIsTrendFullscreenOpen(true) : undefined
                   }
@@ -3020,6 +3062,7 @@ export default function VendedorRelatorioPage() {
                 <TrendComparisonRail
                   series={trendSeriesSummaries}
                   trendView={trendView}
+                  trendMetric={trendMetric}
                   hiddenSeries={hiddenTrendSeries}
                   onToggleSeriesVisibility={toggleTrendSeriesVisibility}
                 />
@@ -3063,6 +3106,7 @@ export default function VendedorRelatorioPage() {
           chartSpec={fullscreenTrendChartSpec}
           series={trendSeriesSummaries}
           trendView={trendView}
+          trendMetric={trendMetric}
           hiddenSeries={hiddenTrendSeries}
           onToggleSeriesVisibility={toggleTrendSeriesVisibility}
           onClose={() => setIsTrendFullscreenOpen(false)}
