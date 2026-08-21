@@ -1,6 +1,3 @@
-
-##  TESTE UPDATE REPOS 13/07-11:34##
-
 # CAOA Venda Cantada Dash
 
 Sistema web para cadastro e acompanhamento de intenções de venda, com frontend em Next.js e backend em Express + Prisma.
@@ -9,7 +6,7 @@ Sistema web para cadastro e acompanhamento de intenções de venda, com frontend
 
 - Frontend em Next.js 15
 - Backend em Express + TypeScript
-- Banco de dados PostgreSQL com Prisma
+- Banco de dados SQL Server com Prisma
 - Autenticação com NextAuth
 - Catálogos do formulário carregados via API
 - Suporte a Docker para subir a aplicação completa
@@ -20,8 +17,8 @@ Sistema web para cadastro e acompanhamento de intenções de venda, com frontend
 - `backend/` - API, Prisma, migrations e seed
 - `frontend/Dockerfile.web` - build do frontend
 - `backend/Dockerfile` - build do backend
-- `docker-compose.yml` - ambiente de desenvolvimento com frontend, backend e banco
-- `docker-compose.prod.yml` - ambiente de produção com Nginx, frontend, backend e banco
+- `docker-compose.yml` - ambiente de desenvolvimento com frontend, backend e SQL Server
+- `docker-compose.prod.yml` - ambiente de produção com Nginx, frontend e backend
 
 ## Principais recursos
 
@@ -36,7 +33,7 @@ Sistema web para cadastro e acompanhamento de intenções de venda, com frontend
 
 - Node.js 20+
 - pnpm 11+
-- PostgreSQL 15+
+- SQL Server 2022+ ou acesso a uma instância SQL Server existente
 
 ## Variáveis de ambiente
 
@@ -49,15 +46,17 @@ O frontend usa a API do backend via `/api/*`.
 Crie `backend/.env` com base no exemplo do projeto:
 
 ```bash
-DATABASE_PROVIDER=postgresql
-DATABASE_URL="postgresql://app:change_me@localhost:5432/salesdb?schema=public"
+DATABASE_PROVIDER=sqlserver
+DATABASE_URL="sqlserver://localhost:1433;database=salesdb;user=sa;password=ChangeMe1234;encrypt=true;trustServerCertificate=true"
 PORT=4000
 ```
 
 Na produção, prefira definir `DATABASE_PROVIDER` e `DATABASE_URL` explicitamente no `.env.production`.
-O provider aceita: `postgresql`, `mysql`, `sqlserver`, `sqlite` e `cockroachdb`.
+O backend usa SQL Server por padrão, e a camada Prisma continua preparada para outros providers se você precisar adaptar o ambiente.
 
 Importante: no Prisma, o `provider` do schema precisa continuar alinhado com o banco alvo do deploy e as migrations precisam ser recriadas para o novo dialeto. Ou seja, o app fica agnóstico na configuração e na camada de acesso, mas a troca entre dialetos ainda exige regenerar o client e revisar as migrations.
+
+Se você não estiver usando Docker, garanta uma instância SQL Server acessível em `localhost:1433`; se preferir subir tudo em container, use `pnpm docker:up`.
 
 ## Como rodar localmente
 
@@ -83,7 +82,7 @@ O backend sobe em `http://localhost:4000`.
 pnpm dev
 ```
 
-O frontend sobe em `http://localhost:3003`.
+O frontend sobe em `http://localhost:3000`.
 
 ## Banco de dados
 
@@ -123,9 +122,9 @@ pnpm docker:up
 
 Serviços expostos:
 
-- Frontend: `http://localhost:3003`
-- Backend: `http://localhost:4000`
-- Postgres: `localhost:5432`
+- Frontend: `http://localhost:3001`
+- Backend: `http://localhost:4001`
+- SQL Server: `localhost:1433`
 
 Para parar:
 
@@ -155,12 +154,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec backen
 
 O arquivo de produção já inclui:
 
-- Postgres com volume persistente
 - Backend com migrations automáticas no boot
 - Frontend apontando para o backend interno
 - Nginx exposto nas portas `80` e `443`, com redirecionamento obrigatório para HTTPS
 - TLS 1.2/1.3 e cabeçalhos de segurança no ponto de entrada
-- `DATABASE_URL` configurável para banco interno ou banco gerenciado
+- `DATABASE_URL` configurável para SQL Server externo ou gerenciado
 
 O certificado e sua chave privada ficam fora do Git em `deploy/certs/`.
 
@@ -169,7 +167,6 @@ O certificado e sua chave privada ficam fora do Git em `deploy/certs/`.
 ### Frontend
 
 - `pnpm dev`
-- `pnpm dev:web`
 - `pnpm build`
 - `pnpm start`
 - `pnpm lint`
@@ -209,7 +206,8 @@ Depois de subir o backend:
 
 ## Observações
 
-- O frontend roda por padrão na porta `3003`.
+- Em desenvolvimento, o frontend roda por padrão na porta `3000`.
+- No `pnpm start`, o frontend roda por padrão na porta `3003`.
 - Se aparecer erro de build no Next.js, rode `pnpm build` antes de usar `pnpm start`.
 - Se algum campo do formulário não carregar, verifique primeiro se o backend está ativo e se os dados do seed foram aplicados.
 
@@ -217,8 +215,8 @@ Depois de subir o backend:
 
 Para executar os dois serviços diretamente pelo Node.js, inclusive durante o desenvolvimento em configuração de produção:
 
-1. Copie `.env.production.example` para `.env.production` e configure o banco, `NEXTAUTH_URL` e as credenciais de autenticação. Para PostgreSQL na própria máquina, ajuste `DATABASE_URL` para `localhost`.
-2. Confirme que o PostgreSQL está em execução e que o banco existe.
+1. Copie `.env.production.example` para `.env.production` e configure o banco, `NEXTAUTH_URL` e as credenciais de autenticação. Para SQL Server na própria máquina, ajuste `DATABASE_URL` para `localhost:1433`.
+2. Confirme que o SQL Server está em execução e que o banco existe.
 3. Execute:
 
 ```bash
@@ -246,7 +244,7 @@ pnpm service:uninstall
 
 Os logs ficam em `logs/production.log`. Depois de alterar o codigo, pare e inicie a tarefa para que o build seja refeito.
 
-Quando alterar `backend/prisma/schema.prisma`, gere manualmente o client antes do prÃ³ximo build:
+Quando alterar `backend/prisma/schema.prisma`, gere manualmente o client antes do próximo build:
 
 ```bash
 pnpm --dir backend prisma:generate

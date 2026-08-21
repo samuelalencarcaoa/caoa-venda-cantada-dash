@@ -1,15 +1,27 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: caoa-venda-cantada-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: change_me
-      POSTGRES_DB: salesdb
+      ACCEPT_EULA: Y
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-ChangeMe1234}
+      MSSQL_DB: ${MSSQL_DB:-salesdb}
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/opt/mssql
     ports:
-      - "5432:5432"
+      - "1433:1433"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -d ${MSSQL_DB:-salesdb} -Q \"SELECT 1\" >/dev/null 2>&1 || /opt/mssql-tools/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -d ${MSSQL_DB:-salesdb} -Q \"SELECT 1\" >/dev/null 2>&1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   backend:
     build:
@@ -17,12 +29,14 @@ services:
       dockerfile: backend/Dockerfile
     container_name: caoa-venda-cantada-backend
     environment:
-      DATABASE_URL: postgresql://app:change_me@db:5432/salesdb?schema=public
+      DATABASE_PROVIDER: sqlserver
+      DATABASE_URL: "sqlserver://db:1433;database=${MSSQL_DB:-salesdb};user=sa;password=${MSSQL_SA_PASSWORD:-ChangeMe1234};encrypt=true;trustServerCertificate=true"
       PORT: 4000
     ports:
       - "4001:4000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
