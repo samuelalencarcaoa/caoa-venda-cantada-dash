@@ -85,6 +85,7 @@ const trendPalette = [
 ] as const;
 
 const MAX_TREND_SERIES = 5;
+const TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT = 5;
 const trendOptions = [
   { value: "volume", label: "Volume" },
   { value: "acumulado", label: "Acumulado" },
@@ -423,6 +424,33 @@ function buildTrendTooltipContent(
       },
     ];
   });
+}
+
+function getTrendTooltipTrailingNonZeroTimes(points: TrendPoint[]) {
+  const orderedTimes = Array.from(
+    new Set(points.filter((point) => point.quantity > 0).map((point) => point.time)),
+  ).sort((a, b) => a - b);
+
+  return new Set(orderedTimes.slice(-TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT));
+}
+
+function getTrendTooltipDimensionPosition(
+  data: TrendTooltipDataItem[] | undefined,
+  trailingNonZeroTimes: Set<number>,
+) {
+  const referencePoint = getTrendTooltipReferencePoint(data);
+
+  if (referencePoint && trailingNonZeroTimes.has(referencePoint.time)) {
+    return {
+      right: 12,
+      top: 12,
+    };
+  }
+
+  return {
+    left: (event: MouseEvent) => event.offsetX,
+    top: 12,
+  };
 }
 
 function buildSparklineGeometry(
@@ -2354,6 +2382,11 @@ export default function VendedorRelatorioPage() {
     [hiddenTrendSeries, trendChartData],
   );
 
+  const trendTooltipTrailingNonZeroTimes = useMemo(
+    () => getTrendTooltipTrailingNonZeroTimes(visibleTrendChartData),
+    [visibleTrendChartData],
+  );
+
   const visibleTrendSeriesSummaries = useMemo(
     () => trendSeriesSummaries.filter((series) => !hiddenTrendSeries.includes(series.vendor)),
     [hiddenTrendSeries, trendSeriesSummaries],
@@ -2465,10 +2498,11 @@ export default function VendedorRelatorioPage() {
             visible: true,
             value: (datum) => formatTrendTooltipTitle(datum as TrendPoint | undefined, isSingleDayPeriod),
           },
-          position: {
-            left: (event) => event.offsetX,
-            top: 12,
-          },
+          position: (data) =>
+            getTrendTooltipDimensionPosition(
+              data as TrendTooltipDataItem[] | undefined,
+              trendTooltipTrailingNonZeroTimes,
+            ),
           updateContent: (_prev, data) =>
             buildTrendTooltipContent(
               data as TrendTooltipDataItem[],
@@ -2492,7 +2526,13 @@ export default function VendedorRelatorioPage() {
       },
       area: { visible: false },
     }),
-    [inlineTrendTooltipParentElementId, isSingleDayPeriod, trendHourRange, visibleTrendChartData],
+    [
+      inlineTrendTooltipParentElementId,
+      isSingleDayPeriod,
+      trendHourRange,
+      trendTooltipTrailingNonZeroTimes,
+      visibleTrendChartData,
+    ],
   );
 
   const inlineTrendChartSpec = useMemo<ILineChartSpec>(
