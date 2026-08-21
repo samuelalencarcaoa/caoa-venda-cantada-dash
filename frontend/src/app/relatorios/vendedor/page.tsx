@@ -2,12 +2,17 @@
 
 import { format } from "date-fns";
 import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   Crown,
-  Maximize2,
+  Eye,
+  EyeOff,
   Medal,
+  Maximize2,
   NotebookText,
   RefreshCw,
   SlidersHorizontal,
@@ -15,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { VChart } from "@visactor/react-vchart";
 import type { ILineChartSpec } from "@visactor/vchart";
 import { Button } from "@/components/ui/button";
@@ -36,7 +41,12 @@ import {
   fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
   fetchSalesIntentionModelosDealer,
+  type SalesIntentionReportRow,
 } from "@/lib/salesIntentionApi";
+import {
+  buildEquivalentPreviousPeriodRange,
+  resolveSalesCantadasAverageMetric,
+} from "@/lib/period-metrics";
 import {
   themedCardClass,
   themedInputClass,
@@ -156,15 +166,87 @@ type TrendPoint = {
   time: number;
 };
 
+type ComparisonDirection = "up" | "down" | "neutral";
+
 type TrendSeriesSummary = {
   vendor: string;
   displayVendor: string;
   color: string;
   points: TrendPoint[];
-  total: number;
-  last: number;
-  delta: number;
+  currentTotal: number;
+  averageValue: number;
+  averageLabel: string;
+  comparisonDirection: ComparisonDirection;
+  comparisonText: string;
 };
+
+type TrendTooltipSeriesDatum = {
+  key?: string;
+  datum?: TrendPoint[];
+  series?: {
+    getSeriesStyle?: (datum: TrendPoint) => ((key: string) => unknown) | undefined;
+  };
+};
+
+type TrendTooltipDimensionInfo = {
+  data?: TrendTooltipSeriesDatum[];
+};
+
+type TrendTooltipDataItem = TrendTooltipDimensionInfo | TrendTooltipSeriesDatum;
+
+type TrendTooltipContentLine = {
+  key: string;
+  value: string;
+  visible: true;
+  hasShape: true;
+  shapeType: "circle";
+  shapeFill: string;
+  shapeStroke: string;
+  shapeLineWidth: number;
+  shapeSize: number;
+  shapeHollow: false;
+};
+
+function formatComparisonLabel(currentTotal: number, previousTotal: number) {
+  if (previousTotal <= 0) {
+    if (currentTotal <= 0) {
+      return {
+        direction: "neutral" as ComparisonDirection,
+        text: "0%",
+      };
+    }
+
+    return {
+      direction: "up" as ComparisonDirection,
+      text: "novo",
+    };
+  }
+
+  const percent = ((currentTotal - previousTotal) / previousTotal) * 100;
+
+  if (percent > 0) {
+    return {
+      direction: "up" as ComparisonDirection,
+      text: `+${Math.abs(percent).toLocaleString("pt-BR", {
+        maximumFractionDigits: 1,
+      })}%`,
+    };
+  }
+
+  if (percent < 0) {
+    return {
+      direction: "down" as ComparisonDirection,
+      text: `-${Math.abs(percent).toLocaleString("pt-BR", {
+        maximumFractionDigits: 1,
+      })}%`,
+    };
+  }
+
+  return {
+    direction: "neutral" as ComparisonDirection,
+    text: "0%",
+  };
+}
 
 function ChartToggle({
   options,
@@ -263,6 +345,86 @@ function formatHourLabel(hour: number) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function formatTrendTooltipDate(time: number, isSingleDayPeriod: boolean) {
+  return format(new Date(time), isSingleDayPeriod ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");
+}
+
+function formatTrendTooltipTitle(point: TrendPoint | undefined, isSingleDayPeriod: boolean) {
+  if (!point) {
+    return "";
+  }
+
+  return formatTrendTooltipDate(point.time, isSingleDayPeriod);
+}
+
+function getTrendTooltipSeriesItems(data: TrendTooltipDataItem[] | undefined) {
+  return (data ?? []).flatMap((item) => {
+    if (Array.isArray((item as TrendTooltipDimensionInfo).data)) {
+      return (item as TrendTooltipDimensionInfo).data ?? [];
+    }
+
+    return [item as TrendTooltipSeriesDatum];
+  });
+}
+
+function getTrendTooltipReferencePoint(data: TrendTooltipDataItem[] | undefined) {
+  for (const seriesItem of getTrendTooltipSeriesItems(data)) {
+    const point = seriesItem.datum?.[0];
+    if (point) {
+      return point;
+    }
+  }
+
+  return undefined;
+}
+
+function isSameTrendTooltipPoint(
+  candidate: TrendPoint,
+  reference: TrendPoint,
+  isSingleDayPeriod: boolean,
+) {
+  return isSingleDayPeriod
+    ? candidate.hour === reference.hour
+    : candidate.time === reference.time || candidate.label === reference.label;
+}
+
+function buildTrendTooltipContent(
+  data: TrendTooltipDataItem[] | undefined,
+  seriesSummaries: TrendSeriesSummary[],
+  isSingleDayPeriod: boolean,
+) {
+  const referencePoint = getTrendTooltipReferencePoint(data);
+
+  if (!referencePoint) {
+    return [];
+  }
+
+  return seriesSummaries.flatMap((seriesSummary) => {
+    const point = seriesSummary.points.find((candidate) =>
+      isSameTrendTooltipPoint(candidate, referencePoint, isSingleDayPeriod),
+    );
+
+    if (!point) {
+      return [];
+    }
+
+    return [
+      {
+        key: seriesSummary.displayVendor,
+        value: Number(point.quantity || 0).toLocaleString("pt-BR"),
+        visible: true as const,
+        hasShape: true as const,
+        shapeType: "circle" as const,
+        shapeFill: seriesSummary.color,
+        shapeStroke: seriesSummary.color,
+        shapeLineWidth: 0,
+        shapeSize: 8,
+        shapeHollow: false as const,
+      },
+    ];
+  });
+}
+
 function buildSparklineGeometry(
   points: TrendPoint[],
   width = 220,
@@ -307,12 +469,124 @@ function buildSparklineGeometry(
   };
 }
 
+function ComparisonBadge({
+  direction,
+  text,
+}: {
+  direction: ComparisonDirection;
+  text: string;
+}) {
+  const Icon = direction === "up" ? ArrowUp : direction === "down" ? ArrowDown : ArrowRight;
+  const toneClass =
+    direction === "up"
+      ? "border-emerald-200/60 bg-emerald-50/90 text-emerald-700 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+      : direction === "down"
+        ? "border-rose-200/60 bg-rose-50/90 text-rose-700 dark:border-rose-300/20 dark:bg-rose-400/10 dark:text-rose-200"
+        : "border-slate-200/70 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium tabular-nums",
+        toneClass,
+      )}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span>{text}</span>
+    </span>
+  );
+}
+
+type VendorReportFilterOptions = {
+  selectedTipoVenda: string[];
+  selectedBandeira: string[];
+  selectedRegional: string[];
+  selectedLojaVenda: string[];
+  selectedMarcaVeiculo: string[];
+  selectedModelo: string[];
+  selectedVersao: string[];
+  selectedClassificacao: string[];
+  vehicleCatalogRows: SalesIntentionModelosDealerRecord[];
+  rangeStart?: Date | null;
+  rangeEnd?: Date | null;
+};
+
+function matchesVendorReportFilters(
+  item: SalesIntentionReportRow,
+  options: VendorReportFilterOptions,
+) {
+  const itemTipoVenda = item.Tipo_Venda || "";
+  const itemBandeira = item.Bandeira || "Sem Bandeira";
+  const itemRegional = item.Regional || "";
+  const itemLojaVenda = item.Loja_Venda || "";
+  const itemMarcaVeiculo = item.Marca_Veiculo || "Sem Marca";
+  const itemClassificacao = item.Classificacao || "";
+  const itemVersao = item.Versao || "";
+  const normalizedItemVersao = normalizeValue(itemVersao);
+
+  const matchesModelo =
+    options.selectedModelo.length === 0 ||
+    options.vehicleCatalogRows.some(
+      (row) =>
+        normalizeValue(row.tipoVenda) === normalizeValue(itemTipoVenda) &&
+        normalizeValue(row.marca) === normalizeValue(itemMarcaVeiculo) &&
+        matchesSelectedValues(options.selectedModelo, row.modelo) &&
+        normalizeValue(row.versaoModelo) === normalizedItemVersao,
+    );
+
+  const matchesTipoVenda = matchesSelectedValues(options.selectedTipoVenda, itemTipoVenda);
+  const matchesBandeira = matchesSelectedValues(options.selectedBandeira, itemBandeira);
+  const matchesRegional = matchesSelectedValues(options.selectedRegional, itemRegional);
+  const matchesLojaVenda = matchesSelectedValues(options.selectedLojaVenda, itemLojaVenda);
+  const matchesMarcaVeiculo = matchesSelectedValues(
+    options.selectedMarcaVeiculo,
+    itemMarcaVeiculo,
+  );
+  const matchesVersao = matchesSelectedValues(options.selectedVersao, itemVersao);
+  const matchesClassificacao = matchesSelectedValues(
+    options.selectedClassificacao,
+    itemClassificacao,
+  );
+
+  let matchesDateRange = true;
+  if (options.rangeStart || options.rangeEnd) {
+    const itemDate = parseReportDate(item.Data_solicitacao);
+    if (!itemDate) {
+      return false;
+    }
+
+    if (options.rangeStart && itemDate < options.rangeStart) {
+      matchesDateRange = false;
+    }
+
+    if (options.rangeEnd && itemDate > options.rangeEnd) {
+      matchesDateRange = false;
+    }
+  }
+
+  return (
+    matchesTipoVenda &&
+    matchesBandeira &&
+    matchesRegional &&
+    matchesLojaVenda &&
+    matchesMarcaVeiculo &&
+    matchesModelo &&
+    matchesVersao &&
+    matchesClassificacao &&
+    matchesDateRange
+  );
+}
+
 function TrendComparisonRail({
   series,
   trendView,
+  hiddenSeries,
+  onToggleSeriesVisibility,
 }: {
   series: TrendSeriesSummary[];
   trendView: TrendView;
+  hiddenSeries: string[];
+  onToggleSeriesVisibility: (vendor: string) => void;
 }) {
   if (series.length === 0) {
     return null;
@@ -331,63 +605,88 @@ function TrendComparisonRail({
 
       <div className="flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pr-1">
         {series.map((item) => {
+          const isHidden = hiddenSeries.includes(item.vendor);
           const { path, lastPoint } = buildSparklineGeometry(item.points);
-          const lastValue = item.last.toLocaleString("pt-BR");
-          const totalValue = item.total.toLocaleString("pt-BR");
-          const deltaValue = `${item.delta >= 0 ? "+" : ""}${item.delta.toLocaleString("pt-BR")}`;
+          const totalValue = item.currentTotal.toLocaleString("pt-BR");
+          const averageValue = item.averageValue.toLocaleString("pt-BR", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          });
 
           return (
             <article
               key={item.vendor}
               className={cn(
                 themedSoftCardClass,
-                "min-w-[220px] snap-start rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-sm dark:border-white/10 dark:bg-slate-950/60",
+                "relative min-w-[220px] snap-start rounded-2xl border border-slate-200/80 bg-white/90 p-3 pr-12 shadow-sm dark:border-white/10 dark:bg-slate-950/60",
+                isHidden && "opacity-45",
               )}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className={cn("truncate text-sm font-medium", themedTextTitleClass)}>
-                    {item.displayVendor}
-                  </p>
-                  <p className={cn("mt-1 text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
-                    {item.points.length} pontos
-                  </p>
-                </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-pressed={isHidden}
+                aria-label={
+                  isHidden
+                    ? `Exibir ${item.displayVendor} no gráfico`
+                    : `Ocultar ${item.displayVendor} do gráfico`
+                }
+                title={isHidden ? "Mostrar série" : "Ocultar série"}
+                onClick={() => onToggleSeriesVisibility(item.vendor)}
+                className={cn(
+                  "absolute right-2 top-2 h-8 w-8 rounded-lg border shadow-sm transition",
+                  isHidden
+                    ? "border-slate-300/70 bg-slate-100/90 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15 dark:hover:text-white"
+                    : "border-slate-200/70 bg-white/95 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white",
+                )}
+              >
+                {isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+
+              <div className="flex items-start gap-2.5">
                 <span
                   className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
+                <div className="min-w-0">
+                  <p className={cn("truncate text-sm font-medium", themedTextTitleClass)}>
+                    {item.displayVendor}
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <div>
-                  <p className={cn("text-2xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
-                    {totalValue}
-                  </p>
-                  <p className={cn("text-xs", themedTextMutedClass)}>Total no período</p>
-                </div>
+              <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1">
+                <p className={cn("text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
+                  Total
+                </p>
+                <p className={cn("text-right text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
+                  {item.averageLabel}
+                </p>
+                <p className={cn("text-2xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+                  {totalValue}
+                </p>
+                <p className={cn("text-right text-2xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+                  {averageValue}
+                </p>
+              </div>
 
-                <div className="text-right">
-                  <p className={cn("text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
-                    Último
-                  </p>
-                  <p className={cn("text-sm font-medium", themedTextStrongClass)}>{lastValue}</p>
-                  <p
-                    className={cn(
-                      "mt-1 text-[10px] font-medium",
-                      item.delta >= 0
-                        ? "text-emerald-500 dark:text-emerald-300"
-                        : "text-rose-500 dark:text-rose-300",
-                    )}
-                  >
-                    {deltaValue}
-                  </p>
-                </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <ComparisonBadge
+                  direction={item.comparisonDirection}
+                  text={item.comparisonText}
+                />
+                <span className={cn("text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
+                  vs. período anterior
+                </span>
               </div>
 
               <svg
                 aria-hidden="true"
-                className="mt-3 h-16 w-full text-slate-400 dark:text-slate-500"
+                className={cn(
+                  "mt-3 h-16 w-full text-slate-400 transition-opacity dark:text-slate-500",
+                  isHidden && "opacity-0",
+                )}
                 viewBox="0 0 220 72"
               >
                 <line
@@ -444,10 +743,12 @@ function matchesSelectedValues(selected: string[], value: string) {
 
 function StatCard({
   label,
+  caption,
   value,
   tooltip,
 }: {
   label: string;
+  caption?: string;
   value: string;
   tooltip: string;
 }) {
@@ -457,6 +758,11 @@ function StatCard({
         <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>{label}</p>
         <TooltipIcon text={tooltip} />
       </div>
+      {caption ? (
+        <p className={cn("mt-1 text-[10px] font-medium tracking-[0.18em]", themedTextMutedClass)}>
+          {caption}
+        </p>
+      ) : null}
       <p className={cn("mt-3 text-3xl font-light tracking-[-0.05em] sm:text-4xl", themedTextTitleClass)}>
         {value}
       </p>
@@ -835,21 +1141,24 @@ function TrendVendorSelector({
 function TrendFullscreenSeriesRail({
   series,
   trendView,
+  hiddenSeries,
+  onToggleSeriesVisibility,
 }: {
   series: TrendSeriesSummary[];
   trendView: TrendView;
+  hiddenSeries: string[];
+  onToggleSeriesVisibility: (vendor: string) => void;
 }) {
   const summaryLabel = trendView === "acumulado" ? "Acumulado" : "Volume";
-  const rankedSeries = [...series].sort((a, b) => b.total - a.total);
-  const maxTotal = rankedSeries[0]?.total || 1;
-  const totalVolume = rankedSeries.reduce((sum, item) => sum + item.total, 0);
+  const rankedSeries = [...series].sort((a, b) => b.currentTotal - a.currentTotal);
+  const maxTotal = rankedSeries[0]?.currentTotal || 1;
   const topSeries = rankedSeries[0];
 
   return (
     <aside
       className={cn(
         themedSoftCardClass,
-        "min-h-0 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-white/5",
+        "flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/80 p-4 shadow-sm h-[360px] phone:h-[380px] tablet:h-[420px] dark:border-white/10 dark:bg-white/5 desktop:h-full desktop:p-3",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -863,9 +1172,6 @@ function TrendFullscreenSeriesRail({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <span className={cn(themedChipClass, "whitespace-nowrap")}>
-          {totalVolume.toLocaleString("pt-BR")} total
-        </span>
         {topSeries ? (
           <span className={cn(themedChipClass, "max-w-full truncate whitespace-nowrap")}>
             Líder: {topSeries.displayVendor}
@@ -873,18 +1179,46 @@ function TrendFullscreenSeriesRail({
         ) : null}
       </div>
 
-      <div className="mt-4 grid max-h-[34dvh] gap-2 overflow-y-auto pr-1 xl:max-h-none xl:grid-cols-1">
+      <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {rankedSeries.map((item, index) => {
-          const totalValue = item.total.toLocaleString("pt-BR");
-          const lastValue = item.last.toLocaleString("pt-BR");
-          const deltaValue = `${item.delta >= 0 ? "+" : ""}${item.delta.toLocaleString("pt-BR")}`;
-          const progress = Math.max(6, (item.total / maxTotal) * 100);
+          const isHidden = hiddenSeries.includes(item.vendor);
+          const totalValue = item.currentTotal.toLocaleString("pt-BR");
+          const averageValue = item.averageValue.toLocaleString("pt-BR", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          });
+          const progress = Math.max(6, (item.currentTotal / maxTotal) * 100);
 
           return (
             <div
               key={item.vendor}
-              className="rounded-2xl border border-slate-200/70 bg-white/90 p-2.5 shadow-sm dark:border-white/10 dark:bg-slate-950/55"
+              className={cn(
+                "relative rounded-2xl border border-slate-200/70 bg-white/90 p-2.5 pr-12 shadow-sm transition-opacity dark:border-white/10 dark:bg-slate-950/55",
+                isHidden && "opacity-45",
+              )}
             >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-pressed={isHidden}
+                aria-label={
+                  isHidden
+                    ? `Exibir ${item.displayVendor} no gráfico`
+                    : `Ocultar ${item.displayVendor} do gráfico`
+                }
+                title={isHidden ? "Mostrar série" : "Ocultar série"}
+                onClick={() => onToggleSeriesVisibility(item.vendor)}
+                className={cn(
+                  "absolute right-2 top-2 h-8 w-8 rounded-lg border shadow-sm transition",
+                  isHidden
+                    ? "border-slate-300/70 bg-slate-100/90 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15 dark:hover:text-white"
+                    : "border-slate-200/70 bg-white/95 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white",
+                )}
+              >
+                {isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+
               <div className="flex items-start gap-3">
                 <span
                   className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
@@ -909,18 +1243,34 @@ function TrendFullscreenSeriesRail({
                           themedTextMutedClass,
                         )}
                       >
-                        {item.points.length} pontos
+                        Desempenho no período
                       </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={cn("text-xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
-                        {totalValue}
-                      </p>
-                      <p className={cn("text-[10px]", themedTextMutedClass)}>Total</p>
                     </div>
                   </div>
 
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <p className={cn("text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
+                      Total de vendas cantadas
+                    </p>
+                    <p className={cn("text-right text-[10px] uppercase tracking-[0.18em]", themedTextMutedClass)}>
+                      {item.averageLabel}
+                    </p>
+                    <p className={cn("text-2xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+                      {totalValue}
+                    </p>
+                    <p className={cn("text-right text-2xl font-light tracking-[-0.05em]", themedTextTitleClass)}>
+                      {averageValue}
+                    </p>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <ComparisonBadge
+                      direction={item.comparisonDirection}
+                      text={item.comparisonText}
+                    />
+                  </div>
+
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -928,20 +1278,6 @@ function TrendFullscreenSeriesRail({
                         width: `${progress}%`,
                       }}
                     />
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
-                    <span className={themedTextMutedClass}>Último: {lastValue}</span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        item.delta >= 0
-                          ? "text-emerald-500 dark:text-emerald-300"
-                          : "text-rose-500 dark:text-rose-300",
-                      )}
-                    >
-                      {deltaValue}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -957,6 +1293,11 @@ function TrendFullscreenModal({
   open,
   title,
   subtitle,
+  periodText,
+  filterChips,
+  hiddenSeries,
+  onToggleSeriesVisibility,
+  tooltipParentElementId,
   chartKey,
   chartSpec,
   series,
@@ -966,6 +1307,11 @@ function TrendFullscreenModal({
   open: boolean;
   title: string;
   subtitle: string;
+  periodText: string;
+  filterChips: string[];
+  hiddenSeries: string[];
+  onToggleSeriesVisibility: (vendor: string) => void;
+  tooltipParentElementId: string;
   chartKey: string;
   chartSpec: ILineChartSpec;
   series: TrendSeriesSummary[];
@@ -994,13 +1340,28 @@ function TrendFullscreenModal({
     };
   }, [open, onClose]);
 
+  const visibleFilterChips = filterChips.slice(0, 4);
+  const remainingFilterCount = Math.max(0, filterChips.length - visibleFilterChips.length);
+  const periodValue = periodText.replace(/^Período:\s*/i, "");
+  const resolvedChartSpec = useMemo<ILineChartSpec>(
+    () => ({
+      ...chartSpec,
+      tooltip: {
+        ...(chartSpec.tooltip ?? {}),
+        parentElement: tooltipParentElementId,
+        offset: { x: 12, y: 0 },
+      },
+    }),
+    [chartSpec, tooltipParentElementId],
+  );
+
   if (!open) {
     return null;
   }
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] bg-slate-950/70 p-3 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] bg-slate-950/70 p-3 backdrop-blur-sm overflow-y-auto desktop:overflow-hidden"
       onClick={onClose}
       role="presentation"
     >
@@ -1039,17 +1400,76 @@ function TrendFullscreenModal({
           </Button>
         </div>
 
-        <div className="grid flex-1 min-h-0 gap-4 px-4 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="min-h-0 overflow-hidden rounded-[28px] border border-slate-200/70 bg-slate-50 p-3 shadow-sm dark:border-white/10 dark:bg-white/5">
-            <VChart
-              key={chartKey}
-              spec={chartSpec}
-              className="h-full min-h-[360px] w-full"
-              style={{ height: "100%" }}
-            />
+        <div className="flex flex-1 min-h-0 flex-col gap-4 px-4 pb-4 desktop:grid desktop:grid-cols-[minmax(0,1.18fr)_minmax(340px,15vw)] desktop:gap-4 desktop:items-stretch">
+          <div className="flex min-h-0 flex-col gap-3 rounded-[28px] border border-slate-200/70 bg-slate-50 p-3 shadow-sm dark:border-white/10 dark:bg-white/5 desktop:h-full">
+            <div className="rounded-[24px] border border-slate-200/70 bg-white/75 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/55">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className={cn(themedTinyLabelClass, "tracking-[0.22em]")}>Período selecionado</span>
+                  <span
+                    className={cn(
+                      themedChipClass,
+                      "shrink-0 border-cyan-400/30 bg-cyan-400/12 px-3 py-1 text-[11px] text-cyan-700 shadow-none dark:border-cyan-300/20 dark:bg-cyan-400/10 dark:text-cyan-100",
+                    )}
+                  >
+                    {periodValue}
+                  </span>
+                </div>
+
+                {filterChips.length > 0 ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:justify-end sm:overflow-x-auto">
+                    <span
+                      className={cn(
+                        "shrink-0 text-[10px] uppercase tracking-[0.18em]",
+                        themedTextMutedClass,
+                      )}
+                    >
+                      Filtros aplicados
+                    </span>
+                    {visibleFilterChips.map((chip) => (
+                      <span
+                        key={chip}
+                        className={cn(
+                          "shrink-0 rounded-full border border-slate-200/80 bg-slate-50/90 px-2.5 py-1 text-[10px] leading-none text-slate-500 shadow-none dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
+                        )}
+                        title={chip}
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                    {remainingFilterCount > 0 ? (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full border border-slate-200/80 bg-slate-50/90 px-2.5 py-1 text-[10px] leading-none text-slate-500 shadow-none dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
+                        )}
+                      >
+                        +{remainingFilterCount}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div
+              id={tooltipParentElementId}
+              className="relative w-full overflow-hidden rounded-[24px] border border-slate-200/70 bg-slate-50/70 h-[320px] phone:h-[360px] tablet:h-[420px] desktop:flex-1 desktop:h-auto desktop:min-h-0 desktop:overflow-hidden dark:border-white/10 dark:bg-white/5"
+            >
+              <VChart
+                key={chartKey}
+                spec={resolvedChartSpec}
+                className="h-full w-full"
+                style={{ height: "100%" }}
+              />
+            </div>
           </div>
 
-          <TrendFullscreenSeriesRail series={series} trendView={trendView} />
+          <TrendFullscreenSeriesRail
+            series={series}
+            trendView={trendView}
+            hiddenSeries={hiddenSeries}
+            onToggleSeriesVisibility={onToggleSeriesVisibility}
+          />
         </div>
       </div>
     </div>,
@@ -1280,6 +1700,7 @@ export default function VendedorRelatorioPage() {
   const [selectedComparisonVendors, setSelectedComparisonVendors] = useState<string[]>([]);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [isTrendFullscreenOpen, setIsTrendFullscreenOpen] = useState(false);
+  const [hiddenTrendSeries, setHiddenTrendSeries] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
@@ -1295,6 +1716,9 @@ export default function VendedorRelatorioPage() {
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
 
   const todayInput = useMemo(() => getTodayInputValue(), []);
+  const chartTooltipRootId = useId().replace(/:/g, "");
+  const inlineTrendTooltipParentElementId = `${chartTooltipRootId}-trend-inline`;
+  const fullscreenTrendTooltipParentElementId = `${chartTooltipRootId}-trend-fullscreen`;
 
   useEffect(() => {
     let active = true;
@@ -1534,79 +1958,40 @@ export default function VendedorRelatorioPage() {
 
   const lastUpdatedText = lastUpdatedAt ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss") : "Carregando...";
 
+  const currentPeriodRange = useMemo(
+    () => ({
+      start: startDate ? buildLocalDateFromInput(startDate) : null,
+      end: endDate ? buildLocalDateFromInput(endDate, true) : null,
+    }),
+    [endDate, startDate],
+  );
+
+  const previousPeriodRange = useMemo(
+    () => buildEquivalentPreviousPeriodRange(startDate, endDate),
+    [endDate, startDate],
+  );
+
   const filteredItems = useMemo(
     () =>
-      enhancedSalesIntention.filter((item) => {
-        const itemTipoVenda = item.Tipo_Venda || "";
-        const itemBandeira = item.Bandeira || "Sem Bandeira";
-        const itemRegional = item.Regional || "";
-        const itemLojaVenda = item.Loja_Venda || "";
-        const itemMarcaVeiculo = item.Marca_Veiculo || "Sem Marca";
-        const itemClassificacao = item.Classificacao || "";
-        const itemVersao = item.Versao || "";
-        const normalizedItemVersao = normalizeValue(itemVersao);
-
-        const matchesModelo =
-          selectedModelo.length === 0 ||
-          vehicleCatalogRows.some(
-            (row) =>
-              normalizeValue(row.tipoVenda) === normalizeValue(itemTipoVenda) &&
-              normalizeValue(row.marca) === normalizeValue(itemMarcaVeiculo) &&
-              matchesSelectedValues(selectedModelo, row.modelo) &&
-              normalizeValue(row.versaoModelo) === normalizedItemVersao,
-          );
-
-        const matchesTipoVenda = matchesSelectedValues(selectedTipoVenda, itemTipoVenda);
-        const matchesBandeira = matchesSelectedValues(selectedBandeira, itemBandeira);
-        const matchesRegional = matchesSelectedValues(selectedRegional, itemRegional);
-        const matchesLojaVenda = matchesSelectedValues(selectedLojaVenda, itemLojaVenda);
-        const matchesMarcaVeiculo = matchesSelectedValues(selectedMarcaVeiculo, itemMarcaVeiculo);
-        const matchesVersao = matchesSelectedValues(selectedVersao, itemVersao);
-        const matchesClassificacao = matchesSelectedValues(selectedClassificacao, itemClassificacao);
-
-        let matchesDateRange = true;
-        if (startDate || endDate) {
-          const itemDate = parseReportDate(item.Data_solicitacao);
-          if (!itemDate) {
-            return false;
-          }
-
-          if (startDate) {
-            const start = buildLocalDateFromInput(startDate);
-            if (!start) {
-              return false;
-            }
-            if (itemDate < start) {
-              matchesDateRange = false;
-            }
-          }
-
-          if (endDate) {
-            const end = buildLocalDateFromInput(endDate, true);
-            if (!end) {
-              return false;
-            }
-            if (itemDate > end) {
-              matchesDateRange = false;
-            }
-          }
-        }
-
-        return (
-          matchesTipoVenda &&
-          matchesBandeira &&
-          matchesRegional &&
-          matchesLojaVenda &&
-          matchesMarcaVeiculo &&
-          matchesModelo &&
-          matchesVersao &&
-          matchesClassificacao &&
-          matchesDateRange
-        );
-      }),
+      enhancedSalesIntention.filter((item) =>
+        matchesVendorReportFilters(item, {
+          selectedTipoVenda,
+          selectedBandeira,
+          selectedRegional,
+          selectedLojaVenda,
+          selectedMarcaVeiculo,
+          selectedModelo,
+          selectedVersao,
+          selectedClassificacao,
+          vehicleCatalogRows,
+          rangeStart: currentPeriodRange.start,
+          rangeEnd: currentPeriodRange.end,
+        }),
+      ),
     [
       enhancedSalesIntention,
-      endDate,
+      currentPeriodRange.end,
+      currentPeriodRange.start,
       selectedBandeira,
       selectedClassificacao,
       selectedLojaVenda,
@@ -1615,10 +2000,43 @@ export default function VendedorRelatorioPage() {
       selectedRegional,
       selectedTipoVenda,
       selectedVersao,
-      startDate,
       vehicleCatalogRows,
     ],
   );
+
+  const previousPeriodItems = useMemo(() => {
+    if (!previousPeriodRange) {
+      return [];
+    }
+
+    return enhancedSalesIntention.filter((item) =>
+      matchesVendorReportFilters(item, {
+        selectedTipoVenda,
+        selectedBandeira,
+        selectedRegional,
+        selectedLojaVenda,
+        selectedMarcaVeiculo,
+        selectedModelo,
+        selectedVersao,
+        selectedClassificacao,
+        vehicleCatalogRows,
+        rangeStart: previousPeriodRange.start,
+        rangeEnd: previousPeriodRange.end,
+      }),
+    );
+  }, [
+    enhancedSalesIntention,
+    previousPeriodRange,
+    selectedBandeira,
+    selectedClassificacao,
+    selectedLojaVenda,
+    selectedMarcaVeiculo,
+    selectedModelo,
+    selectedRegional,
+    selectedTipoVenda,
+    selectedVersao,
+    vehicleCatalogRows,
+  ]);
 
   const vendorRanking = useMemo(() => {
     const grouped = new Map<string, { proposals: number; quantity: number }>();
@@ -1684,7 +2102,58 @@ export default function VendedorRelatorioPage() {
     return comparisonVendorOptions.slice(0, MAX_TREND_SERIES);
   }, [comparisonVendorOptions, selectedComparisonVendors]);
 
-  const trendChartKey = `${isSingleDayPeriod ? "hourly" : "daily"}-${trendView}-${trendSeriesLabels.join("|")}`;
+  useEffect(() => {
+    setHiddenTrendSeries((current) => {
+      const next = current.filter((vendor) => trendSeriesLabels.includes(vendor));
+
+      if (next.length === current.length && next.every((value, index) => value === current[index])) {
+        return current;
+      }
+
+      return next;
+    });
+  }, [trendSeriesLabels]);
+
+  const toggleTrendSeriesVisibility = (vendor: string) => {
+    setHiddenTrendSeries((current) =>
+      current.includes(vendor)
+        ? current.filter((value) => value !== vendor)
+        : [...current, vendor],
+    );
+  };
+
+  const hiddenTrendSeriesSignature = hiddenTrendSeries.slice().sort().join("|");
+
+  const salesCantadasAverageMetric = useMemo(
+    () => resolveSalesCantadasAverageMetric(startDate, endDate),
+    [endDate, startDate],
+  );
+
+  const currentVendorTotals = useMemo(() => {
+    const grouped = new Map<string, number>();
+
+    filteredItems.forEach((item) => {
+      const vendor = item.Proprietario || "Sem vendedor";
+      const quantity = Number(item.Quantidade) || 0;
+      grouped.set(vendor, (grouped.get(vendor) || 0) + quantity);
+    });
+
+    return grouped;
+  }, [filteredItems]);
+
+  const previousVendorTotals = useMemo(() => {
+    const grouped = new Map<string, number>();
+
+    previousPeriodItems.forEach((item) => {
+      const vendor = item.Proprietario || "Sem vendedor";
+      const quantity = Number(item.Quantidade) || 0;
+      grouped.set(vendor, (grouped.get(vendor) || 0) + quantity);
+    });
+
+    return grouped;
+  }, [previousPeriodItems]);
+
+  const trendChartKey = `${isSingleDayPeriod ? "hourly" : "daily"}-${trendView}-${trendSeriesLabels.join("|")}-${hiddenTrendSeriesSignature || "all"}`;
 
   const trendChartData = useMemo<TrendPoint[]>(() => {
     if (trendSeriesLabels.length === 0) {
@@ -1852,34 +2321,55 @@ export default function VendedorRelatorioPage() {
 
     return trendSeriesLabels.map((vendor, index) => {
       const points = (grouped.get(vendor) ?? []).slice().sort((a, b) => a.time - b.time);
-      const values = points.map((point) => point.quantity);
-      const total = values.reduce((sum, value) => sum + value, 0);
-      const last = values[values.length - 1] ?? 0;
-      const first = values[0] ?? 0;
+      const currentTotal = currentVendorTotals.get(vendor) ?? 0;
+      const previousTotal = previousVendorTotals.get(vendor) ?? 0;
+      const averageValue = salesCantadasAverageMetric.divisor
+        ? currentTotal / salesCantadasAverageMetric.divisor
+        : 0;
+      const comparison = formatComparisonLabel(currentTotal, previousTotal);
 
       return {
         vendor,
         displayVendor: formatVendorDisplayName(vendor),
         color: trendPalette[index % trendPalette.length],
         points,
-        total,
-        last,
-        delta: last - first,
+        currentTotal,
+        averageValue,
+        averageLabel: salesCantadasAverageMetric.label,
+        comparisonDirection: comparison.direction,
+        comparisonText: comparison.text,
       };
     });
-  }, [trendChartData, trendSeriesLabels]);
+  }, [
+    currentVendorTotals,
+    previousVendorTotals,
+    salesCantadasAverageMetric.divisor,
+    salesCantadasAverageMetric.label,
+    trendChartData,
+    trendSeriesLabels,
+  ]);
+
+  const visibleTrendChartData = useMemo(
+    () => trendChartData.filter((point) => !hiddenTrendSeries.includes(point.vendor)),
+    [hiddenTrendSeries, trendChartData],
+  );
+
+  const visibleTrendSeriesSummaries = useMemo(
+    () => trendSeriesSummaries.filter((series) => !hiddenTrendSeries.includes(series.vendor)),
+    [hiddenTrendSeries, trendSeriesSummaries],
+  );
 
   const trendHourRange = useMemo(() => {
-    if (!isSingleDayPeriod || trendChartData.length === 0) {
+    if (!isSingleDayPeriod || visibleTrendChartData.length === 0) {
       return null;
     }
 
-    const hours = trendChartData.map((item) => item.hour);
+    const hours = visibleTrendChartData.map((item) => item.hour);
     return {
       min: Math.min(...hours),
       max: Math.max(...hours),
     };
-  }, [isSingleDayPeriod, trendChartData]);
+  }, [isSingleDayPeriod, visibleTrendChartData]);
 
   const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
@@ -1887,7 +2377,7 @@ export default function VendedorRelatorioPage() {
       data: [
         {
           id: "vendorTrend",
-          values: trendChartData,
+          values: visibleTrendChartData,
         },
       ],
       xField: isSingleDayPeriod ? "hour" : "label",
@@ -1966,19 +2456,25 @@ export default function VendedorRelatorioPage() {
       ],
       tooltip: {
         trigger: ["hover", "click"],
-        confine: true,
-        mark: {
-          title: { value: (datum) => formatVendorDisplayName(String(datum?.vendor || "Série")) },
-          content: [
-            {
-              key: isSingleDayPeriod ? "Hora" : "Data",
-              value: (datum) => datum?.label || "Período",
-            },
-            {
-              key: trendView === "acumulado" ? "Volume acumulado" : "Volume",
-              value: (datum) => Number(datum?.quantity || 0).toLocaleString("pt-BR"),
-            },
-          ],
+        confine: false,
+        parentElement: inlineTrendTooltipParentElementId,
+        activeType: "dimension",
+        offset: { x: 0, y: 0 },
+        dimension: {
+          title: {
+            visible: true,
+            value: (datum) => formatTrendTooltipTitle(datum as TrendPoint | undefined, isSingleDayPeriod),
+          },
+          position: {
+            left: (event) => event.offsetX,
+            top: 12,
+          },
+          updateContent: (_prev, data) =>
+            buildTrendTooltipContent(
+              data as TrendTooltipDataItem[],
+              visibleTrendSeriesSummaries,
+              isSingleDayPeriod,
+            ),
         },
       },
       point: {
@@ -1996,7 +2492,7 @@ export default function VendedorRelatorioPage() {
       },
       area: { visible: false },
     }),
-    [isSingleDayPeriod, trendChartData, trendHourRange, trendView],
+    [inlineTrendTooltipParentElementId, isSingleDayPeriod, trendHourRange, visibleTrendChartData],
   );
 
   const inlineTrendChartSpec = useMemo<ILineChartSpec>(
@@ -2024,6 +2520,8 @@ export default function VendedorRelatorioPage() {
         ...(trendChartSpec.tooltip ?? {}),
         activeType: "dimension",
         confine: false,
+        parentElement: fullscreenTrendTooltipParentElementId,
+        offset: { x: 0, y: 0 },
       },
       legends: {
         visible: false,
@@ -2058,7 +2556,7 @@ export default function VendedorRelatorioPage() {
         },
       },
     }),
-    [isSingleDayPeriod, trendChartSpec],
+    [fullscreenTrendTooltipParentElementId, isSingleDayPeriod, trendChartSpec],
   );
 
   const totalQuantity = useMemo(
@@ -2066,9 +2564,13 @@ export default function VendedorRelatorioPage() {
     [filteredItems],
   );
 
-  const averageQuantityPerRecord = filteredItems.length
-    ? totalQuantity / filteredItems.length
-    : 0;
+  const averageQuantityPerPeriod = useMemo(() => {
+    if (!salesCantadasAverageMetric.divisor) {
+      return 0;
+    }
+
+    return totalQuantity / salesCantadasAverageMetric.divisor;
+  }, [salesCantadasAverageMetric.divisor, totalQuantity]);
 
   const activeBrands = useMemo(
     () =>
@@ -2397,12 +2899,13 @@ export default function VendedorRelatorioPage() {
             tooltip="Soma das quantidades registradas."
           />
           <StatCard
-            label="Média"
-            value={averageQuantityPerRecord.toLocaleString("pt-BR", {
+            label={salesCantadasAverageMetric.label}
+            caption={salesCantadasAverageMetric.caption}
+            value={averageQuantityPerPeriod.toLocaleString("pt-BR", {
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
             })}
-            tooltip="Quantidade média por intenção filtrada."
+            tooltip={salesCantadasAverageMetric.tooltip}
           />
           <StatCard
             label="Marcas"
@@ -2447,7 +2950,7 @@ export default function VendedorRelatorioPage() {
           ) : null}
 
           <div className="flex flex-col gap-4 xl:grid xl:grid-cols-2 xl:items-stretch">
-          <ChartCard
+            <ChartCard
               title="Comparativo"
               tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
               hasData={trendChartData.length > 0}
@@ -2468,9 +2971,17 @@ export default function VendedorRelatorioPage() {
               contentClassName="h-[280px] min-h-0 tablet:h-[340px] xl:flex-1"
             >
               <div className="tablet:hidden">
-                <TrendComparisonRail series={trendSeriesSummaries} trendView={trendView} />
+                <TrendComparisonRail
+                  series={trendSeriesSummaries}
+                  trendView={trendView}
+                  hiddenSeries={hiddenTrendSeries}
+                  onToggleSeriesVisibility={toggleTrendSeriesVisibility}
+                />
               </div>
-              <div className="hidden h-full min-h-0 tablet:block">
+              <div
+                id={inlineTrendTooltipParentElementId}
+                className="hidden h-full min-h-0 tablet:block"
+              >
                 <VChart
                   key={trendChartKey}
                   spec={inlineTrendChartSpec}
@@ -2499,10 +3010,15 @@ export default function VendedorRelatorioPage() {
           open={isTrendFullscreenOpen}
           title="Comparativo"
           subtitle={`Visualização expandida em ${isSingleDayPeriod ? "horas" : trendView === "acumulado" ? "acumulado" : "volume"} com os filtros atuais.`}
+          periodText={displayActivePeriodText}
+          filterChips={appliedFilterChips.slice(0, -1)}
+          tooltipParentElementId={fullscreenTrendTooltipParentElementId}
           chartKey={trendChartKey}
           chartSpec={fullscreenTrendChartSpec}
           series={trendSeriesSummaries}
           trendView={trendView}
+          hiddenSeries={hiddenTrendSeries}
+          onToggleSeriesVisibility={toggleTrendSeriesVisibility}
           onClose={() => setIsTrendFullscreenOpen(false)}
         />
 

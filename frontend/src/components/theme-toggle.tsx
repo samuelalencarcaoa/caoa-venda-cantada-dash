@@ -17,7 +17,7 @@ export function ThemeToggle() {
   const { setTheme, theme, resolvedTheme } = useTheme();
   const hydrated = useHydration();
   const activeTheme = resolvedTheme ?? theme;
-  const isDarkTheme = activeTheme === "dark";
+  const isDarkTheme = hydrated && activeTheme === "dark";
 
   return (
     <DropdownMenu>
@@ -31,6 +31,7 @@ export function ThemeToggle() {
               ? "!border-slate-200 !bg-white !text-slate-900 hover:!bg-slate-50 dark:!border-slate-200 dark:!bg-white dark:!text-slate-900 dark:hover:!bg-slate-50"
               : "!border-slate-900/80 !bg-slate-950 !text-white hover:!bg-slate-900 dark:!border-slate-900/80 dark:!bg-slate-950 dark:!text-white dark:hover:!bg-slate-900",
           )}
+          suppressHydrationWarning
         >
           <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
