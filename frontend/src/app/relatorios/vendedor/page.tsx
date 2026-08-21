@@ -928,10 +928,16 @@ function RankingCard({
                   Vendedor
                 </th>
                 <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
-                  Venda Cantada
+                  <span className="inline-flex items-center justify-end gap-1.5">
+                    <span>Total</span>
+                    <TooltipIcon text="Total por cliente" />
+                  </span>
                 </th>
                 <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
-                  Quantidade
+                  <span className="inline-flex items-center justify-end gap-1.5">
+                    <span>Quant.</span>
+                    <TooltipIcon text="Total por volume de veículos" />
+                  </span>
                 </th>
                 <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
                   Média/Proposta
