@@ -1638,7 +1638,7 @@ function PodiumCard({
         </span>
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[920px] grid-cols-3 items-end gap-2 sm:gap-5 sm:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)]">
+      <div className="relative mx-auto flex w-full max-w-[920px] snap-x snap-mandatory items-end gap-3 overflow-x-auto px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:grid tablet:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)] tablet:gap-5 tablet:overflow-visible tablet:px-0 tablet:pb-0">
         {podiumSlots.map((slot) => {
           const item = slot.item;
           const share = item && totalQuantity > 0 ? (item.quantity / totalQuantity) * 100 : 0;
@@ -1648,7 +1648,12 @@ function PodiumCard({
             <div
               key={slot.rank}
               className={cn(
-                "flex min-w-0 flex-col items-center self-stretch",
+                "flex min-w-[84%] flex-none snap-center flex-col items-center self-stretch phone:min-w-[76%] tablet:min-w-0 tablet:flex-1 tablet:snap-none",
+                slot.rank === 1
+                  ? "order-1 tablet:order-none"
+                  : slot.rank === 2
+                    ? "order-2 tablet:order-none"
+                    : "order-3 tablet:order-none",
                 slot.rank === 1 && "relative z-10",
               )}
             >
@@ -1665,7 +1670,7 @@ function PodiumCard({
                 {slot.rank === 1 ? (
                   <div
                     className={cn(
-                      "absolute left-1/2 top-0.5 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-0.5 text-[7px] font-medium uppercase tracking-[0.16em] sm:top-1 sm:px-2.5 sm:py-0.5 sm:text-[9px] sm:tracking-[0.22em]",
+                      "absolute left-1/2 top-1 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.16em] sm:px-2.5 sm:py-0.5 sm:text-[9px] sm:tracking-[0.22em]",
                       slot.badgeClass,
                     )}
                   >
@@ -1696,18 +1701,21 @@ function PodiumCard({
                   )}
                 </div>
 
-                <div className="relative mt-1.5 space-y-0.5">
+                <div className="relative mt-1.5 space-y-1">
                   <p
-                    className={cn("max-w-full break-words leading-4", slot.vendorClass)}
+                    className={cn(
+                      "max-w-full break-words leading-5 sm:leading-4",
+                      slot.vendorClass,
+                    )}
                   >
                     {displayVendor}
                   </p>
-                  <div className="flex items-end justify-between gap-1 sm:gap-2">
+                  <div className="flex items-end justify-between gap-2 sm:gap-2">
                     <div className="min-w-0">
                       <p className={slot.quantityClass}>
                         {item ? item.quantity.toLocaleString("pt-BR") : "-"}
                       </p>
-                      <p className={cn("flex items-center gap-1", slot.metaClass)}>
+                      <p className={cn("flex items-center gap-1.5", slot.metaClass)}>
                         <span>
                           {item ? `${item.proposals.toLocaleString("pt-BR")} prop.` : "Sem posição"}
                         </span>
@@ -1717,7 +1725,7 @@ function PodiumCard({
                       </p>
                     </div>
                     <div className="min-w-0 text-right">
-                      <p className={cn("flex items-center justify-end gap-1", slot.metaClass)}>
+                      <p className={cn("flex items-center justify-end gap-1.5", slot.metaClass)}>
                         <span>
                           {item
                             ? `${share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% vol.`
@@ -1730,7 +1738,7 @@ function PodiumCard({
                     </div>
                   </div>
 
-                  <div className={cn("mt-2 h-1 overflow-hidden rounded-full", slot.footClass)}>
+                  <div className={cn("mt-2 h-1.5 overflow-hidden rounded-full", slot.footClass)}>
                     <div className={cn("h-full rounded-full", slot.progressClass)} style={{ width: `${Math.min(100, share)}%` }} />
                   </div>
                 </div>
