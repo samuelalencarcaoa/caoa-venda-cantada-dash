@@ -115,7 +115,7 @@ export function resolveSalesCantadasAverageMetric(
 
   if (totalDays <= 62) {
     return {
-      label: "Média por mês",
+      label: "Média mês",
       caption: "de vendas cantadas",
       tooltip: "Média por mês de vendas cantadas no período selecionado.",
       divisor: totalDays / 30,
