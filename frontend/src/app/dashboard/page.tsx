@@ -34,6 +34,11 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import {
+  buildBrandDetailHref,
+  dashboardBrandNames,
+  type DashboardPeriod,
+} from "@/lib/brand-routing";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
 import {
   themedBadgeClass,
@@ -57,17 +62,9 @@ const periodOptions = [
   { key: "intervalo", label: "Intervalo de datas" },
 ] as const;
 
-const brands = [
-  "CAOA CHERY",
-  "CAOA CHANGAN",
-  "HYUNDAI",
-  "FORD",
-  "SEMINOVOS",
-];
+const vehicleBrands = dashboardBrandNames.filter((brand) => brand !== "SEMINOVOS");
 
-const vehicleBrands = brands.filter((brand) => brand !== "SEMINOVOS");
-
-type PeriodType = (typeof periodOptions)[number]["key"];
+type PeriodType = DashboardPeriod;
 type CountItem = { label: string; value: number };
 
 function TooltipIcon({ text }: { text: string }) {
@@ -395,33 +392,44 @@ function PeriodNoDataModal({
 function BrandTotalCard({
   value,
   brand,
+  href,
   className = "",
 }: {
   value: number;
   brand: string;
+  href: string;
   className?: string;
 }) {
   return (
-    <DashboardCard className={cn("min-h-[168px] px-5 py-5", className)}>
-      <div className="flex h-full flex-col justify-between gap-3">
-        <div className="flex items-center justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {brand}
-          </span>
-        </div>
+    <Link
+      href={href}
+      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+      aria-label={`Abrir detalhes de ${brand}`}
+    >
+      <DashboardCard className={cn(
+        "min-h-[168px] px-5 py-5 transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.24)]",
+        className,
+      )}>
+        <div className="flex h-full flex-col justify-between gap-3">
+          <div className="flex items-center justify-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 transition group-hover:bg-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-300 dark:group-hover:bg-emerald-400/15">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {brand}
+            </span>
+          </div>
 
-        <div className="flex flex-1 items-center justify-center">
-          <p className={cn("text-5xl font-light leading-none tracking-[-0.05em] xl:text-6xl", themedTextTitleClass)}>
-            {value.toLocaleString("pt-BR")}
+          <div className="flex flex-1 items-center justify-center">
+            <p className={cn("text-5xl font-light leading-none tracking-[-0.05em] xl:text-6xl", themedTextTitleClass)}>
+              {value.toLocaleString("pt-BR")}
+            </p>
+          </div>
+
+          <p className={cn("text-center text-[10px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
+            Total de Vendas Cantadas
           </p>
         </div>
-
-        <p className={cn("text-center text-[10px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
-          Total de Vendas Cantadas
-        </p>
-      </div>
-    </DashboardCard>
+      </DashboardCard>
+    </Link>
   );
 }
 
@@ -536,23 +544,22 @@ function MobileBrandCard({
   brand,
   value,
   active,
-  onClick,
-  buttonRef,
+  href,
+  linkRef,
 }: {
   brand: string;
   value: number;
   active: boolean;
-  onClick: () => void;
-  buttonRef?: (element: HTMLButtonElement | null) => void;
+  href: string;
+  linkRef?: (element: HTMLAnchorElement | null) => void;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      ref={buttonRef}
-      onClick={onClick}
+    <Link
+      href={href}
+      ref={linkRef}
+      aria-label={`Abrir detalhes de ${brand}`}
       className={cn(
-        "flex h-[198px] w-[160px] shrink-0 snap-center flex-col justify-between rounded-[24px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition dark:text-slate-100",
+        "flex h-[198px] w-[160px] shrink-0 snap-center flex-col justify-between rounded-[24px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:text-slate-100",
         active
           ? "border-cyan-400/80 bg-white text-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_18px_30px_-20px_rgba(15,23,42,0.18)] dark:border-cyan-400/90 dark:bg-slate-950/90 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_18px_30px_-20px_rgba(34,211,238,0.35)]"
           : "border-slate-200 bg-white text-slate-900 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_18px_50px_-38px_rgba(0,0,0,0.35)] dark:hover:border-white/20 dark:hover:bg-white/5",
@@ -600,7 +607,7 @@ function MobileBrandCard({
           Total de vendas cantadas
         </p>
       </div>
-    </button>
+    </Link>
   );
 }
 
@@ -615,7 +622,7 @@ export default function DashboardV2Page() {
   const [isNoDataModalOpen, setIsNoDataModalOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [lastAutoOpenedNoticeKey, setLastAutoOpenedNoticeKey] = useState<string | null>(null);
-  const mobileBrandRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const mobileBrandRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
 
   const monthQuickFilters = useMemo(
     () =>
@@ -681,6 +688,32 @@ export default function DashboardV2Page() {
       endDate: format(range.end, "yyyy-MM-dd")
     };
   }, [endDate, period, range.end, range.start, startDate]);
+
+  const brandDetailDateRange = useMemo(() => {
+    if (period === "intervalo") {
+      if (!startDate && !endDate) {
+        const fallbackRange = getMonthRange(referenceDate, 0);
+
+        return {
+          period,
+          startDate: format(fallbackRange.start, "yyyy-MM-dd"),
+          endDate: format(fallbackRange.end, "yyyy-MM-dd"),
+        };
+      }
+
+      return {
+        period,
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+      };
+    }
+
+    return {
+      period,
+      startDate: format(range.start, "yyyy-MM-dd"),
+      endDate: format(range.end, "yyyy-MM-dd"),
+    };
+  }, [endDate, period, range.end, range.start, referenceDate, startDate]);
 
   const {
     items: sales,
@@ -864,7 +897,7 @@ export default function DashboardV2Page() {
 
   const brandTotals = useMemo(
     () =>
-      brands.map((brand) => {
+      dashboardBrandNames.map((brand) => {
         const sourceItems = brand === "SEMINOVOS" ? seminovosSales : novosSales;
         const value = sourceItems
           .filter((item) => matchesBrand(item, brand))
@@ -1221,11 +1254,11 @@ export default function DashboardV2Page() {
                 key={brand.brand}
                 brand={brand.brand}
                 value={brand.value}
+                href={buildBrandDetailHref(brand.brand, brandDetailDateRange)}
                 active={selectedMobileBrand === brand.brand}
-                buttonRef={(element) => {
+                linkRef={(element) => {
                   mobileBrandRefs.current[brand.brand] = element;
                 }}
-                onClick={() => setSelectedMobileBrand(brand.brand)}
               />
             ))}
           </div>
@@ -1241,6 +1274,24 @@ export default function DashboardV2Page() {
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-1.5">
+              <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Bandeira em destaque</p>
+              <TooltipIcon text="Use os chips para alternar a visão mobile dos rankings. Os cards da faixa acima abrem a página de detalhes da bandeira." />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {brandTotals.map((brand) => (
+              <PeriodPill
+                key={brand.brand}
+                active={selectedMobileBrand === brand.brand}
+                onClick={() => setSelectedMobileBrand(brand.brand)}
+                className="px-3 py-2 text-[10px] shadow-none"
+                uppercase={false}
+              >
+                {brand.brand}
+              </PeriodPill>
+            ))}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1502,7 +1553,11 @@ export default function DashboardV2Page() {
         <section className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {brandTotals.map((brand) => (
-              <BrandTotalCard key={brand.brand} {...brand} />
+              <BrandTotalCard
+                key={brand.brand}
+                {...brand}
+                href={buildBrandDetailHref(brand.brand, brandDetailDateRange)}
+              />
             ))}
           </div>
 

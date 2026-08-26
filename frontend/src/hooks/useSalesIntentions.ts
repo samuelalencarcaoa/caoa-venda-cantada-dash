@@ -25,6 +25,7 @@ export function useSalesIntentions(
   const startDate = dateRange?.startDate;
   const endDate = dateRange?.endDate;
   const tipoVenda = dateRange?.tipoVenda;
+  const bandeira = dateRange?.bandeira;
 
   const loadItems = useCallback(async (requestOptions?: { silent?: boolean }) => {
     const silent = requestOptions?.silent ?? false;
@@ -38,7 +39,7 @@ export function useSalesIntentions(
     try {
       const data = options?.searchAll
         ? await fetchAllSalesIntentions()
-        : await fetchSalesIntentions({ startDate, endDate, tipoVenda });
+        : await fetchSalesIntentions({ startDate, endDate, tipoVenda, bandeira });
       setItems(data);
       setLastUpdatedAt(new Date());
     } catch (err) {
@@ -52,6 +53,7 @@ export function useSalesIntentions(
     }
   }, [
     endDate,
+    bandeira,
     options?.searchAll,
     startDate,
     tipoVenda,

@@ -216,6 +216,7 @@ export type SalesIntentionDateRange = {
   startDate?: string;
   endDate?: string;
   tipoVenda?: 'NOVOS' | 'SEMINOVOS';
+  bandeira?: string;
 };
 
 export async function fetchSalesIntentions(
@@ -225,9 +226,14 @@ export async function fetchSalesIntentions(
   if (dateRange?.startDate) searchParams.set('startDate', dateRange.startDate);
   if (dateRange?.endDate) searchParams.set('endDate', dateRange.endDate);
   if (dateRange?.tipoVenda) searchParams.set('tipoVenda', dateRange.tipoVenda);
+  if (dateRange?.bandeira) searchParams.set('bandeira', dateRange.bandeira);
 
   const hasPartialDateRange = Boolean(dateRange?.startDate) !== Boolean(dateRange?.endDate);
-  const endpoint = hasPartialDateRange ? '/api/sales-intentions/search' : '/api/sales-intentions';
+  const hasAdvancedSearchFilters = Boolean(dateRange?.bandeira);
+  const endpoint =
+    hasPartialDateRange || hasAdvancedSearchFilters
+      ? '/api/sales-intentions/search'
+      : '/api/sales-intentions';
   const query = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
   const data = await fetchApi<SalesIntentionApiRecord[]>(`${endpoint}${query}`);
   return data.map(transformApiRecord);
