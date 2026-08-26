@@ -1,21 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: caoa-venda-cantada-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
-      POSTGRES_DB: ${POSTGRES_DB:-salesdb}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-salesdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
   backend:
     build:
       context: .
@@ -23,14 +6,11 @@ services:
     container_name: caoa-venda-cantada-backend
     restart: unless-stopped
     environment:
-      DATABASE_PROVIDER: ${DATABASE_PROVIDER:-postgresql}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change_me}@db:5432/${POSTGRES_DB:-salesdb}?schema=public}
+      DATABASE_PROVIDER: ${DATABASE_PROVIDER:-sqlserver}
+      DATABASE_URL: "${DATABASE_URL}"
       PORT: 4000
       TLS_ENABLED: "false"
       NODE_ENV: production
-    depends_on:
-      db:
-        condition: service_healthy
     command: sh -c "pnpm prisma:migrate:deploy && node dist/server.js"
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
@@ -81,7 +61,3 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-volumes:
-  db-data:
-    name: caoa-venda-cantada-db-data

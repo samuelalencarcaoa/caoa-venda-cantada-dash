@@ -5,7 +5,7 @@ type RelationalDatabaseProvider =
   | 'sqlite'
   | 'cockroachdb';
 
-const DEFAULT_PROVIDER: RelationalDatabaseProvider = 'postgresql';
+const DEFAULT_PROVIDER: RelationalDatabaseProvider = 'sqlserver';
 const SUPPORTED_PROVIDERS: RelationalDatabaseProvider[] = [
   'postgresql',
   'mysql',
