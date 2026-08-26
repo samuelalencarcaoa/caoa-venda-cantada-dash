@@ -215,6 +215,12 @@ Depois de subir o backend:
 
 ## Produção nativa (sem Docker)
 
+### Publicar atras do IIS
+
+Para Windows Server com IIS, use o IIS como terminador HTTPS e proxy reverso para
+o Next.js em `127.0.0.1:3003`. O projeto inclui um `web.config` e o procedimento
+completo em [`deploy/iis/README.md`](./deploy/iis/README.md).
+
 Para executar os dois serviços diretamente pelo Node.js, inclusive durante o desenvolvimento em configuração de produção:
 
 1. Copie `.env.production.example` para `.env.production` e configure o banco, `NEXTAUTH_URL` e as credenciais de autenticação. Para PostgreSQL na própria máquina, ajuste `DATABASE_URL` para `localhost`.

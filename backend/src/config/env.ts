@@ -20,6 +20,7 @@ const database = getDatabaseConfig();
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? 'development',
+  HOST: process.env.BACKEND_HOST ?? '127.0.0.1',
   PORT: parsePort(process.env.PORT),
   TLS_ENABLED: parseBoolean(process.env.TLS_ENABLED),
   TLS_CERT_PATH: process.env.TLS_CERT_PATH,

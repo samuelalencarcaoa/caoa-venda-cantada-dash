@@ -39,9 +39,9 @@ function getServer() {
 
 const server = getServer();
 
-server.listen(env.PORT, () => {
+server.listen(env.PORT, env.HOST, () => {
   const protocol = env.TLS_ENABLED ? 'https' : 'http';
   console.log(
-    `Backend rodando em ${protocol}://localhost:${env.PORT} usando ${databaseProviderLabel[env.DATABASE_PROVIDER]}`
+    `Backend rodando em ${protocol}://${env.HOST}:${env.PORT} usando ${databaseProviderLabel[env.DATABASE_PROVIDER]}`
   );
 });
