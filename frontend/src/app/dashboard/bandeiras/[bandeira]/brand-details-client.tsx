@@ -243,7 +243,13 @@ function QuickAccessCard({
             )}
           >
             <Link
-              href={buildBrandDetailHref(otherBrand, { period, startDate, endDate })}
+              href={
+                buildBrandDetailHref(otherBrand, {
+                  period: period ?? undefined,
+                  startDate,
+                  endDate,
+                })
+              }
               aria-label={`Abrir detalhes de ${otherBrand}`}
               title={`Abrir detalhes de ${otherBrand}`}
               className="flex h-full w-full items-center justify-center"
