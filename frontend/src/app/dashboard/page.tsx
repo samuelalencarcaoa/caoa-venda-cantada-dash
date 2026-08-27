@@ -319,9 +319,9 @@ type BrandCardVisual = {
 };
 
 const brandCardDesktopFrameClassName = "h-[92px] px-3 py-2.5";
-const brandCardCompactFrameClassName = "h-[76px] px-3 py-2";
+const brandCardCompactFrameClassName = "h-[84px] px-2.5 py-1.5";
 const brandCardImageClassName = "max-w-[220px] max-h-[76px]";
-const brandCardCompactImageClassName = "max-w-[184px] max-h-[58px]";
+const brandCardCompactImageClassName = "max-w-[168px] max-h-[62px]";
 
 function getBrandCardVisual(brand: string): BrandCardVisual {
   switch (brand) {
@@ -452,7 +452,7 @@ function BrandCardLinkHint({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] shadow-sm transition duration-200",
+        "inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] shadow-sm transition duration-200",
         active
           ? "border-cyan-400/30 bg-cyan-50 text-cyan-700 ring-1 ring-cyan-300/20 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-300"
           : "border-sky-200/80 bg-sky-50/90 text-sky-700 group-hover:border-cyan-300/70 group-hover:bg-cyan-50 group-hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300",
@@ -713,7 +713,7 @@ function MobileBrandCard({
       aria-label={`Abrir detalhes de ${brand}`}
       title={`Abrir detalhes de ${brand}`}
       className={cn(
-        "group relative flex h-[236px] w-[182px] cursor-pointer shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[28px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:text-slate-100",
+        "group relative flex h-[236px] w-[210px] cursor-pointer shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[28px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:w-[182px] dark:text-slate-100",
         active
           ? "border-cyan-400/80 bg-white text-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_18px_30px_-20px_rgba(15,23,42,0.18)] dark:border-cyan-400/90 dark:bg-slate-950/90 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_18px_30px_-20px_rgba(34,211,238,0.35)]"
           : "border-slate-200 bg-white text-slate-900 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] hover:border-cyan-300/70 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_18px_50px_-38px_rgba(0,0,0,0.35)] dark:hover:border-cyan-400/30 dark:hover:bg-white/5",
@@ -747,7 +747,7 @@ function MobileBrandCard({
           <BrandCardLinkHint
             label="Ver detalhes"
             active={active}
-            className="justify-start self-start"
+            className="justify-start self-start whitespace-nowrap px-2.5 py-1 text-[9px] tracking-[0.18em]"
           />
         </div>
       </div>

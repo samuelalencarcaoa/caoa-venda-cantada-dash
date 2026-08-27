@@ -118,7 +118,13 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      return allowedDomains.some((domain) => userEmail.endsWith(`@${domain}`));
+      const isAllowed = allowedDomains.some((domain) => userEmail.endsWith(`@${domain}`));
+
+      if (!isAllowed) {
+        return `/access-denied?error=AccessDenied&email=${encodeURIComponent(userEmail)}`;
+      }
+
+      return true;
     },
 
     async session({ session, token }) {

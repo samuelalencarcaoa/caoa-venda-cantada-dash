@@ -3,13 +3,42 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
 import BrandLogo from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import {
+  themedChipClass,
+  themedInputClass,
+  themedPageBackgroundClass,
+  themedPageTextClass,
+  themedPanelClass,
+  themedSoftCardClass,
+  themedTextBodyClass,
+  themedTextTitleClass,
+  themedTinyLabelClass,
+} from "@/lib/theme-classes";
+import { cn } from "@/lib/utils";
 
 const MIN_LOADING_MS = 1000;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function MicrosoftLogoMark({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={cn("shrink-0", className)}
+      role="img"
+    >
+      <rect x="2" y="2" width="9" height="9" rx="1.5" fill="#f25022" />
+      <rect x="13" y="2" width="9" height="9" rx="1.5" fill="#7fba00" />
+      <rect x="2" y="13" width="9" height="9" rx="1.5" fill="#00a4ef" />
+      <rect x="13" y="13" width="9" height="9" rx="1.5" fill="#ffb900" />
+    </svg>
+  );
 }
 
 export default function LoginPage() {
@@ -82,87 +111,123 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_34%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_100%)] px-4 py-10 dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.14),_transparent_32%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-10 shadow-xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-        <div className="mb-8">
-          <div className="mb-6">
-            <BrandLogo className="mx-auto w-full max-w-[320px]" />
-          </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Acesso ao painel de vendas e relatórios.
-          </p>
-        </div>
+    <main
+      className={cn(
+        themedPageBackgroundClass,
+        themedPageTextClass,
+        "flex min-h-[100dvh] items-center px-4 py-6 sm:px-6 sm:py-8",
+      )}
+    >
+      <div className="mx-auto w-full max-w-2xl">
+        <section className={cn(themedPanelClass, "relative overflow-hidden p-5 sm:p-8")}>
+          <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,_#0ea5e9_0%,_#22d3ee_48%,_#38bdf8_100%)]" />
 
+          <div className="relative space-y-7">
+            <div className="space-y-4 text-center">
+              <span
+                className={cn(
+                  themedChipClass,
+                  "mx-auto inline-flex border-sky-100 bg-sky-50 text-sky-700 dark:border-white/10 dark:bg-white/5 dark:text-cyan-200",
+                )}
+              >
+                Acesso seguro
+              </span>
 
-        <div className="flex items-center justify-between gap-4">
-          <Button
-            type="button"
-            onClick={handleMicrosoftSignIn}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            {isLoading ? "Conectando..." : "Entrar com Microsoft"}
-          </Button>
-        </div>
+              <div className="mx-auto w-full max-w-[300px]">
+                <BrandLogo className="mx-auto w-full max-w-[300px]" />
+              </div>
 
-        {allowFallbackAuth ? (
-          <form className="mt-8 space-y-4" onSubmit={handleFallbackSignIn}>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/80">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Acesso temporário</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Use credenciais de homologação quando o login Microsoft não estiver disponível.
-              </p>
+              <div className="space-y-2">
+                <h1 className={cn("text-2xl font-semibold tracking-[-0.03em] sm:text-3xl", themedTextTitleClass)}>
+                  Conecte-se ao painel
+                </h1>
+                <p className={cn("mx-auto max-w-lg text-sm leading-6", themedTextBodyClass)}>
+                  Use sua conta Microsoft para acessar as vendas, relatórios e indicadores do sistema.
+                </p>
+              </div>
+            </div>
 
-              <label className="mt-4 block text-sm text-slate-700 dark:text-slate-300">
-                Usuário
-                <input
-                  className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950"
-                  value={fallbackUsername}
-                  onChange={(event) => setFallbackUsername(event.target.value)}
-                  placeholder="admin"
-                  required
-                />
-              </label>
-
-              <label className="mt-4 block text-sm text-slate-700 dark:text-slate-300">
-                Senha
-                <input
-                  type="password"
-                  className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 dark:bg-slate-950"
-                  value={fallbackPassword}
-                  onChange={(event) => setFallbackPassword(event.target.value)}
-                  placeholder="admin"
-                  required
-                />
-              </label>
-
-              {fallbackError && (
-                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-100">
-                  {fallbackError}
+            <div className="rounded-[24px] border border-sky-100 bg-sky-50/70 p-4 dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center gap-4 text-left">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
+                  <MicrosoftLogoMark className="h-8 w-8" />
                 </div>
-              )}
 
-              <Button type="submit" className="mt-5 w-full" disabled={isFallbackLoading}>
-                {isFallbackLoading ? "Verificando..." : "Entrar com credenciais temporárias"}
+                <div className="min-w-0 space-y-1">
+                  <p className={cn(themedTinyLabelClass, "text-sky-600 dark:text-cyan-200")}>Conexão principal</p>
+                  <p className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+                    Entrar no sistema
+                  </p>
+                  <p className={cn("text-sm leading-6", themedTextBodyClass)}>
+                    Acesso ao painel de vendas e relatórios.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleMicrosoftSignIn}
+                disabled={isLoading}
+                className="mt-4 h-12 w-full rounded-full text-base font-semibold shadow-[0_16px_30px_-20px_rgba(14,165,233,0.8)]"
+              >
+                {isLoading ? "Conectando..." : "Entrar com Microsoft"}
               </Button>
             </div>
-          </form>
-        ) : null}
 
-{/*         <div className="mt-8 space-y-3 text-sm text-slate-600 dark:text-slate-400">
-          <p>
-            Não tem uma conta?{' '}
-            <Link href="/register" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">
-              Crie uma!
-            </Link>
-          </p>
-          <p>
-            <Link href="/forgot-password" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">
-              Não consegue acessar sua conta?
-            </Link>
-          </p>
-        </div> */}
+            {allowFallbackAuth ? (
+              <form
+                className={cn(
+                  themedSoftCardClass,
+                  "space-y-4 p-4 sm:p-5 dark:bg-white/5",
+                )}
+                onSubmit={handleFallbackSignIn}
+              >
+                <div className="space-y-1">
+                  <p className={cn("text-sm font-semibold", themedTextTitleClass)}>
+                    Acesso temporário
+                  </p>
+                  <p className={cn("text-sm leading-6", themedTextBodyClass)}>
+                    Use credenciais de homologação quando o login Microsoft não estiver disponível.
+                  </p>
+                </div>
+
+                <label className="block space-y-2 text-sm">
+                  <span className={themedTinyLabelClass}>Usuário</span>
+                  <input
+                    className={cn(themedInputClass, "rounded-2xl")}
+                    value={fallbackUsername}
+                    onChange={(event) => setFallbackUsername(event.target.value)}
+                    placeholder="admin"
+                    required
+                  />
+                </label>
+
+                <label className="block space-y-2 text-sm">
+                  <span className={themedTinyLabelClass}>Senha</span>
+                  <input
+                    type="password"
+                    className={cn(themedInputClass, "rounded-2xl")}
+                    value={fallbackPassword}
+                    onChange={(event) => setFallbackPassword(event.target.value)}
+                    placeholder="admin"
+                    required
+                  />
+                </label>
+
+                {fallbackError ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-100">
+                    {fallbackError}
+                  </div>
+                ) : null}
+
+                <Button type="submit" className="h-11 w-full rounded-full" disabled={isFallbackLoading}>
+                  {isFallbackLoading ? "Verificando..." : "Entrar com credenciais temporárias"}
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

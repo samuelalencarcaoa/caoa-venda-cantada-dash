@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 export default function AccessDeniedContent() {
   const searchParams = useSearchParams();
   const error = searchParams?.get("error") ?? null;
+  const email = searchParams?.get("email")?.trim() || null;
 
   const errorMessages: Record<string, string> = {
     OAuthSignin: "Erro ao conectar com o provedor de autenticação.",
@@ -18,13 +19,18 @@ export default function AccessDeniedContent() {
     EmailSignInError: "Erro ao enviar email de autenticação.",
     CredentialsSignin: "Credenciais inválidas.",
     SessionCallback: "Erro ao criar sessão.",
-    AccessDenied: "Acesso negado. Você não tem permissão para acessar este recurso.",
+    AccessDenied:
+      "Sua conta não está autorizada para acessar este sistema. Use um e-mail corporativo liberado ou peça acesso ao administrador.",
     Verification: "Token de verificação inválido ou expirado.",
   };
 
   const message =
     (error && errorMessages[error]) ||
-    "Acesso negado. Você não tem permissão para acessar este recurso.";
+    "Sua conta não está autorizada para acessar este sistema. Use um e-mail corporativo liberado ou peça acesso ao administrador.";
+
+  const finalMessage = email
+    ? `O e-mail ${email} não tem permissão para acessar este sistema. Use um e-mail corporativo liberado ou solicite acesso ao administrador.`
+    : message;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_34%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_100%)] px-4 dark:bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.14),_transparent_32%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)]">
@@ -36,12 +42,23 @@ export default function AccessDeniedContent() {
         </div>
 
         <h1 className="mb-2 text-center text-2xl font-bold text-rose-600 dark:text-rose-400">
-          Acesso Negado
+          Conta sem permissão
         </h1>
 
         <p className="mb-6 text-center text-sm text-slate-600 dark:text-slate-400">
-          {message}
+          {finalMessage}
         </p>
+
+        {email ? (
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center dark:border-white/10 dark:bg-white/5">
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+              E-mail utilizado
+            </p>
+            <p className="mt-1 break-all text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {email}
+            </p>
+          </div>
+        ) : null}
 
         {error && (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-400/20 dark:bg-rose-500/10">
@@ -68,7 +85,7 @@ export default function AccessDeniedContent() {
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
-          Se o problema persistir, entre em contato com o administrador do sistema.
+          Se você acredita que deveria ter acesso, entre em contato com o administrador do sistema.
         </p>
       </div>
     </div>
