@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   endOfDay,
   endOfMonth,
@@ -14,6 +15,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
+  ArrowRight,
   BarChart3,
   CalendarDays,
   CircleHelp,
@@ -232,20 +234,6 @@ function formatOrdinal(value: number) {
   return `${value}º`;
 }
 
-function getBrandBadgeLabel(brand: string) {
-  const parts = brand
-    .split(/\s+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return brand.slice(0, 4).toUpperCase();
-  }
-
-  const lastPart = parts[parts.length - 1] ?? brand;
-  return lastPart.slice(0, 4).toUpperCase();
-}
-
 function formatInputDateLabel(value: string) {
   const [yearText, monthText, dayText] = value.split("-");
   const year = Number(yearText);
@@ -311,9 +299,171 @@ function DashboardCard({
   className?: string;
 }) {
   return (
-    <article className={cn(themedCardClass, className)}>
+    <article className={cn(themedCardClass, "h-full", className)}>
       {children}
     </article>
+  );
+}
+
+type BrandCardVisual = {
+  src: string;
+  alt: string;
+  panelClassName: string;
+  glowClassName: string;
+  desktopFrameClassName: string;
+  compactFrameClassName: string;
+  imageClassName: string;
+  compactImageClassName: string;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+};
+
+const brandCardDesktopFrameClassName = "h-[92px] px-3 py-2.5";
+const brandCardCompactFrameClassName = "h-[76px] px-3 py-2";
+const brandCardImageClassName = "max-w-[220px] max-h-[76px]";
+const brandCardCompactImageClassName = "max-w-[184px] max-h-[58px]";
+
+function getBrandCardVisual(brand: string): BrandCardVisual {
+  switch (brand) {
+    case "CAOA CHERY":
+      return {
+        src: "/images/chery-logo.png",
+        alt: "CAOA Chery",
+        panelClassName:
+          "border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-white to-sky-50 dark:border-cyan-400/20 dark:from-cyan-500/10 dark:via-slate-950/75 dark:to-slate-950/55",
+        glowClassName:
+          "bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_58%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.15),transparent_58%)]",
+        desktopFrameClassName: brandCardDesktopFrameClassName,
+        compactFrameClassName: brandCardCompactFrameClassName,
+        imageClassName: brandCardImageClassName,
+        compactImageClassName: brandCardCompactImageClassName,
+        intrinsicWidth: 240,
+        intrinsicHeight: 180,
+      };
+    case "CAOA CHANGAN":
+      return {
+        src: "/images/changan-logo.png",
+        alt: "CAOA Changan",
+        panelClassName:
+          "border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:border-emerald-400/20 dark:from-emerald-500/10 dark:via-slate-950/75 dark:to-slate-950/55",
+        glowClassName:
+          "bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_58%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.14),transparent_58%)]",
+        desktopFrameClassName: brandCardDesktopFrameClassName,
+        compactFrameClassName: brandCardCompactFrameClassName,
+        imageClassName: brandCardImageClassName,
+        compactImageClassName: brandCardCompactImageClassName,
+        intrinsicWidth: 240,
+        intrinsicHeight: 180,
+      };
+    case "HYUNDAI":
+      return {
+        src: "/images/hyundai-logo.png",
+        alt: "Hyundai",
+        panelClassName:
+          "border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-sky-50 dark:border-blue-400/20 dark:from-blue-500/10 dark:via-slate-950/75 dark:to-slate-950/55",
+        glowClassName:
+          "bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_58%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_58%)]",
+        desktopFrameClassName: brandCardDesktopFrameClassName,
+        compactFrameClassName: brandCardCompactFrameClassName,
+        imageClassName: brandCardImageClassName,
+        compactImageClassName: brandCardCompactImageClassName,
+        intrinsicWidth: 240,
+        intrinsicHeight: 180,
+      };
+    case "FORD":
+      return {
+        src: "/images/ford-logo.png",
+        alt: "Ford",
+        panelClassName:
+          "border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-blue-50 dark:border-indigo-400/20 dark:from-indigo-500/10 dark:via-slate-950/75 dark:to-slate-950/55",
+        glowClassName:
+          "bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.18),transparent_58%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.14),transparent_58%)]",
+        desktopFrameClassName: brandCardDesktopFrameClassName,
+        compactFrameClassName: brandCardCompactFrameClassName,
+        imageClassName: brandCardImageClassName,
+        compactImageClassName: brandCardCompactImageClassName,
+        intrinsicWidth: 240,
+        intrinsicHeight: 180,
+      };
+    case "SEMINOVOS":
+    default:
+      return {
+        src: "/images/seminovos.png",
+        alt: "Seminovos",
+        panelClassName:
+          "border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:border-white/10 dark:from-slate-900/80 dark:via-slate-950/95 dark:to-slate-900/70",
+        glowClassName:
+          "bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.16),transparent_58%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.12),transparent_58%)]",
+        desktopFrameClassName: brandCardDesktopFrameClassName,
+        compactFrameClassName: brandCardCompactFrameClassName,
+        imageClassName: brandCardImageClassName,
+        compactImageClassName: brandCardCompactImageClassName,
+        intrinsicWidth: 1942,
+        intrinsicHeight: 809,
+      };
+  }
+}
+
+function BrandLogoPanel({
+  brand,
+  compact = false,
+}: {
+  brand: string;
+  compact?: boolean;
+}) {
+  const visual = getBrandCardVisual(brand);
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-[24px] border shadow-[0_18px_40px_-36px_rgba(15,23,42,0.34)] transition duration-300 group-hover:-translate-y-0.5",
+        compact ? visual.compactFrameClassName : visual.desktopFrameClassName,
+        visual.panelClassName,
+      )}
+    >
+      <div className={cn("pointer-events-none absolute inset-0", visual.glowClassName)} />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.42),transparent_42%,rgba(255,255,255,0.1)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%,rgba(255,255,255,0.02)_100%)]" />
+      <div className="relative flex h-full items-center justify-center">
+        <Image
+          src={visual.src}
+          alt={visual.alt}
+          width={visual.intrinsicWidth}
+          height={visual.intrinsicHeight}
+          className={cn(
+            "h-auto w-auto object-contain transition duration-300 group-hover:scale-[1.03]",
+            brand === "SEMINOVOS" && "dark:brightness-0 dark:invert dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.35)]",
+            compact ? visual.compactImageClassName : visual.imageClassName,
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BrandCardLinkHint({
+  label,
+  active = false,
+  className = "",
+}: {
+  label: string;
+  active?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] shadow-sm transition duration-200",
+        active
+          ? "border-cyan-400/30 bg-cyan-50 text-cyan-700 ring-1 ring-cyan-300/20 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-300"
+          : "border-sky-200/80 bg-sky-50/90 text-sky-700 group-hover:border-cyan-300/70 group-hover:bg-cyan-50 group-hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300",
+        className,
+      )}
+    >
+      <span>{label}</span>
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-current shadow-[0_4px_10px_-6px_rgba(15,23,42,0.28)] ring-1 ring-inset ring-current/10 transition group-hover:translate-x-0.5 dark:bg-slate-950/80">
+        <ArrowRight className="h-2.5 w-2.5" />
+      </span>
+    </span>
   );
 }
 
@@ -403,30 +553,33 @@ function BrandTotalCard({
   return (
     <Link
       href={href}
-      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+      className="group block h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
       aria-label={`Abrir detalhes de ${brand}`}
+      title={`Abrir detalhes de ${brand}`}
     >
-      <DashboardCard className={cn(
-        "min-h-[168px] px-5 py-5 transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.24)]",
-        className,
-      )}>
-        <div className="flex h-full flex-col justify-between gap-3">
-          <div className="flex items-center justify-center">
-            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 transition group-hover:bg-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-300 dark:group-hover:bg-emerald-400/15">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {brand}
-            </span>
+      <DashboardCard
+        className={cn(
+          "relative min-h-[240px] overflow-hidden px-4 py-4 transition duration-300 group-hover:-translate-y-0.5 group-hover:border-cyan-300/50 group-hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.24)] dark:group-hover:border-cyan-400/30",
+          className,
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_32%)]" />
+
+        <div className="relative flex h-full flex-col gap-3">
+          <div className="flex items-center justify-end gap-3">
+            <BrandCardLinkHint label="Abrir detalhes" />
           </div>
 
-          <div className="flex flex-1 items-center justify-center">
-            <p className={cn("text-5xl font-light leading-none tracking-[-0.05em] xl:text-6xl", themedTextTitleClass)}>
+          <BrandLogoPanel brand={brand} />
+
+          <div className="flex flex-1 flex-col justify-end gap-0.5">
+            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
+              Total de Vendas Cantadas
+            </p>
+            <p className={cn("text-5xl font-light leading-none tracking-[-0.05em] xl:text-[3.8rem]", themedTextTitleClass)}>
               {value.toLocaleString("pt-BR")}
             </p>
           </div>
-
-          <p className={cn("text-center text-[10px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
-            Total de Vendas Cantadas
-          </p>
         </div>
       </DashboardCard>
     </Link>
@@ -558,54 +711,45 @@ function MobileBrandCard({
       href={href}
       ref={linkRef}
       aria-label={`Abrir detalhes de ${brand}`}
+      title={`Abrir detalhes de ${brand}`}
       className={cn(
-        "flex h-[198px] w-[160px] shrink-0 snap-center flex-col justify-between rounded-[24px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:text-slate-100",
+        "group relative flex h-[236px] w-[182px] cursor-pointer shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[28px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:text-slate-100",
         active
           ? "border-cyan-400/80 bg-white text-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_18px_30px_-20px_rgba(15,23,42,0.18)] dark:border-cyan-400/90 dark:bg-slate-950/90 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_18px_30px_-20px_rgba(34,211,238,0.35)]"
-          : "border-slate-200 bg-white text-slate-900 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_18px_50px_-38px_rgba(0,0,0,0.35)] dark:hover:border-white/20 dark:hover:bg-white/5",
+          : "border-slate-200 bg-white text-slate-900 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] hover:border-cyan-300/70 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_18px_50px_-38px_rgba(0,0,0,0.35)] dark:hover:border-cyan-400/30 dark:hover:bg-white/5",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.1),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.06),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.04),transparent_32%)]" />
+
+      <div className="relative flex h-full flex-col gap-3">
+        <div className="flex items-start justify-end gap-3">
           <span
             className={cn(
-              "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]",
+              "mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sky-600 shadow-[0_10px_20px_-16px_rgba(15,23,42,0.24)] transition group-hover:border-cyan-300 group-hover:bg-cyan-50 group-hover:text-cyan-600 dark:border-white/10 dark:bg-slate-950/90 dark:text-cyan-300 dark:group-hover:border-cyan-400/30 dark:group-hover:bg-cyan-400/10",
               active
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
-                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+                ? "border-cyan-400/80 bg-cyan-50 text-cyan-600 shadow-[0_0_0_6px_rgba(34,211,238,0.14)] dark:border-cyan-400/80 dark:bg-cyan-400/10 dark:text-cyan-300"
+                : "",
             )}
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {getBrandBadgeLabel(brand)}
+            <ArrowRight className="h-4 w-4" />
           </span>
-          <p
-            className={cn(
-              "min-h-[2.5rem] whitespace-normal text-[13px] font-semibold uppercase tracking-[0.22em] leading-tight",
-              "text-slate-900 dark:text-slate-100",
-            )}
-          >
-            {brand}
-          </p>
         </div>
-        <span
-          className={cn(
-            "mt-1 h-2.5 w-2.5 rounded-full",
-            active
-              ? "bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.14)]"
-              : "bg-slate-400 dark:bg-slate-500",
-          )}
-        />
-      </div>
 
-      <div className="flex flex-1 flex-col justify-end">
-        <p className="text-4xl font-light leading-none tracking-[-0.06em] text-slate-900 dark:text-slate-100">
-          {value.toLocaleString("pt-BR")}
-        </p>
-        <p
-          className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400"
-        >
-          Total de vendas cantadas
-        </p>
+        <BrandLogoPanel brand={brand} compact />
+
+        <div className="flex flex-1 flex-col justify-end gap-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+            Total de vendas cantadas
+          </p>
+          <p className="text-4xl font-light leading-none tracking-[-0.06em] text-slate-900 dark:text-slate-100">
+            {value.toLocaleString("pt-BR")}
+          </p>
+          <BrandCardLinkHint
+            label="Ver detalhes"
+            active={active}
+            className="justify-start self-start"
+          />
+        </div>
       </div>
     </Link>
   );

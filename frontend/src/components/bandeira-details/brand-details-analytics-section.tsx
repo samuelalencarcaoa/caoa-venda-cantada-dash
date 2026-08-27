@@ -80,7 +80,6 @@ type PrimaryClassification = {
   percentage: number;
 };
 
-const TOP_ITEMS_LIMIT = 10;
 const TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT = 5;
 const ONE_HOUR_IN_MS = 60 * 60 * 1000;
 
@@ -189,6 +188,14 @@ function buildHorizontalBarGradient(startColor: string, endColor: string) {
 
 function getHorizontalBarPadding(isCompactLayout: boolean) {
   return isCompactLayout ? [14, 16, 32, 44] : [16, 24, 40, 110];
+}
+
+function getScrollableBarChartHeight(itemCount: number, isCompactLayout: boolean) {
+  const visibleHeight = isCompactLayout ? 300 : 340;
+  const estimatedRowHeight = isCompactLayout ? 24 : 26;
+  const estimatedVerticalPadding = isCompactLayout ? 52 : 60;
+
+  return Math.max(visibleHeight, itemCount * estimatedRowHeight + estimatedVerticalPadding);
 }
 
 function sumQuantity(items: SalesIntentionReportRow[]) {
@@ -636,6 +643,7 @@ function ChartCard({
   emptyMessage = "Nenhum dado encontrado para os filtros selecionados.",
   className,
   contentClassName,
+  chartHeight,
   footer,
 }: {
   title: string;
@@ -648,12 +656,13 @@ function ChartCard({
   emptyMessage?: string;
   className?: string;
   contentClassName?: string;
+  chartHeight?: number;
   footer?: string;
 }) {
   return (
     <article className={cn(themedCardClass, "w-full min-w-0 overflow-hidden px-4 py-4 sm:px-5 sm:py-5", className)}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="min-w-0 space-y-1 sm:min-h-[64px]">
           <div className="flex items-center gap-1.5">
             <h3 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               {title}
@@ -661,14 +670,14 @@ function ChartCard({
             <TooltipIcon text={tooltip} />
           </div>
           {description ? (
-            <p className={cn("mt-1 text-xs leading-5", themedTextBodyClass)}>
+            <p className={cn("text-xs leading-5", themedTextBodyClass)}>
               {description}
             </p>
           ) : null}
         </div>
 
         {badge ? (
-          <span className={cn("shrink-0 self-start whitespace-nowrap px-2.5 py-1 text-[10px]", themedChipClass)}>
+          <span className={cn("shrink-0 self-start whitespace-nowrap px-2.5 py-1 text-[10px] leading-none", themedChipClass)}>
             {badge}
           </span>
         ) : null}
@@ -676,12 +685,17 @@ function ChartCard({
 
       <div className={cn("mt-4 min-h-0 max-w-full overflow-hidden", contentClassName ?? "h-[300px] sm:h-[330px]")}>
         {hasData ? (
-          <VChart
-            key={chartKey}
-            spec={spec}
-            className="block h-full w-full max-w-full min-w-0"
-            style={{ height: "100%", width: "100%", maxWidth: "100%", minWidth: 0 }}
-          />
+          <div
+            className="block w-full min-w-0"
+            style={{ height: chartHeight ? `${chartHeight}px` : "100%" }}
+          >
+            <VChart
+              key={chartKey}
+              spec={spec}
+              className="block h-full w-full max-w-full min-w-0"
+              style={{ height: "100%", width: "100%", maxWidth: "100%", minWidth: 0 }}
+            />
+          </div>
         ) : (
           <div className="flex h-full items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-4 text-center dark:border-white/10 dark:bg-white/5">
             <p className={cn("max-w-sm text-sm leading-6", themedTextMutedClass)}>
@@ -765,14 +779,13 @@ export function BrandDetailsAnalyticsSection({
   const chartMutedColor = isDarkMode ? "#94a3b8" : "#64748b";
   const chartGridColor = isDarkMode ? "#334155" : "#e2e8f0";
   const lineColor = "#22d3ee";
-  const modelColor = "#0ea5e9";
-  const modelAccentColor = "#67e8f9";
-  const storeColor = "#14b8a6";
-  const storeAccentColor = "#5eead4";
-  const classificationColor = "#818cf8";
-  const classificationAccentColor = "#c4b5fd";
-  const regionalColor = "#f59e0b";
-  const regionalAccentColor = "#fcd34d";
+  const barColor = lineColor;
+  const barAccentColor = "#67e8f9";
+  const barBackgroundColor = isDarkMode ? "#1f2937" : "#e2e8f0";
+  const barMinHeight = isCompactChartLayout ? 8 : 10;
+  const barWidth = barMinHeight;
+  const barCornerRadius = 999;
+  const horizontalBarChartCardClassName = "min-h-[452px]";
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 639px)");
@@ -1019,7 +1032,6 @@ export function BrandDetailsAnalyticsSection({
       chartGridColor,
       chartMutedColor,
       isCompactChartLayout,
-      isDarkMode,
       lineColor,
       isHourlyTrend,
       trendHourRange,
@@ -1028,32 +1040,22 @@ export function BrandDetailsAnalyticsSection({
     ],
   );
 
-  const modelChartData = useMemo(
-    () => modelSeries.slice(0, TOP_ITEMS_LIMIT),
-    [modelSeries],
-  );
-
-  const storeChartData = useMemo(
-    () => storeSeries.slice(0, TOP_ITEMS_LIMIT),
-    [storeSeries],
-  );
-
-  const classificationChartData = useMemo(
-    () => classificationSeries.slice(0, TOP_ITEMS_LIMIT),
-    [classificationSeries],
-  );
-
-  const regionalChartData = useMemo(
-    () => regionalSeries.slice(0, TOP_ITEMS_LIMIT),
-    [regionalSeries],
-  );
-
   const barChartPadding = useMemo(
     () => getHorizontalBarPadding(isCompactChartLayout),
     [isCompactChartLayout],
   );
   const barAxisFontSize = isCompactChartLayout ? 9 : 11;
   const barLabelMaxLength = isCompactChartLayout ? 14 : 28;
+  const barChartContentClassName = isCompactChartLayout
+    ? "max-h-[300px] overflow-y-auto overflow-x-hidden pr-1"
+    : "max-h-[340px] overflow-y-auto overflow-x-hidden pr-1";
+  const modelChartHeight = getScrollableBarChartHeight(modelSeries.length, isCompactChartLayout);
+  const storeChartHeight = getScrollableBarChartHeight(storeSeries.length, isCompactChartLayout);
+  const classificationChartHeight = getScrollableBarChartHeight(
+    classificationSeries.length,
+    isCompactChartLayout,
+  );
+  const regionalChartHeight = getScrollableBarChartHeight(regionalSeries.length, isCompactChartLayout);
 
   const modelChartSpec = useMemo<IBarChartSpec>(
     () => ({
@@ -1063,25 +1065,26 @@ export function BrandDetailsAnalyticsSection({
       data: [
         {
           id: "brandModelDistribution",
-          values: modelChartData,
+          values: modelSeries,
         },
       ],
       xField: "value",
       yField: "label",
-      color: [modelColor],
+      color: [barColor],
       padding: barChartPadding,
-      barMinHeight: 10,
+      barWidth,
+      barMinHeight,
       bar: {
         style: {
-          fill: buildHorizontalBarGradient(modelColor, modelAccentColor),
-          cornerRadius: 999,
+          fill: buildHorizontalBarGradient(barColor, barAccentColor),
+          cornerRadius: barCornerRadius,
         },
       },
       barBackground: {
         visible: true,
         style: {
-          fill: isDarkMode ? "#1f2937" : "#e2e8f0",
-          cornerRadius: 999,
+          fill: barBackgroundColor,
+          cornerRadius: barCornerRadius,
         },
       },
       label: {
@@ -1159,10 +1162,13 @@ export function BrandDetailsAnalyticsSection({
       chartGridColor,
       chartMutedColor,
       chartTextColor,
-      isDarkMode,
-      modelAccentColor,
-      modelChartData,
-      modelColor,
+      modelSeries,
+      barAccentColor,
+      barBackgroundColor,
+      barColor,
+      barCornerRadius,
+      barMinHeight,
+      barWidth,
     ],
   );
 
@@ -1174,25 +1180,26 @@ export function BrandDetailsAnalyticsSection({
       data: [
         {
           id: "brandStoreDistribution",
-          values: storeChartData,
+          values: storeSeries,
         },
       ],
       xField: "value",
       yField: "label",
-      color: [storeColor],
+      color: [barColor],
       padding: barChartPadding,
-      barMinHeight: 10,
+      barWidth,
+      barMinHeight,
       bar: {
         style: {
-          fill: buildHorizontalBarGradient(storeColor, storeAccentColor),
-          cornerRadius: 999,
+          fill: buildHorizontalBarGradient(barColor, barAccentColor),
+          cornerRadius: barCornerRadius,
         },
       },
       barBackground: {
         visible: true,
         style: {
-          fill: isDarkMode ? "#1f2937" : "#e2e8f0",
-          cornerRadius: 999,
+          fill: barBackgroundColor,
+          cornerRadius: barCornerRadius,
         },
       },
       label: {
@@ -1270,10 +1277,13 @@ export function BrandDetailsAnalyticsSection({
       chartGridColor,
       chartMutedColor,
       chartTextColor,
-      isDarkMode,
-      storeAccentColor,
-      storeChartData,
-      storeColor,
+      storeSeries,
+      barAccentColor,
+      barBackgroundColor,
+      barColor,
+      barCornerRadius,
+      barMinHeight,
+      barWidth,
     ],
   );
 
@@ -1285,25 +1295,26 @@ export function BrandDetailsAnalyticsSection({
       data: [
         {
           id: "brandClassificationDistribution",
-          values: classificationChartData,
+          values: classificationSeries,
         },
       ],
       xField: "value",
       yField: "label",
-      color: [classificationColor],
+      color: [barColor],
       padding: barChartPadding,
-      barMinHeight: 10,
+      barWidth,
+      barMinHeight,
       bar: {
         style: {
-          fill: buildHorizontalBarGradient(classificationColor, classificationAccentColor),
-          cornerRadius: 999,
+          fill: buildHorizontalBarGradient(barColor, barAccentColor),
+          cornerRadius: barCornerRadius,
         },
       },
       barBackground: {
         visible: true,
         style: {
-          fill: isDarkMode ? "#1f2937" : "#e2e8f0",
-          cornerRadius: 999,
+          fill: barBackgroundColor,
+          cornerRadius: barCornerRadius,
         },
       },
       label: {
@@ -1381,10 +1392,13 @@ export function BrandDetailsAnalyticsSection({
       chartGridColor,
       chartMutedColor,
       chartTextColor,
-      classificationChartData,
-      classificationColor,
-      classificationAccentColor,
-      isDarkMode,
+      classificationSeries,
+      barAccentColor,
+      barBackgroundColor,
+      barColor,
+      barCornerRadius,
+      barMinHeight,
+      barWidth,
     ],
   );
 
@@ -1396,25 +1410,26 @@ export function BrandDetailsAnalyticsSection({
       data: [
         {
           id: "brandRegionalDistribution",
-          values: regionalChartData,
+          values: regionalSeries,
         },
       ],
       xField: "value",
       yField: "label",
-      color: [regionalColor],
+      color: [barColor],
       padding: barChartPadding,
-      barMinHeight: 10,
+      barWidth,
+      barMinHeight,
       bar: {
         style: {
-          fill: buildHorizontalBarGradient(regionalColor, regionalAccentColor),
-          cornerRadius: 999,
+          fill: buildHorizontalBarGradient(barColor, barAccentColor),
+          cornerRadius: barCornerRadius,
         },
       },
       barBackground: {
         visible: true,
         style: {
-          fill: isDarkMode ? "#1f2937" : "#e2e8f0",
-          cornerRadius: 999,
+          fill: barBackgroundColor,
+          cornerRadius: barCornerRadius,
         },
       },
       label: {
@@ -1492,17 +1507,15 @@ export function BrandDetailsAnalyticsSection({
       chartGridColor,
       chartMutedColor,
       chartTextColor,
-      isDarkMode,
-      regionalAccentColor,
-      regionalChartData,
-      regionalColor,
+      regionalSeries,
+      barAccentColor,
+      barBackgroundColor,
+      barColor,
+      barCornerRadius,
+      barMinHeight,
+      barWidth,
     ],
   );
-
-  const isModelChartLimited = modelSeries.length > TOP_ITEMS_LIMIT;
-  const isStoreChartLimited = storeSeries.length > TOP_ITEMS_LIMIT;
-  const isClassificationChartLimited = classificationSeries.length > TOP_ITEMS_LIMIT;
-  const isRegionalChartLimited = regionalSeries.length > TOP_ITEMS_LIMIT;
 
   return (
     <section
@@ -1562,55 +1575,60 @@ export function BrandDetailsAnalyticsSection({
               .map((item) => `${item.time}:${item.value}`)
               .join("|")}`}
             spec={trendChartSpec}
+            className={horizontalBarChartCardClassName}
             contentClassName="h-[300px] sm:h-[340px]"
           />
 
           <ChartCard
             title="Vendas Cantadas por Regional"
             tooltip="Agrupamento por Regional com ordenação do maior para o menor."
-            description="As regionais mais relevantes do recorte atual."
-            badge={isRegionalChartLimited ? `Top ${TOP_ITEMS_LIMIT}` : formatItemCountLabel(regionalSeries.length)}
-            hasData={regionalChartData.length > 0}
-            chartKey={`brand-regional-${regionalChartData.map((item) => `${item.key}:${item.value}`).join("|")}`}
+            description="Todas as regionais do recorte atual aparecem na ordem do maior volume para o menor."
+            badge={formatItemCountLabel(regionalSeries.length)}
+            hasData={regionalSeries.length > 0}
+            chartKey={`brand-regional-${regionalSeries.map((item) => `${item.key}:${item.value}`).join("|")}`}
             spec={regionalChartSpec}
-            contentClassName="h-[300px] sm:h-[340px]"
-            footer={isRegionalChartLimited ? `Mostrando ${TOP_ITEMS_LIMIT} de ${regionalSeries.length} regionais para preservar a leitura.` : undefined}
+            className={horizontalBarChartCardClassName}
+            contentClassName={barChartContentClassName}
+            chartHeight={regionalChartHeight}
           />
 
           <ChartCard
             title="Vendas Cantadas por Modelo"
             tooltip="Agrupamento por Versao com normalização de espaços e capitalização, ordenado do maior para o menor."
-            description="Mostrando as versões mais relevantes do recorte atual."
-            badge={isModelChartLimited ? `Top ${TOP_ITEMS_LIMIT}` : formatItemCountLabel(modelSeries.length)}
-            hasData={modelChartData.length > 0}
-            chartKey={`brand-model-${modelChartData.map((item) => `${item.key}:${item.value}`).join("|")}`}
+            description="Todas as versões do recorte atual aparecem em ordem decrescente."
+            badge={formatItemCountLabel(modelSeries.length)}
+            hasData={modelSeries.length > 0}
+            chartKey={`brand-model-${modelSeries.map((item) => `${item.key}:${item.value}`).join("|")}`}
             spec={modelChartSpec}
-            contentClassName="h-[300px] sm:h-[340px]"
-            footer={isModelChartLimited ? `Mostrando ${TOP_ITEMS_LIMIT} de ${modelSeries.length} modelos para preservar a leitura.` : undefined}
+            className={horizontalBarChartCardClassName}
+            contentClassName={barChartContentClassName}
+            chartHeight={modelChartHeight}
           />
 
           <ChartCard
             title="Vendas Cantadas por Loja"
             tooltip="Agrupamento por Loja_Venda com ordenação do maior para o menor."
-            description="Caso existam muitas lojas, a visualização mantém as mais relevantes em destaque."
-            badge={isStoreChartLimited ? `Top ${TOP_ITEMS_LIMIT}` : formatItemCountLabel(storeSeries.length)}
-            hasData={storeChartData.length > 0}
-            chartKey={`brand-store-${storeChartData.map((item) => `${item.key}:${item.value}`).join("|")}`}
+            description="A lista completa de lojas fica disponível com rolagem vertical quando necessário."
+            badge={formatItemCountLabel(storeSeries.length)}
+            hasData={storeSeries.length > 0}
+            chartKey={`brand-store-${storeSeries.map((item) => `${item.key}:${item.value}`).join("|")}`}
             spec={storeChartSpec}
-            contentClassName="h-[300px] sm:h-[340px]"
-            footer={isStoreChartLimited ? `Mostrando ${TOP_ITEMS_LIMIT} de ${storeSeries.length} lojas para evitar corte silencioso.` : undefined}
+            className={horizontalBarChartCardClassName}
+            contentClassName={barChartContentClassName}
+            chartHeight={storeChartHeight}
           />
 
           <ChartCard
             title="Vendas Cantadas por Classificação"
             tooltip="Distribuição por Classificacao após normalização. A visão respeita o mesmo recorte da tabela."
             description="As classificações são consolidadas antes do agrupamento para evitar duplicidades por capitalização."
-            badge={isClassificationChartLimited ? `Top ${TOP_ITEMS_LIMIT}` : formatItemCountLabel(classificationSeries.length)}
-            hasData={classificationChartData.length > 0}
-            chartKey={`brand-classification-${classificationChartData.map((item) => `${item.key}:${item.value}`).join("|")}`}
+            badge={formatItemCountLabel(classificationSeries.length)}
+            hasData={classificationSeries.length > 0}
+            chartKey={`brand-classification-${classificationSeries.map((item) => `${item.key}:${item.value}`).join("|")}`}
             spec={classificationChartSpec}
-            contentClassName="h-[300px] sm:h-[340px]"
-            footer={isClassificationChartLimited ? `Mostrando ${TOP_ITEMS_LIMIT} de ${classificationSeries.length} classificações para preservar a leitura.` : undefined}
+            className={horizontalBarChartCardClassName}
+            contentClassName={barChartContentClassName}
+            chartHeight={classificationChartHeight}
           />
         </div>
       ) : (
