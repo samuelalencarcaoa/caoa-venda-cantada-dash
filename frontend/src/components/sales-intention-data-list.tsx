@@ -13,7 +13,6 @@ import {
   themedPanelClass,
   themedTextBodyClass,
   themedTextTitleClass,
-  themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { updateSalesIntention } from "@/lib/salesIntentionApi";
 import { cn } from "@/lib/utils";
@@ -368,9 +367,6 @@ export function SalesIntentionDataList({
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5">
-              <p className={cn(themedTinyLabelClass, "tracking-[0.3em]")}>
-                Tabela detalhada
-              </p>
               <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
                 Lista de dados
               </h2>

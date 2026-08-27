@@ -13,6 +13,13 @@ type PeriodAverageMetric = {
   divisor: number;
 };
 
+export type SalesCantadasTrendGranularity = "hour" | "day" | "week" | "month" | "bimonth" | "quarter" | "year";
+
+type SalesCantadasPeriodWindow = {
+  averageMetric: PeriodAverageMetric;
+  trendGranularity: SalesCantadasTrendGranularity;
+};
+
 function buildLocalDateFromInput(value: string) {
   if (!value) {
     return null;
@@ -40,6 +47,90 @@ function getInclusiveDayCount(startDate?: string, endDate?: string) {
   }
 
   return Math.max(1, differenceInCalendarDays(end, start) + 1);
+}
+
+function resolveSalesCantadasPeriodWindow(totalDays: number): SalesCantadasPeriodWindow {
+  if (totalDays <= 1) {
+    return {
+      averageMetric: {
+        label: "Média por hora",
+        caption: "de vendas cantadas",
+        tooltip: "Média por hora de vendas cantadas no período selecionado.",
+        divisor: 24,
+      },
+      trendGranularity: "hour",
+    };
+  }
+
+  if (totalDays <= 7) {
+    return {
+      averageMetric: {
+        label: "Média por dia",
+        caption: "de vendas cantadas",
+        tooltip: "Média por dia de vendas cantadas no período selecionado.",
+        divisor: totalDays,
+      },
+      trendGranularity: "day",
+    };
+  }
+
+  if (totalDays <= 31) {
+    return {
+      averageMetric: {
+        label: "Média por semana",
+        caption: "de vendas cantadas",
+        tooltip: "Média por semana de vendas cantadas no período selecionado.",
+        divisor: totalDays / 7,
+      },
+      trendGranularity: "week",
+    };
+  }
+
+  if (totalDays <= 62) {
+    return {
+      averageMetric: {
+        label: "Média mês",
+        caption: "de vendas cantadas",
+        tooltip: "Média por mês de vendas cantadas no período selecionado.",
+        divisor: totalDays / 30,
+      },
+      trendGranularity: "month",
+    };
+  }
+
+  if (totalDays <= 93) {
+    return {
+      averageMetric: {
+        label: "Média bimestral",
+        caption: "de vendas cantadas",
+        tooltip: "Média bimestral de vendas cantadas no período selecionado.",
+        divisor: totalDays / 60,
+      },
+      trendGranularity: "bimonth",
+    };
+  }
+
+  if (totalDays <= 365) {
+    return {
+      averageMetric: {
+        label: "Média trimestral",
+        caption: "de vendas cantadas",
+        tooltip: "Média trimestral de vendas cantadas no período selecionado.",
+        divisor: totalDays / 90,
+      },
+      trendGranularity: "quarter",
+    };
+  }
+
+  return {
+    averageMetric: {
+      label: "Média anual",
+      caption: "de vendas cantadas",
+      tooltip: "Média anual de vendas cantadas no período selecionado.",
+      divisor: totalDays / 365,
+    },
+    trendGranularity: "year",
+  };
 }
 
 export function buildEquivalentPreviousPeriodRange(
@@ -85,65 +176,13 @@ export function resolveSalesCantadasAverageMetric(
   endDate?: string,
 ): PeriodAverageMetric {
   const totalDays = getInclusiveDayCount(startDate, endDate);
+  return resolveSalesCantadasPeriodWindow(totalDays).averageMetric;
+}
 
-  if (totalDays <= 1) {
-    return {
-      label: "Média por hora",
-      caption: "de vendas cantadas",
-      tooltip: "Média por hora de vendas cantadas no período selecionado.",
-      divisor: 24,
-    };
-  }
-
-  if (totalDays <= 7) {
-    return {
-      label: "Média por dia",
-      caption: "de vendas cantadas",
-      tooltip: "Média por dia de vendas cantadas no período selecionado.",
-      divisor: totalDays,
-    };
-  }
-
-  if (totalDays <= 31) {
-    return {
-      label: "Média por semana",
-      caption: "de vendas cantadas",
-      tooltip: "Média por semana de vendas cantadas no período selecionado.",
-      divisor: totalDays / 7,
-    };
-  }
-
-  if (totalDays <= 62) {
-    return {
-      label: "Média mês",
-      caption: "de vendas cantadas",
-      tooltip: "Média por mês de vendas cantadas no período selecionado.",
-      divisor: totalDays / 30,
-    };
-  }
-
-  if (totalDays <= 93) {
-    return {
-      label: "Média bimestral",
-      caption: "de vendas cantadas",
-      tooltip: "Média bimestral de vendas cantadas no período selecionado.",
-      divisor: totalDays / 60,
-    };
-  }
-
-  if (totalDays <= 365) {
-    return {
-      label: "Média trimestral",
-      caption: "de vendas cantadas",
-      tooltip: "Média trimestral de vendas cantadas no período selecionado.",
-      divisor: totalDays / 90,
-    };
-  }
-
-  return {
-    label: "Média anual",
-    caption: "de vendas cantadas",
-    tooltip: "Média anual de vendas cantadas no período selecionado.",
-    divisor: totalDays / 365,
-  };
+export function resolveSalesCantadasTrendGranularity(
+  startDate?: string,
+  endDate?: string,
+): SalesCantadasTrendGranularity {
+  const totalDays = getInclusiveDayCount(startDate, endDate);
+  return resolveSalesCantadasPeriodWindow(totalDays).trendGranularity;
 }
