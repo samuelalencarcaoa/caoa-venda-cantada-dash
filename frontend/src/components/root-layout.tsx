@@ -58,69 +58,71 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         {children}
 
-        <footer className="border-t border-slate-200 bg-white/95 px-4 py-6 backdrop-blur dark:border-white/10 dark:bg-slate-950/95 sm:px-6">
-          <div className="mx-auto flex w-full max-w-8xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Desenvolvido pelo Departamento de Tecnologia e Inovação da CAOA
-              </p>
-              <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Ambiente institucional com acesso às políticas e orientações oficiais da CAOA.
-              </p>
+        <div className="mt-auto shrink-0 pt-[30px]">
+          <footer className="border-t border-slate-200 bg-white/95 px-4 py-6 backdrop-blur dark:border-white/10 dark:bg-slate-950/95 sm:px-6">
+            <div className="mx-auto flex w-full max-w-8xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Desenvolvido pelo Departamento de Tecnologia e Inovação da CAOA
+                </p>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+                  Ambiente institucional com acesso às políticas e orientações oficiais da CAOA.
+                </p>
+              </div>
             </div>
-          </div>
 
-          <nav className="mx-auto mt-6 flex w-full max-w-8xl flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <a
-              href="https://caoa.com.br/politica-de-privacidade"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-sky-700 dark:hover:text-cyan-300"
-            >
-              Política de privacidade
-            </a>
-            <a
-              href="https://caoa.com.br/politica-de-cookies"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-sky-700 dark:hover:text-cyan-300"
-            >
-              Política de cookies
-            </a>
-            <a
-              href="https://caoa.com.br/alerta-de-fraudes"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-sky-700 dark:hover:text-cyan-300"
-            >
-              Alerta de fraudes
-            </a>
-            <a
-              href="https://caoa.com.br/seguranca-veicular"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-sky-700 dark:hover:text-cyan-300"
-            >
-              Segurança veicular
-            </a>
-            <a
-              href="https://caoa.com.br/titulares-de-dados-atendimento"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-sky-700 dark:hover:text-cyan-300"
-            >
-              Titulares de dados
-            </a>
-            <a
-              href="https://caoa.com.br/caoa-governanca-e-sustentabilidade"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-sky-700 dark:hover:text-cyan-300"
-            >
-              Governança e sustentabilidade
-            </a>
-          </nav>
-        </footer>
+            <nav className="mx-auto mt-6 flex w-full max-w-8xl flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <a
+                href="https://caoa.com.br/politica-de-privacidade"
+                target="_blank"
+                rel="noreferrer"
+                className="transition hover:text-sky-700 dark:hover:text-cyan-300"
+              >
+                Política de privacidade
+              </a>
+              <a
+                href="https://caoa.com.br/politica-de-cookies"
+                target="_blank"
+                rel="noreferrer"
+                className="transition hover:text-sky-700 dark:hover:text-cyan-300"
+              >
+                Política de cookies
+              </a>
+              <a
+                href="https://caoa.com.br/alerta-de-fraudes"
+                target="_blank"
+                rel="noreferrer"
+                className="transition hover:text-sky-700 dark:hover:text-cyan-300"
+              >
+                Alerta de fraudes
+              </a>
+              <a
+                href="https://caoa.com.br/seguranca-veicular"
+                target="_blank"
+                rel="noreferrer"
+                className="transition hover:text-sky-700 dark:hover:text-cyan-300"
+              >
+                Segurança veicular
+              </a>
+              <a
+                href="https://caoa.com.br/titulares-de-dados-atendimento"
+                target="_blank"
+                rel="noreferrer"
+                className="transition hover:text-sky-700 dark:hover:text-cyan-300"
+              >
+                Titulares de dados
+              </a>
+              <a
+                href="https://caoa.com.br/caoa-governanca-e-sustentabilidade"
+                target="_blank"
+                rel="noreferrer"
+                className="transition hover:text-sky-700 dark:hover:text-cyan-300"
+              >
+                Governança e sustentabilidade
+              </a>
+            </nav>
+          </footer>
+        </div>
       </div>
     </div>
   );
