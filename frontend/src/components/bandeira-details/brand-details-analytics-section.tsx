@@ -1537,7 +1537,7 @@ export function BrandDetailsAnalyticsSection({
 
       <div className="grid grid-cols-1 gap-2 phone:grid-cols-2 sm:gap-3 xl:grid-cols-4">
         <MetricCard
-          label="Total de intenções"
+          label="Total de Vendas Cantadas"
           value={formatNumber(totalQuantity)}
           tooltip="Soma do campo Quantidade nos registros filtrados."
         />
