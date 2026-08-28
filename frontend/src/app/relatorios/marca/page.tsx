@@ -4,12 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { VChart } from "@visactor/react-vchart";
 import type { ILineChartSpec } from "@visactor/vchart";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import { Button } from "@/components/ui/button";
-import { FilterSelectCard, TooltipIcon } from "@/components/sales-intention-filter-select-card";
+import {
+  FilterDateInput,
+  FilterSelectCard,
+  TooltipIcon,
+} from "@/components/sales-intention-filter-select-card";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
-import { format } from "date-fns";
-import { NotebookText, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { addYears, format, subYears } from "date-fns";
+import { NotebookText, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import {
   fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
@@ -143,6 +148,15 @@ function matchesSelectedValues(selected: string[], value: string) {
   );
 }
 
+function areStringSelectionsEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const normalizedRight = new Set(right.map((value) => normalizeValue(value)));
+  return left.every((value) => normalizedRight.has(normalizeValue(value)));
+}
+
 type RankingChartItem = { label: string; value: number };
 type CompositionChartItem = { label: string; value: number; percentage: number };
 
@@ -179,9 +193,16 @@ function ChartToggle({ options, value, onChange }: {
   value: string;
   onChange: (value: string) => void;
 }) {
+  const chartToggleDrag = useHorizontalDragScroll<HTMLDivElement>();
+
   return (
     <div
-      className="inline-flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5"
+      ref={chartToggleDrag.ref}
+      onPointerDown={chartToggleDrag.onPointerDown}
+      onPointerMove={chartToggleDrag.onPointerMove}
+      onPointerUp={chartToggleDrag.onPointerUp}
+      onPointerCancel={chartToggleDrag.onPointerCancel}
+      className="inline-flex min-w-0 max-w-full cursor-grab gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 select-none active:cursor-grabbing dark:border-white/10 dark:bg-white/5"
       role="group"
     >
       {options.map((option) => {
@@ -447,8 +468,18 @@ export default function MarcaVeiculoRelatorioPage() {
   const [selectedModelo, setSelectedModelo] = useState<string[]>([]);
   const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
   const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
+  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>([]);
+  const [appliedBandeira, setAppliedBandeira] = useState<string[]>([]);
+  const [appliedLojaVenda, setAppliedLojaVenda] = useState<string[]>([]);
+  const [appliedRegional, setAppliedRegional] = useState<string[]>([]);
+  const [appliedMarcaVeiculo, setAppliedMarcaVeiculo] = useState<string[]>([]);
+  const [appliedModelo, setAppliedModelo] = useState<string[]>([]);
+  const [appliedVersao, setAppliedVersao] = useState<string[]>([]);
+  const [appliedClassificacao, setAppliedClassificacao] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
+  const [appliedStartDate, setAppliedStartDate] = useState<string>(() => getTodayInputValue());
+  const [appliedEndDate, setAppliedEndDate] = useState<string>(() => getTodayInputValue());
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -460,6 +491,7 @@ export default function MarcaVeiculoRelatorioPage() {
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
   const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [rankingDimension, setRankingDimension] = useState<RankingDimension>("bandeira");
@@ -619,11 +651,94 @@ export default function MarcaVeiculoRelatorioPage() {
     setSelectedModelo([]);
     setSelectedVersao([]);
     setSelectedClassificacao([]);
+    setAppliedTipoVenda([]);
+    setAppliedBandeira([]);
+    setAppliedRegional([]);
+    setAppliedLojaVenda([]);
+    setAppliedMarcaVeiculo([]);
+    setAppliedModelo([]);
+    setAppliedVersao([]);
+    setAppliedClassificacao([]);
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
     setEndDate(latestAvailableDateInput);
+    setAppliedStartDate(latestAvailableDateInput);
+    setAppliedEndDate(latestAvailableDateInput);
+    setRefreshTick((tick) => tick + 1);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const applyFilters = () => {
+    setAppliedTipoVenda(selectedTipoVenda);
+    setAppliedBandeira(selectedBandeira);
+    setAppliedRegional(selectedRegional);
+    setAppliedLojaVenda(selectedLojaVenda);
+    setAppliedMarcaVeiculo(selectedMarcaVeiculo);
+    setAppliedModelo(selectedModelo);
+    setAppliedVersao(selectedVersao);
+    setAppliedClassificacao(selectedClassificacao);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
     setRefreshTick((tick) => tick + 1);
   };
+
+  const hasPendingFilterChanges = useMemo(
+    () =>
+      !areStringSelectionsEqual(selectedTipoVenda, appliedTipoVenda) ||
+      !areStringSelectionsEqual(selectedBandeira, appliedBandeira) ||
+      !areStringSelectionsEqual(selectedRegional, appliedRegional) ||
+      !areStringSelectionsEqual(selectedLojaVenda, appliedLojaVenda) ||
+      !areStringSelectionsEqual(selectedMarcaVeiculo, appliedMarcaVeiculo) ||
+      !areStringSelectionsEqual(selectedModelo, appliedModelo) ||
+      !areStringSelectionsEqual(selectedVersao, appliedVersao) ||
+      !areStringSelectionsEqual(selectedClassificacao, appliedClassificacao) ||
+      startDate !== appliedStartDate ||
+      endDate !== appliedEndDate,
+    [
+      appliedBandeira,
+      appliedClassificacao,
+      appliedEndDate,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedModelo,
+      appliedRegional,
+      appliedStartDate,
+      appliedTipoVenda,
+      appliedVersao,
+      endDate,
+      selectedBandeira,
+      selectedClassificacao,
+      selectedLojaVenda,
+      selectedMarcaVeiculo,
+      selectedModelo,
+      selectedRegional,
+      selectedTipoVenda,
+      selectedVersao,
+      startDate,
+    ],
+  );
+
+  const startDateMin = useMemo(() => {
+    if (!endDate) {
+      return undefined;
+    }
+
+    const endDateValue = buildLocalDateFromInput(endDate, true);
+    return endDateValue ? format(subYears(endDateValue, 2), "yyyy-MM-dd") : undefined;
+  }, [endDate]);
+
+  const startDateMax = endDate || undefined;
+
+  const endDateMin = startDate || undefined;
+
+  const endDateMax = useMemo(() => {
+    if (!startDate) {
+      return undefined;
+    }
+
+    const startDateValue = buildLocalDateFromInput(startDate);
+    return startDateValue ? format(addYears(startDateValue, 2), "yyyy-MM-dd") : undefined;
+  }, [startDate]);
 
   const filteredItems = useMemo(
     () =>
@@ -638,46 +753,46 @@ export default function MarcaVeiculoRelatorioPage() {
         const normalizedItemVersao = normalizeValue(itemVersao);
 
         const matchesModelo =
-          selectedModelo.length === 0 ||
+          appliedModelo.length === 0 ||
           vehicleCatalogRows.some(
             (row) =>
               normalizeValue(row.tipoVenda) === normalizeValue(itemTipoVenda) &&
               normalizeValue(row.marca) === normalizeValue(itemMarcaVeiculo) &&
-              matchesSelectedValues(selectedModelo, row.modelo) &&
+              matchesSelectedValues(appliedModelo, row.modelo) &&
               normalizeValue(row.versaoModelo) === normalizedItemVersao,
           );
 
-        const matchesTipoVenda = matchesSelectedValues(selectedTipoVenda, itemTipoVenda);
-        const matchesBandeira = matchesSelectedValues(selectedBandeira, itemBandeira);
-        const matchesRegional = matchesSelectedValues(selectedRegional, itemRegional);
-        const matchesLojaVenda = matchesSelectedValues(selectedLojaVenda, itemLojaVenda);
+        const matchesTipoVenda = matchesSelectedValues(appliedTipoVenda, itemTipoVenda);
+        const matchesBandeira = matchesSelectedValues(appliedBandeira, itemBandeira);
+        const matchesRegional = matchesSelectedValues(appliedRegional, itemRegional);
+        const matchesLojaVenda = matchesSelectedValues(appliedLojaVenda, itemLojaVenda);
         const matchesMarcaVeiculo = matchesSelectedValues(
-          selectedMarcaVeiculo,
+          appliedMarcaVeiculo,
           itemMarcaVeiculo,
         );
-        const matchesVersao = matchesSelectedValues(selectedVersao, itemVersao);
+        const matchesVersao = matchesSelectedValues(appliedVersao, itemVersao);
         const matchesClassificacao = matchesSelectedValues(
-          selectedClassificacao,
+          appliedClassificacao,
           itemClassificacao,
         );
 
         let matchesDateRange = true;
-        if (startDate || endDate) {
+        if (appliedStartDate || appliedEndDate) {
           const itemDate = parseReportDate(item.Data_solicitacao);
           if (!itemDate) {
             return false;
           }
 
-          if (startDate) {
-            const start = buildLocalDateFromInput(startDate);
+          if (appliedStartDate) {
+            const start = buildLocalDateFromInput(appliedStartDate);
             if (!start) {
               return false;
             }
             if (itemDate < start) matchesDateRange = false;
           }
 
-          if (endDate) {
-            const end = buildLocalDateFromInput(endDate, true);
+          if (appliedEndDate) {
+            const end = buildLocalDateFromInput(appliedEndDate, true);
             if (!end) {
               return false;
             }
@@ -699,16 +814,16 @@ export default function MarcaVeiculoRelatorioPage() {
       }),
     [
       enhancedSalesIntention,
-      endDate,
-      selectedBandeira,
-      selectedClassificacao,
-      selectedLojaVenda,
-      selectedMarcaVeiculo,
-      selectedModelo,
-      selectedRegional,
-      selectedTipoVenda,
-      selectedVersao,
-      startDate,
+      appliedBandeira,
+      appliedClassificacao,
+      appliedEndDate,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedModelo,
+      appliedRegional,
+      appliedStartDate,
+      appliedTipoVenda,
+      appliedVersao,
       vehicleCatalogRows,
     ],
   );
@@ -733,7 +848,7 @@ export default function MarcaVeiculoRelatorioPage() {
   );
 
   const trendChartData = useMemo(() => {
-    const isSingleDay = Boolean(startDate && endDate && startDate === endDate);
+    const isSingleDay = Boolean(appliedStartDate && appliedEndDate && appliedStartDate === appliedEndDate);
 
     if (isSingleDay) {
       const hourlyValues = Array.from({ length: 24 }, (_, hour) => ({
@@ -747,7 +862,7 @@ export default function MarcaVeiculoRelatorioPage() {
       filteredItems.forEach((item) => {
         const createdAt = parseReportDate(item.Criado);
         if (!createdAt) return;
-        if (formatInputDate(createdAt) !== startDate) return;
+        if (formatInputDate(createdAt) !== appliedStartDate) return;
 
         const hour = createdAt.getHours();
         hourlyValues[hour].value += Number(item.Quantidade) || 0;
@@ -830,7 +945,7 @@ export default function MarcaVeiculoRelatorioPage() {
         };
       }),
     };
-  }, [endDate, filteredItems, startDate, trendView]);
+  }, [appliedEndDate, appliedStartDate, filteredItems, trendView]);
 
   const trendHourRange = useMemo(() => {
     if (trendChartData.grainLabel !== "Visão por hora" || trendChartData.values.length === 0) {
@@ -973,31 +1088,33 @@ export default function MarcaVeiculoRelatorioPage() {
     if (latestAvailableDateInput !== todayInput) {
       setStartDate(latestAvailableDateInput);
       setEndDate(latestAvailableDateInput);
+      setAppliedStartDate(latestAvailableDateInput);
+      setAppliedEndDate(latestAvailableDateInput);
       setAutoFallbackDate(latestAvailableDateInput);
     }
   }, [endDate, hasDataForToday, latestAvailableDateInput, startDate, todayInput]);
 
   const activePeriodText = useMemo(() => {
-    if (startDate && endDate) {
-      if (startDate === endDate) {
-        return startDate === todayInput
+    if (appliedStartDate && appliedEndDate) {
+      if (appliedStartDate === appliedEndDate) {
+        return appliedStartDate === todayInput
           ? "Período ativo: Hoje"
-          : `Período ativo: ${formatDisplayInputDate(startDate)}`;
+          : `Período ativo: ${formatDisplayInputDate(appliedStartDate)}`;
       }
 
-      return `Período ativo: ${formatDisplayInputDate(startDate)} a ${formatDisplayInputDate(endDate)}`;
+      return `Período ativo: ${formatDisplayInputDate(appliedStartDate)} a ${formatDisplayInputDate(appliedEndDate)}`;
     }
 
-    if (startDate) {
-      return `Período ativo: a partir de ${formatDisplayInputDate(startDate)}`;
+    if (appliedStartDate) {
+      return `Período ativo: a partir de ${formatDisplayInputDate(appliedStartDate)}`;
     }
 
-    if (endDate) {
-      return `Período ativo: até ${formatDisplayInputDate(endDate)}`;
+    if (appliedEndDate) {
+      return `Período ativo: até ${formatDisplayInputDate(appliedEndDate)}`;
     }
 
     return "Período ativo: intervalo livre";
-  }, [endDate, startDate, todayInput]);
+  }, [appliedEndDate, appliedStartDate, todayInput]);
 
   const fallbackNotice = useMemo(() => {
     if (!autoFallbackDate) {
@@ -1022,16 +1139,16 @@ export default function MarcaVeiculoRelatorioPage() {
     const timer = setTimeout(() => setIsLoading(false), 100);
     return () => clearTimeout(timer);
   }, [
-    selectedTipoVenda,
-    selectedBandeira,
-    selectedRegional,
-    selectedLojaVenda,
-    selectedMarcaVeiculo,
-    selectedModelo,
-    selectedVersao,
-    selectedClassificacao,
-    startDate,
-    endDate,
+    appliedTipoVenda,
+    appliedBandeira,
+    appliedRegional,
+    appliedLojaVenda,
+    appliedMarcaVeiculo,
+    appliedModelo,
+    appliedVersao,
+    appliedClassificacao,
+    appliedStartDate,
+    appliedEndDate,
     refreshTick,
   ]);
 
@@ -1155,17 +1272,39 @@ export default function MarcaVeiculoRelatorioPage() {
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void refresh({ silent: true })}
-              className={cn("h-10 shrink-0 rounded-full px-4 text-xs font-medium", themedOutlineButtonClass)}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDesktopFiltersOpen((current) => !current)}
+                aria-expanded={isDesktopFiltersOpen}
+                aria-controls="marca-filters-panel"
+                className={cn(
+                  "hidden h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-medium tablet:inline-flex",
+                  themedOutlineButtonClass,
+                )}
+              >
+                {isDesktopFiltersOpen ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <SlidersHorizontal className="h-4 w-4" />
+                )}
+                <span>{isDesktopFiltersOpen ? "Ocultar filtro" : "Abrir filtro"}</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void refresh({ silent: true })}
+                className={cn(
+                  "h-10 shrink-0 rounded-full px-4 text-xs font-medium",
+                  themedOutlineButtonClass,
+                )}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                Atualizar
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -1182,13 +1321,22 @@ export default function MarcaVeiculoRelatorioPage() {
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+            {isMobileFiltersOpen ? "Ocultar filtro" : "Abrir filtro"}
           </Button>
         </div>
 
         <section
           id="marca-filters-panel"
-          className={cn(themedPanelClass, "p-4", isMobileFiltersOpen ? "block" : "hidden tablet:block")}
+          className={cn(
+            themedPanelClass,
+            "overflow-hidden p-4 transition-[max-height,opacity,transform] duration-300 ease-out",
+            isMobileFiltersOpen
+              ? "max-h-[5000px] opacity-100 translate-y-0"
+              : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
+            isDesktopFiltersOpen
+              ? "tablet:max-h-[5000px] tablet:pointer-events-auto tablet:opacity-100 tablet:translate-y-0"
+              : "tablet:pointer-events-none tablet:max-h-0 tablet:-translate-y-2 tablet:opacity-0",
+          )}
         >
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -1199,20 +1347,31 @@ export default function MarcaVeiculoRelatorioPage() {
                 Combine uma ou mais opções em qualquer campo.
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={clearFilters}
-              className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
-            >
-              Limpar filtros
-            </Button>
+            <div className="hidden flex-wrap items-center gap-2 tablet:flex">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+              >
+                Limpar filtros
+              </Button>
+              <Button
+                type="button"
+                onClick={applyFilters}
+                disabled={!hasPendingFilterChanges}
+                className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Aplicar filtros
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <FilterSelectCard
               label="Tipo de venda"
               value={selectedTipoVenda}
+              appliedValue={appliedTipoVenda}
               options={tipoVendaOptions}
               onChange={setSelectedTipoVenda}
               tooltip="Filtro aplicado por tipo de venda."
@@ -1222,6 +1381,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Bandeira"
               value={selectedBandeira}
+              appliedValue={appliedBandeira}
               options={bandeiraOptions}
               onChange={setSelectedBandeira}
               tooltip="Filtro aplicado por bandeira."
@@ -1230,6 +1390,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Regional"
               value={selectedRegional}
+              appliedValue={appliedRegional}
               options={regionalOptions}
               onChange={setSelectedRegional}
               tooltip="Filtro aplicado por regional."
@@ -1238,6 +1399,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Loja de Venda"
               value={selectedLojaVenda}
+              appliedValue={appliedLojaVenda}
               options={lojaVendaOptions}
               onChange={setSelectedLojaVenda}
               tooltip="Filtro aplicado por loja de venda."
@@ -1246,6 +1408,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Marca veículo"
               value={selectedMarcaVeiculo}
+              appliedValue={appliedMarcaVeiculo}
               options={marcaVeiculoOptions}
               onChange={setSelectedMarcaVeiculo}
               tooltip="Filtro aplicado por marca do veículo."
@@ -1254,6 +1417,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Modelo"
               value={selectedModelo}
+              appliedValue={appliedModelo}
               options={modeloOptions}
               onChange={setSelectedModelo}
               tooltip="Filtro aplicado por modelo."
@@ -1262,6 +1426,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Versão"
               value={selectedVersao}
+              appliedValue={appliedVersao}
               options={versaoOptions}
               onChange={setSelectedVersao}
               tooltip="Filtro aplicado por versão."
@@ -1270,6 +1435,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <FilterSelectCard
               label="Classificação"
               value={selectedClassificacao}
+              appliedValue={appliedClassificacao}
               options={classificacaoOptions}
               onChange={setSelectedClassificacao}
               tooltip="Filtro aplicado por classificação."
@@ -1291,15 +1457,15 @@ export default function MarcaVeiculoRelatorioPage() {
                   >
                     De
                   </span>
-                  <input
-                    type="date"
-                    max={endDate || undefined}
+                  <FilterDateInput
+                    value={startDate}
+                    onChange={handleStartDateChange}
+                    min={startDateMin}
+                    max={startDateMax}
                     className={cn(
                       "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
                       themedInputClass,
                     )}
-                    value={startDate}
-                    onChange={(event) => handleStartDateChange(event.target.value)}
                   />
                 </label>
                 <label className="min-w-0">
@@ -1311,18 +1477,36 @@ export default function MarcaVeiculoRelatorioPage() {
                   >
                     Até
                   </span>
-                  <input
-                    type="date"
-                    min={startDate || undefined}
+                  <FilterDateInput
+                    value={endDate}
+                    onChange={handleEndDateChange}
+                    min={endDateMin}
+                    max={endDateMax}
                     className={cn(
                       "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
                       themedInputClass,
                     )}
-                    value={endDate}
-                    onChange={(event) => handleEndDateChange(event.target.value)}
                   />
                 </label>
               </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 tablet:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className={cn("h-10 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+              >
+                Limpar filtros
+              </Button>
+              <Button
+                type="button"
+                onClick={applyFilters}
+                disabled={!hasPendingFilterChanges}
+                className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Aplicar filtros
+              </Button>
             </div>
           </div>
         </section>

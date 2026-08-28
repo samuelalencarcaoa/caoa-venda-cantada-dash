@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { addYears, format, subYears } from "date-fns";
 import {
   ArrowDown,
   ArrowRight,
@@ -35,8 +35,13 @@ import {
 import { ReportErrorCard } from "@/components/report-error-card";
 import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
-import { FilterSelectCard, TooltipIcon } from "@/components/sales-intention-filter-select-card";
+import {
+  FilterDateInput,
+  FilterSelectCard,
+  TooltipIcon,
+} from "@/components/sales-intention-filter-select-card";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import {
   fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
@@ -128,7 +133,7 @@ const vendorStatusChipClass =
 
 const vendorFilterChipClass = cn(
   themedChipClass,
-  "inline-flex max-w-[18rem] items-center normal-case tracking-normal truncate",
+  "inline-flex max-w-[18rem] shrink-0 items-center normal-case tracking-normal truncate",
 );
 
 function toTitleCase(value: string) {
@@ -200,19 +205,6 @@ type TrendTooltipDimensionInfo = {
 
 type TrendTooltipDataItem = TrendTooltipDimensionInfo | TrendTooltipSeriesDatum;
 
-type TrendTooltipContentLine = {
-  key: string;
-  value: string;
-  visible: true;
-  hasShape: true;
-  shapeType: "circle";
-  shapeFill: string;
-  shapeStroke: string;
-  shapeLineWidth: number;
-  shapeSize: number;
-  shapeHollow: false;
-};
-
 function formatComparisonLabel(currentTotal: number, previousTotal: number) {
   if (previousTotal <= 0) {
     if (currentTotal <= 0) {
@@ -263,9 +255,16 @@ function ChartToggle({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const chartToggleDrag = useHorizontalDragScroll<HTMLDivElement>();
+
   return (
     <div
-      className="inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5"
+      ref={chartToggleDrag.ref}
+      onPointerDown={chartToggleDrag.onPointerDown}
+      onPointerMove={chartToggleDrag.onPointerMove}
+      onPointerUp={chartToggleDrag.onPointerUp}
+      onPointerCancel={chartToggleDrag.onPointerCancel}
+      className="inline-flex max-w-full cursor-grab gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 select-none active:cursor-grabbing dark:border-white/10 dark:bg-white/5"
       role="group"
     >
       {options.map((option) => {
@@ -635,6 +634,8 @@ function TrendComparisonRail({
   hiddenSeries: string[];
   onToggleSeriesVisibility: (vendor: string) => void;
 }) {
+  const comparisonRailDrag = useHorizontalDragScroll<HTMLDivElement>();
+
   if (series.length === 0) {
     return null;
   }
@@ -652,7 +653,14 @@ function TrendComparisonRail({
         </span>
       </div>
 
-      <div className="flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pr-1">
+      <div
+        ref={comparisonRailDrag.ref}
+        onPointerDown={comparisonRailDrag.onPointerDown}
+        onPointerMove={comparisonRailDrag.onPointerMove}
+        onPointerUp={comparisonRailDrag.onPointerUp}
+        onPointerCancel={comparisonRailDrag.onPointerCancel}
+        className="flex min-w-0 cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pr-1 select-none active:cursor-grabbing"
+      >
         {series.map((item) => {
           const isHidden = hiddenSeries.includes(item.vendor);
           const { path, lastPoint } = buildSparklineGeometry(item.points);
@@ -788,6 +796,15 @@ function matchesSelectedValues(selected: string[], value: string) {
     selected.length === 0 ||
     selected.some((option) => normalizeValue(option) === normalizeValue(value))
   );
+}
+
+function areStringSelectionsEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const normalizedRight = new Set(right.map((value) => normalizeValue(value)));
+  return left.every((value) => normalizedRight.has(normalizeValue(value)));
 }
 
 function StatCard({
@@ -1559,6 +1576,8 @@ function PodiumCard({
   totalQuantity: number;
   className?: string;
 }) {
+  const podiumRailDrag = useHorizontalDragScroll<HTMLDivElement>();
+
   const topThree = items.slice(0, 3);
   const podiumSlots = [
     {
@@ -1638,7 +1657,14 @@ function PodiumCard({
         </span>
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-[920px] snap-x snap-mandatory items-end gap-3 overflow-x-auto px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:grid tablet:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)] tablet:gap-5 tablet:overflow-visible tablet:px-0 tablet:pb-0">
+      <div
+        ref={podiumRailDrag.ref}
+        onPointerDown={podiumRailDrag.onPointerDown}
+        onPointerMove={podiumRailDrag.onPointerMove}
+        onPointerUp={podiumRailDrag.onPointerUp}
+        onPointerCancel={podiumRailDrag.onPointerCancel}
+        className="relative mx-auto flex w-full max-w-[920px] cursor-grab snap-x snap-mandatory items-end gap-3 overflow-x-auto px-1 pb-2 select-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden active:cursor-grabbing tablet:grid tablet:grid-cols-[minmax(0,0.94fr)_minmax(0,1.08fr)_minmax(0,0.94fr)] tablet:gap-5 tablet:overflow-visible tablet:px-0 tablet:pb-0"
+      >
         {podiumSlots.map((slot) => {
           const item = slot.item;
           const share = item && totalQuantity > 0 ? (item.quantity / totalQuantity) * 100 : 0;
@@ -1778,6 +1804,14 @@ export default function VendedorRelatorioPage() {
   const [selectedModelo, setSelectedModelo] = useState<string[]>([]);
   const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
   const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
+  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>([]);
+  const [appliedBandeira, setAppliedBandeira] = useState<string[]>([]);
+  const [appliedRegional, setAppliedRegional] = useState<string[]>([]);
+  const [appliedLojaVenda, setAppliedLojaVenda] = useState<string[]>([]);
+  const [appliedMarcaVeiculo, setAppliedMarcaVeiculo] = useState<string[]>([]);
+  const [appliedModelo, setAppliedModelo] = useState<string[]>([]);
+  const [appliedVersao, setAppliedVersao] = useState<string[]>([]);
+  const [appliedClassificacao, setAppliedClassificacao] = useState<string[]>([]);
   const [selectedComparisonVendors, setSelectedComparisonVendors] = useState<string[]>([]);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("quant");
@@ -1785,6 +1819,8 @@ export default function VendedorRelatorioPage() {
   const [hiddenTrendSeries, setHiddenTrendSeries] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
   const [endDate, setEndDate] = useState<string>(() => getTodayInputValue());
+  const [appliedStartDate, setAppliedStartDate] = useState<string>(() => getTodayInputValue());
+  const [appliedEndDate, setAppliedEndDate] = useState<string>(() => getTodayInputValue());
   const [autoFallbackDate, setAutoFallbackDate] = useState<string | null>(null);
   const [rankingVisibleCount, setRankingVisibleCount] = useState<RankingDisplayCount>(20);
   const [chartError, setChartError] = useState<string | null>(null);
@@ -1795,7 +1831,9 @@ export default function VendedorRelatorioPage() {
   const [isVehicleCatalogLoading, setIsVehicleCatalogLoading] = useState(true);
   const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
+  const appliedFilterChipsDrag = useHorizontalDragScroll<HTMLDivElement>();
 
   const todayInput = useMemo(() => getTodayInputValue(), []);
   const chartTooltipRootId = useId().replace(/:/g, "");
@@ -1957,33 +1995,35 @@ export default function VendedorRelatorioPage() {
     if (latestAvailableDateInput !== todayInput) {
       setStartDate(latestAvailableDateInput);
       setEndDate(latestAvailableDateInput);
+      setAppliedStartDate(latestAvailableDateInput);
+      setAppliedEndDate(latestAvailableDateInput);
       setAutoFallbackDate(latestAvailableDateInput);
     }
   }, [endDate, hasDataForToday, latestAvailableDateInput, startDate, todayInput]);
 
   const activePeriodText = useMemo(() => {
-    if (startDate && endDate) {
-      if (startDate === endDate) {
-        return startDate === todayInput
+    if (appliedStartDate && appliedEndDate) {
+      if (appliedStartDate === appliedEndDate) {
+        return appliedStartDate === todayInput
           ? "Período ativo: Hoje"
-          : `Período ativo: ${formatDisplayInputDate(startDate)}`;
+          : `Período ativo: ${formatDisplayInputDate(appliedStartDate)}`;
       }
 
-      return `Período ativo: ${formatDisplayInputDate(startDate)} a ${formatDisplayInputDate(endDate)}`;
+      return `Período ativo: ${formatDisplayInputDate(appliedStartDate)} a ${formatDisplayInputDate(appliedEndDate)}`;
     }
 
-    if (startDate) {
-      return `Período ativo: a partir de ${formatDisplayInputDate(startDate)}`;
+    if (appliedStartDate) {
+      return `Período ativo: a partir de ${formatDisplayInputDate(appliedStartDate)}`;
     }
 
-    if (endDate) {
-      return `Período ativo: até ${formatDisplayInputDate(endDate)}`;
+    if (appliedEndDate) {
+      return `Período ativo: até ${formatDisplayInputDate(appliedEndDate)}`;
     }
 
     return "Período ativo: intervalo livre";
-  }, [endDate, startDate, todayInput]);
+  }, [appliedEndDate, appliedStartDate, todayInput]);
 
-  const isSingleDayPeriod = Boolean(startDate && endDate && startDate === endDate);
+  const isSingleDayPeriod = Boolean(appliedStartDate && appliedEndDate && appliedStartDate === appliedEndDate);
   const displayActivePeriodText = activePeriodText.replace("Período ativo: ", "Período: ");
   const displayFallbackNotice = autoFallbackDate
     ? `Usando ${formatDisplayInputDate(autoFallbackDate)}`
@@ -1991,35 +2031,35 @@ export default function VendedorRelatorioPage() {
   const appliedFilterChips = useMemo(() => {
     const chips: string[] = [];
 
-    selectedTipoVenda.forEach((value) => {
+    appliedTipoVenda.forEach((value) => {
       chips.push(`Tipo de venda: ${formatTipoVendaLabel(value)}`);
     });
 
-    selectedBandeira.forEach((value) => {
+    appliedBandeira.forEach((value) => {
       chips.push(`Bandeira: ${value}`);
     });
 
-    selectedRegional.forEach((value) => {
+    appliedRegional.forEach((value) => {
       chips.push(`Regional: ${value}`);
     });
 
-    selectedLojaVenda.forEach((value) => {
+    appliedLojaVenda.forEach((value) => {
       chips.push(`Loja: ${value}`);
     });
 
-    selectedMarcaVeiculo.forEach((value) => {
+    appliedMarcaVeiculo.forEach((value) => {
       chips.push(`Marca veículo: ${value}`);
     });
 
-    selectedModelo.forEach((value) => {
+    appliedModelo.forEach((value) => {
       chips.push(`Modelo: ${value}`);
     });
 
-    selectedVersao.forEach((value) => {
+    appliedVersao.forEach((value) => {
       chips.push(`Versão: ${value}`);
     });
 
-    selectedClassificacao.forEach((value) => {
+    appliedClassificacao.forEach((value) => {
       chips.push(`Classificação: ${value}`);
     });
 
@@ -2028,43 +2068,43 @@ export default function VendedorRelatorioPage() {
     return chips;
   }, [
     displayActivePeriodText,
-    selectedBandeira,
-    selectedClassificacao,
-    selectedLojaVenda,
-    selectedMarcaVeiculo,
-    selectedModelo,
-    selectedRegional,
-    selectedTipoVenda,
-    selectedVersao,
+    appliedBandeira,
+    appliedClassificacao,
+    appliedLojaVenda,
+    appliedMarcaVeiculo,
+    appliedModelo,
+    appliedRegional,
+    appliedTipoVenda,
+    appliedVersao,
   ]);
 
   const lastUpdatedText = lastUpdatedAt ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss") : "Carregando...";
 
   const currentPeriodRange = useMemo(
     () => ({
-      start: startDate ? buildLocalDateFromInput(startDate) : null,
-      end: endDate ? buildLocalDateFromInput(endDate, true) : null,
+      start: appliedStartDate ? buildLocalDateFromInput(appliedStartDate) : null,
+      end: appliedEndDate ? buildLocalDateFromInput(appliedEndDate, true) : null,
     }),
-    [endDate, startDate],
+    [appliedEndDate, appliedStartDate],
   );
 
   const previousPeriodRange = useMemo(
-    () => buildEquivalentPreviousPeriodRange(startDate, endDate),
-    [endDate, startDate],
+    () => buildEquivalentPreviousPeriodRange(appliedStartDate, appliedEndDate),
+    [appliedEndDate, appliedStartDate],
   );
 
   const filteredItems = useMemo(
     () =>
-      enhancedSalesIntention.filter((item) =>
+        enhancedSalesIntention.filter((item) =>
         matchesVendorReportFilters(item, {
-          selectedTipoVenda,
-          selectedBandeira,
-          selectedRegional,
-          selectedLojaVenda,
-          selectedMarcaVeiculo,
-          selectedModelo,
-          selectedVersao,
-          selectedClassificacao,
+          selectedTipoVenda: appliedTipoVenda,
+          selectedBandeira: appliedBandeira,
+          selectedRegional: appliedRegional,
+          selectedLojaVenda: appliedLojaVenda,
+          selectedMarcaVeiculo: appliedMarcaVeiculo,
+          selectedModelo: appliedModelo,
+          selectedVersao: appliedVersao,
+          selectedClassificacao: appliedClassificacao,
           vehicleCatalogRows,
           rangeStart: currentPeriodRange.start,
           rangeEnd: currentPeriodRange.end,
@@ -2074,14 +2114,14 @@ export default function VendedorRelatorioPage() {
       enhancedSalesIntention,
       currentPeriodRange.end,
       currentPeriodRange.start,
-      selectedBandeira,
-      selectedClassificacao,
-      selectedLojaVenda,
-      selectedMarcaVeiculo,
-      selectedModelo,
-      selectedRegional,
-      selectedTipoVenda,
-      selectedVersao,
+      appliedBandeira,
+      appliedClassificacao,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedModelo,
+      appliedRegional,
+      appliedTipoVenda,
+      appliedVersao,
       vehicleCatalogRows,
     ],
   );
@@ -2093,14 +2133,14 @@ export default function VendedorRelatorioPage() {
 
     return enhancedSalesIntention.filter((item) =>
       matchesVendorReportFilters(item, {
-        selectedTipoVenda,
-        selectedBandeira,
-        selectedRegional,
-        selectedLojaVenda,
-        selectedMarcaVeiculo,
-        selectedModelo,
-        selectedVersao,
-        selectedClassificacao,
+        selectedTipoVenda: appliedTipoVenda,
+        selectedBandeira: appliedBandeira,
+        selectedRegional: appliedRegional,
+        selectedLojaVenda: appliedLojaVenda,
+        selectedMarcaVeiculo: appliedMarcaVeiculo,
+        selectedModelo: appliedModelo,
+        selectedVersao: appliedVersao,
+        selectedClassificacao: appliedClassificacao,
         vehicleCatalogRows,
         rangeStart: previousPeriodRange.start,
         rangeEnd: previousPeriodRange.end,
@@ -2109,14 +2149,14 @@ export default function VendedorRelatorioPage() {
   }, [
     enhancedSalesIntention,
     previousPeriodRange,
-    selectedBandeira,
-    selectedClassificacao,
-    selectedLojaVenda,
-    selectedMarcaVeiculo,
-    selectedModelo,
-    selectedRegional,
-    selectedTipoVenda,
-    selectedVersao,
+    appliedBandeira,
+    appliedClassificacao,
+    appliedLojaVenda,
+    appliedMarcaVeiculo,
+    appliedModelo,
+    appliedRegional,
+    appliedTipoVenda,
+    appliedVersao,
     vehicleCatalogRows,
   ]);
 
@@ -2207,8 +2247,8 @@ export default function VendedorRelatorioPage() {
   const hiddenTrendSeriesSignature = hiddenTrendSeries.slice().sort().join("|");
 
   const salesCantadasAverageMetric = useMemo(
-    () => resolveSalesCantadasAverageMetric(startDate, endDate),
-    [endDate, startDate],
+    () => resolveSalesCantadasAverageMetric(appliedStartDate, appliedEndDate),
+    [appliedEndDate, appliedStartDate],
   );
 
   const currentVendorTotals = useMemo(() => {
@@ -2244,7 +2284,7 @@ export default function VendedorRelatorioPage() {
 
     const selectedSeries = new Set(trendSeriesLabels);
     if (isSingleDayPeriod) {
-      const selectedDate = buildLocalDateFromInput(startDate);
+      const selectedDate = buildLocalDateFromInput(appliedStartDate);
       if (!selectedDate) {
         return [];
       }
@@ -2263,7 +2303,7 @@ export default function VendedorRelatorioPage() {
         }
 
         const createdAt = parseReportDate(item.Criado);
-        if (!createdAt || formatInputDate(createdAt) !== startDate) {
+        if (!createdAt || formatInputDate(createdAt) !== appliedStartDate) {
           return;
         }
 
@@ -2390,7 +2430,7 @@ export default function VendedorRelatorioPage() {
           };
         }),
     );
-  }, [filteredItems, isSingleDayPeriod, startDate, trendMetric, trendSeriesLabels, trendView]);
+  }, [appliedStartDate, filteredItems, isSingleDayPeriod, trendMetric, trendSeriesLabels, trendView]);
 
   const trendSeriesSummaries = useMemo<TrendSeriesSummary[]>(() => {
     const grouped = new Map<string, TrendPoint[]>();
@@ -2585,6 +2625,7 @@ export default function VendedorRelatorioPage() {
       isSingleDayPeriod,
       trendHourRange,
       trendTooltipTrailingNonZeroTimes,
+      visibleTrendSeriesSummaries,
       visibleTrendChartData,
     ],
   );
@@ -2675,6 +2716,64 @@ export default function VendedorRelatorioPage() {
       ).size,
     [filteredItems],
   );
+
+  const hasPendingFilterChanges = useMemo(
+    () =>
+      !areStringSelectionsEqual(selectedTipoVenda, appliedTipoVenda) ||
+      !areStringSelectionsEqual(selectedBandeira, appliedBandeira) ||
+      !areStringSelectionsEqual(selectedRegional, appliedRegional) ||
+      !areStringSelectionsEqual(selectedLojaVenda, appliedLojaVenda) ||
+      !areStringSelectionsEqual(selectedMarcaVeiculo, appliedMarcaVeiculo) ||
+      !areStringSelectionsEqual(selectedModelo, appliedModelo) ||
+      !areStringSelectionsEqual(selectedVersao, appliedVersao) ||
+      !areStringSelectionsEqual(selectedClassificacao, appliedClassificacao) ||
+      startDate !== appliedStartDate ||
+      endDate !== appliedEndDate,
+    [
+      appliedBandeira,
+      appliedClassificacao,
+      appliedEndDate,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedModelo,
+      appliedRegional,
+      appliedStartDate,
+      appliedTipoVenda,
+      appliedVersao,
+      endDate,
+      selectedBandeira,
+      selectedClassificacao,
+      selectedLojaVenda,
+      selectedMarcaVeiculo,
+      selectedModelo,
+      selectedRegional,
+      selectedTipoVenda,
+      selectedVersao,
+      startDate,
+    ],
+  );
+
+  const startDateMin = useMemo(() => {
+    if (!endDate) {
+      return undefined;
+    }
+
+    const endDateValue = buildLocalDateFromInput(endDate, true);
+    return endDateValue ? format(subYears(endDateValue, 2), "yyyy-MM-dd") : undefined;
+  }, [endDate]);
+
+  const startDateMax = endDate || undefined;
+
+  const endDateMin = startDate || undefined;
+
+  const endDateMax = useMemo(() => {
+    if (!startDate) {
+      return undefined;
+    }
+
+    const startDateValue = buildLocalDateFromInput(startDate);
+    return startDateValue ? format(addYears(startDateValue, 2), "yyyy-MM-dd") : undefined;
+  }, [startDate]);
 
   if (apiLoading) {
     return (
@@ -2774,11 +2873,35 @@ export default function VendedorRelatorioPage() {
     setSelectedModelo([]);
     setSelectedVersao([]);
     setSelectedClassificacao([]);
+    setAppliedTipoVenda([]);
+    setAppliedBandeira([]);
+    setAppliedRegional([]);
+    setAppliedLojaVenda([]);
+    setAppliedMarcaVeiculo([]);
+    setAppliedModelo([]);
+    setAppliedVersao([]);
+    setAppliedClassificacao([]);
     setSelectedComparisonVendors([]);
     setAutoFallbackDate(null);
     setStartDate(latestAvailableDateInput);
     setEndDate(latestAvailableDateInput);
+    setAppliedStartDate(latestAvailableDateInput);
+    setAppliedEndDate(latestAvailableDateInput);
     setChartError(null);
+    setIsMobileFiltersOpen(false);
+  };
+
+  const applyFilters = () => {
+    setAppliedTipoVenda(selectedTipoVenda);
+    setAppliedBandeira(selectedBandeira);
+    setAppliedRegional(selectedRegional);
+    setAppliedLojaVenda(selectedLojaVenda);
+    setAppliedMarcaVeiculo(selectedMarcaVeiculo);
+    setAppliedModelo(selectedModelo);
+    setAppliedVersao(selectedVersao);
+    setAppliedClassificacao(selectedClassificacao);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
   };
 
   return (
@@ -2813,18 +2936,39 @@ export default function VendedorRelatorioPage() {
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void refresh({ silent: true })}
-              className={cn(
-                "h-10 shrink-0 rounded-full px-4 text-xs font-medium",
-                themedOutlineButtonClass,
-              )}
-            >
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDesktopFiltersOpen((current) => !current)}
+                aria-expanded={isDesktopFiltersOpen}
+                aria-controls="vendedor-filters-panel"
+                className={cn(
+                  "hidden h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-medium tablet:inline-flex",
+                  themedOutlineButtonClass,
+                )}
+              >
+                {isDesktopFiltersOpen ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <SlidersHorizontal className="h-4 w-4" />
+                )}
+                <span>{isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtro"}</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void refresh({ silent: true })}
+                className={cn(
+                  "h-10 shrink-0 rounded-full px-4 text-xs font-medium",
+                  themedOutlineButtonClass,
+                )}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                Atualizar
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -2841,13 +2985,22 @@ export default function VendedorRelatorioPage() {
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+            {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtro"}
           </Button>
         </div>
 
         <section
           id="vendedor-filters-panel"
-          className={cn(themedPanelClass, "p-4", isMobileFiltersOpen ? "block" : "hidden tablet:block")}
+          className={cn(
+            themedPanelClass,
+            "overflow-hidden p-4 transition-[max-height,opacity,transform] duration-300 ease-out",
+            isMobileFiltersOpen
+              ? "max-h-[5000px] opacity-100 translate-y-0"
+              : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
+            isDesktopFiltersOpen
+              ? "tablet:max-h-[5000px] tablet:pointer-events-auto tablet:opacity-100 tablet:translate-y-0"
+              : "tablet:pointer-events-none tablet:max-h-0 tablet:-translate-y-2 tablet:opacity-0",
+          )}
         >
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -2857,24 +3010,38 @@ export default function VendedorRelatorioPage() {
                 </h2>
                 <TooltipIcon text="Use tipo de venda, bandeira, regional, loja, marca, modelo, versão, classificação e período para refinar o recorte." />
               </div>
+              <p className={cn("mt-2 text-xs", themedTextMutedClass)}>
+                Ajuste os filtros e clique em aplicar para atualizar os dados da página.
+              </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={clearFilters}
-              className={cn(
-                "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
-                themedOutlineButtonClass,
-              )}
-            >
-              Limpar filtros
-            </Button>
+            <div className="hidden flex-wrap items-center gap-2 tablet:flex">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className={cn(
+                  "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
+                  themedOutlineButtonClass,
+                )}
+              >
+                Limpar filtros
+              </Button>
+              <Button
+                type="button"
+                onClick={applyFilters}
+                disabled={!hasPendingFilterChanges}
+                className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Aplicar filtros
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <FilterSelectCard
               label="Tipo de venda"
               value={selectedTipoVenda}
+              appliedValue={appliedTipoVenda}
               options={tipoVendaOptions}
               onChange={setSelectedTipoVenda}
               tooltip="Filtro aplicado por tipo de venda."
@@ -2884,6 +3051,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Bandeira"
               value={selectedBandeira}
+              appliedValue={appliedBandeira}
               options={bandeiraOptions}
               onChange={setSelectedBandeira}
               tooltip="Filtro aplicado por bandeira."
@@ -2892,6 +3060,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Regional"
               value={selectedRegional}
+              appliedValue={appliedRegional}
               options={regionalOptions}
               onChange={setSelectedRegional}
               tooltip="Filtro aplicado por regional."
@@ -2900,6 +3069,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Loja de Venda"
               value={selectedLojaVenda}
+              appliedValue={appliedLojaVenda}
               options={lojaVendaOptions}
               onChange={setSelectedLojaVenda}
               tooltip="Filtro aplicado por loja de venda."
@@ -2908,6 +3078,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Marca veículo"
               value={selectedMarcaVeiculo}
+              appliedValue={appliedMarcaVeiculo}
               options={marcaVeiculoOptions}
               onChange={setSelectedMarcaVeiculo}
               tooltip="Filtro aplicado por marca do veículo."
@@ -2916,6 +3087,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Modelo"
               value={selectedModelo}
+              appliedValue={appliedModelo}
               options={modeloOptions}
               onChange={setSelectedModelo}
               tooltip="Filtro aplicado por modelo."
@@ -2924,6 +3096,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Versão"
               value={selectedVersao}
+              appliedValue={appliedVersao}
               options={versaoOptions}
               onChange={setSelectedVersao}
               tooltip="Filtro aplicado por versão."
@@ -2932,6 +3105,7 @@ export default function VendedorRelatorioPage() {
             <FilterSelectCard
               label="Classificação"
               value={selectedClassificacao}
+              appliedValue={appliedClassificacao}
               options={classificacaoOptions}
               onChange={setSelectedClassificacao}
               tooltip="Filtro aplicado por classificação."
@@ -2946,37 +3120,55 @@ export default function VendedorRelatorioPage() {
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <label className="min-w-0">
                   <span className="sr-only">De</span>
-                  <input
-                    type="date"
-                    max={endDate || undefined}
+                  <FilterDateInput
+                    value={startDate}
+                    onChange={(value) => {
+                      setAutoFallbackDate(null);
+                      setStartDate(value);
+                    }}
+                    min={startDateMin}
+                    max={startDateMax}
                     className={cn(
                       "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
                       themedInputClass,
                     )}
-                    value={startDate}
-                    onChange={(event) => {
-                      setAutoFallbackDate(null);
-                      setStartDate(event.target.value);
-                    }}
                   />
                 </label>
                 <label className="min-w-0">
                   <span className="sr-only">Até</span>
-                  <input
-                    type="date"
-                    min={startDate || undefined}
+                  <FilterDateInput
+                    value={endDate}
+                    onChange={(value) => {
+                      setAutoFallbackDate(null);
+                      setEndDate(value);
+                    }}
+                    min={endDateMin}
+                    max={endDateMax}
                     className={cn(
                       "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
                       themedInputClass,
                     )}
-                    value={endDate}
-                    onChange={(event) => {
-                      setAutoFallbackDate(null);
-                      setEndDate(event.target.value);
-                    }}
                   />
                 </label>
               </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 tablet:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className={cn("h-10 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+              >
+                Limpar filtros
+              </Button>
+              <Button
+                type="button"
+                onClick={applyFilters}
+                disabled={!hasPendingFilterChanges}
+                className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Aplicar filtros
+              </Button>
             </div>
           </div>
         </section>
@@ -3026,7 +3218,14 @@ export default function VendedorRelatorioPage() {
           <div className={cn(themedSoftCardClass, "mx-1 rounded-2xl px-3 py-2")}>
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
               <p className={cn(themedTinyLabelClass, "shrink-0 tracking-[0.2em]")}>Filtros aplicados</p>
-              <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+              <div
+                ref={appliedFilterChipsDrag.ref}
+                onPointerDown={appliedFilterChipsDrag.onPointerDown}
+                onPointerMove={appliedFilterChipsDrag.onPointerMove}
+                onPointerUp={appliedFilterChipsDrag.onPointerUp}
+                onPointerCancel={appliedFilterChipsDrag.onPointerCancel}
+                className="flex min-w-0 flex-1 cursor-grab flex-nowrap items-center gap-2 overflow-x-auto pb-1 select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden active:cursor-grabbing"
+              >
                 {appliedFilterChips.map((chip, index) => (
                   <span key={`${chip}-${index}`} className={vendorFilterChipClass} title={chip}>
                     {chip}

@@ -1,21 +1,26 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import {
+  addYears,
   endOfMonth,
   format,
   isSameDay,
   isSameMonth,
   startOfMonth,
+  subYears,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ArrowLeft,
   Flag,
+  NotebookText,
   RefreshCw,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 
 import { ReportErrorCard } from "@/components/report-error-card";
@@ -26,10 +31,13 @@ import {
 } from "@/components/bandeira-details/brand-details-analytics-section";
 import {
   FilterSelectCard,
+  FilterDateInput,
+  FilterStatusChip,
   TooltipIcon,
 } from "@/components/sales-intention-filter-select-card";
 import { Button } from "@/components/ui/button";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import {
   buildBrandDetailHref,
   dashboardBrandNames,
@@ -47,6 +55,7 @@ import {
   themedPanelClass,
   themedSoftCardClass,
   themedTinyLabelClass,
+  themedTextMutedClass,
   themedTextTitleClass,
 } from "@/lib/theme-classes";
 
@@ -64,6 +73,48 @@ const heroOutlineButtonClass =
   "border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white";
 
 const heroPrimaryButtonClass = "bg-cyan-400 text-slate-950 hover:bg-cyan-300";
+
+function normalizeSelectionValue(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function areStringSelectionsEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const normalizedRightValues = new Set(right.map(normalizeSelectionValue));
+
+  return left.every((item) => normalizedRightValues.has(normalizeSelectionValue(item)));
+}
+
+function formatPeriodSelectionLabel(start?: string, end?: string) {
+  if (!start && !end) {
+    return "Todos";
+  }
+
+  if (start && end && start === end) {
+    return format(start, "dd/MM/yyyy", { locale: ptBR });
+  }
+
+  if (start && end) {
+    return `${format(start, "dd/MM/yyyy", { locale: ptBR })} → ${format(
+      end,
+      "dd/MM/yyyy",
+      { locale: ptBR },
+    )}`;
+  }
+
+  if (start) {
+    return `A partir de ${format(start, "dd/MM/yyyy", { locale: ptBR })}`;
+  }
+
+  if (end) {
+    return `Até ${format(end, "dd/MM/yyyy", { locale: ptBR })}`;
+  }
+
+  return "Todos";
+}
 
 type BrandIdentityVisual = {
   src: string;
@@ -86,9 +137,10 @@ type QuickAccessBrandVisual = {
 const brandIdentityImageClassName = "max-w-[500px] max-h-[200px]";
 const brandIdentityCompactImageClassName = "max-w-[520px] max-h-[160px]";
 const brandIdentitySeminovosImageClassName = "max-w-[560px] max-h-[230px]";
-const quickAccessImageClassName = "max-w-[82px] max-h-[46px] sm:max-w-[70px] sm:max-h-[38px]";
+const quickAccessImageClassName =
+  "max-w-[68px] max-h-[38px] sm:max-w-[78px] sm:max-h-[44px]";
 const quickAccessSeminovosImageClassName =
-  "max-w-[88px] max-h-[48px] sm:max-w-[76px] sm:max-h-[40px]";
+  "max-w-[72px] max-h-[38px] sm:max-w-[82px] sm:max-h-[46px]";
 
 function getBrandIdentityVisual(brandName: string): BrandIdentityVisual {
   switch (brandName) {
@@ -228,46 +280,48 @@ function QuickAccessCard({
         Acesso rápido
       </p>
 
-      <div className="flex w-full snap-x snap-mandatory items-center justify-start gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0">
+      <div className="flex w-full snap-x snap-mandatory items-center justify-start gap-2 max-[319px]:gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:justify-center tablet:overflow-visible tablet:px-0 tablet:pb-0">
         {quickAccessBrands.map((otherBrand) => {
           const visual = getQuickAccessBrandVisual(otherBrand);
 
           return (
-          <Button
-            key={otherBrand}
-            asChild
-            variant="outline"
-            className={cn(
-              "group relative h-[92px] w-[92px] shrink-0 snap-center overflow-hidden rounded-full border border-white/15 bg-white/12 p-0 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] backdrop-blur-none",
-              "hover:border-white/25 hover:bg-white/18 hover:text-white sm:h-[96px] sm:w-[96px]",
-            )}
-          >
-            <Link
-              href={
-                buildBrandDetailHref(otherBrand, {
-                  period: period ?? undefined,
-                  startDate,
-                  endDate,
-                })
-              }
-              aria-label={`Abrir detalhes de ${otherBrand}`}
-              title={`Abrir detalhes de ${otherBrand}`}
-              className="flex h-full w-full items-center justify-center"
-            >
-              <Image
-                alt={visual.alt}
+            <div key={otherBrand} className="flex shrink-0 snap-center justify-center">
+              <Button
+                asChild
+                variant="outline"
                 className={cn(
-                  "h-auto w-auto object-contain transition duration-200 group-hover:scale-[1.08]",
-                  visual.imageClassName,
-                  otherBrand === "SEMINOVOS" &&
-                    "dark:brightness-0 dark:invert dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]",
+                  "group relative mx-auto flex aspect-square h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/12 p-0 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] ring-1 ring-inset ring-white/10 backdrop-blur-none",
+                  "max-[319px]:h-[84px] max-[319px]:w-[84px]",
+                  "hover:border-white/25 hover:bg-white/18 hover:text-white tablet:h-[96px] tablet:w-[96px]",
                 )}
-                height={visual.imageHeight}
-                src={visual.src}
-                width={visual.imageWidth}
-              />
-            </Link>
-          </Button>
+              >
+                <Link
+                  href={
+                    buildBrandDetailHref(otherBrand, {
+                      period: period ?? undefined,
+                      startDate,
+                      endDate,
+                    })
+                  }
+                  aria-label={`Abrir detalhes de ${otherBrand}`}
+                  title={`Abrir detalhes de ${otherBrand}`}
+                  className="flex h-full w-full items-center justify-center"
+                >
+                  <Image
+                    alt={visual.alt}
+                    className={cn(
+                      "h-auto w-auto object-contain transition duration-200 group-hover:scale-[1.08]",
+                      visual.imageClassName,
+                      otherBrand === "SEMINOVOS" &&
+                        "dark:brightness-0 dark:invert dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]",
+                    )}
+                    height={visual.imageHeight}
+                    src={visual.src}
+                    width={visual.imageWidth}
+                  />
+                </Link>
+              </Button>
+            </div>
           );
         })}
       </div>
@@ -382,6 +436,24 @@ function capitalizeText(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function buildLocalDateFromInput(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function formatPeriodLabel(
   period?: DashboardPeriod | null,
   startDate?: string,
@@ -459,6 +531,9 @@ function HeroSection({
   isRefreshing: boolean;
   onRefresh: () => void;
 }) {
+  const statusChipsDrag = useHorizontalDragScroll<HTMLDivElement>();
+  const summaryChipsDrag = useHorizontalDragScroll<HTMLDivElement>();
+
   return (
     <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between lg:gap-5">
@@ -473,13 +548,29 @@ function HeroSection({
               {brandName}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80 dark:text-cyan-200/80">
+          <div
+            ref={statusChipsDrag.ref}
+            onPointerDown={statusChipsDrag.onPointerDown}
+            onPointerMove={statusChipsDrag.onPointerMove}
+            onPointerUp={statusChipsDrag.onPointerUp}
+            onPointerCancel={statusChipsDrag.onPointerCancel}
+            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80 dark:text-cyan-200/80"
+            title="Arraste para ver mais informações"
+          >
             <span className={brandStatusChipClass}>Atualizado: {lastUpdatedText}</span>
             <span className={brandStatusChipClass}>
               {isRefreshing ? "Atualizando..." : "Pronto"}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-sky-50/90 dark:text-cyan-50/90">
+          <div
+            ref={summaryChipsDrag.ref}
+            onPointerDown={summaryChipsDrag.onPointerDown}
+            onPointerMove={summaryChipsDrag.onPointerMove}
+            onPointerUp={summaryChipsDrag.onPointerUp}
+            onPointerCancel={summaryChipsDrag.onPointerCancel}
+            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[11px] font-medium text-sky-50/90 dark:text-cyan-50/90"
+            title="Arraste para ver mais informações"
+          >
             <span className={brandStatusChipClass}>{periodLabel}</span>
             <span className={brandStatusChipClass}>
               {activeFilterCount.toLocaleString("pt-BR")} filtros ativos
@@ -654,29 +745,40 @@ export function BrandDetailsClient({
 
   const [selectedStartDate, setSelectedStartDate] = useState(initialStartDate);
   const [selectedEndDate, setSelectedEndDate] = useState(initialEndDate);
+  const [appliedStartDate, setAppliedStartDate] = useState(initialStartDate);
+  const [appliedEndDate, setAppliedEndDate] = useState(initialEndDate);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
   const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>([]);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedLojaVenda, setSelectedLojaVenda] = useState<string[]>([]);
   const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string[]>([]);
   const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
   const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
+  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>([]);
+  const [appliedRegional, setAppliedRegional] = useState<string[]>([]);
+  const [appliedLojaVenda, setAppliedLojaVenda] = useState<string[]>([]);
+  const [appliedMarcaVeiculo, setAppliedMarcaVeiculo] = useState<string[]>([]);
+  const [appliedVersao, setAppliedVersao] = useState<string[]>([]);
+  const [appliedClassificacao, setAppliedClassificacao] = useState<string[]>([]);
+  const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
+  const periodChipDrag = useHorizontalDragScroll<HTMLDivElement>();
 
   const query = useMemo(
     () => ({
       bandeira: brandName,
-      ...(selectedStartDate ? { startDate: selectedStartDate } : {}),
-      ...(selectedEndDate ? { endDate: selectedEndDate } : {}),
+      ...(appliedStartDate ? { startDate: appliedStartDate } : {}),
+      ...(appliedEndDate ? { endDate: appliedEndDate } : {}),
     }),
-    [brandName, selectedEndDate, selectedStartDate],
+    [appliedEndDate, appliedStartDate, brandName],
   );
 
   const { items, isLoading, isRefreshing, error, lastUpdatedAt, refresh } =
     useSalesIntentions(query);
 
   const periodLabel = useMemo(
-    () => formatPeriodLabel(period, selectedStartDate, selectedEndDate),
-    [period, selectedEndDate, selectedStartDate],
+    () => formatPeriodLabel(period, appliedStartDate, appliedEndDate),
+    [appliedEndDate, appliedStartDate, period],
   );
 
   const tipoVendaOptions = useMemo(
@@ -732,33 +834,89 @@ export function BrandDetailsClient({
         );
 
         return (
-          matchesSelectedValues(selectedTipoVenda, itemTipoVenda) &&
-          matchesSelectedValues(selectedRegional, itemRegional) &&
-          matchesSelectedValues(selectedLojaVenda, itemLojaVenda) &&
-          matchesSelectedValues(selectedMarcaVeiculo, itemMarcaVeiculo) &&
-          matchesSelectedValues(selectedVersao, itemVersao) &&
-          matchesSelectedValues(selectedClassificacao, itemClassificacao)
+          matchesSelectedValues(appliedTipoVenda, itemTipoVenda) &&
+          matchesSelectedValues(appliedRegional, itemRegional) &&
+          matchesSelectedValues(appliedLojaVenda, itemLojaVenda) &&
+          matchesSelectedValues(appliedMarcaVeiculo, itemMarcaVeiculo) &&
+          matchesSelectedValues(appliedVersao, itemVersao) &&
+          matchesSelectedValues(appliedClassificacao, itemClassificacao)
         );
       }),
     [
       items,
+      appliedClassificacao,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedRegional,
+      appliedTipoVenda,
+      appliedVersao,
+    ],
+  );
+
+  const hasPendingFilterChanges = useMemo(
+    () =>
+      selectedStartDate !== appliedStartDate ||
+      selectedEndDate !== appliedEndDate ||
+      !areStringSelectionsEqual(selectedTipoVenda, appliedTipoVenda) ||
+      !areStringSelectionsEqual(selectedRegional, appliedRegional) ||
+      !areStringSelectionsEqual(selectedLojaVenda, appliedLojaVenda) ||
+      !areStringSelectionsEqual(selectedMarcaVeiculo, appliedMarcaVeiculo) ||
+      !areStringSelectionsEqual(selectedVersao, appliedVersao) ||
+      !areStringSelectionsEqual(selectedClassificacao, appliedClassificacao),
+    [
+      appliedClassificacao,
+      appliedEndDate,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedRegional,
+      appliedStartDate,
+      appliedTipoVenda,
+      appliedVersao,
       selectedClassificacao,
+      selectedEndDate,
       selectedLojaVenda,
       selectedMarcaVeiculo,
       selectedRegional,
+      selectedStartDate,
       selectedTipoVenda,
       selectedVersao,
     ],
   );
 
+  const selectedStartDateMin = useMemo(() => {
+    if (!selectedEndDate) {
+      return undefined;
+    }
+
+    const selectedEndDateValue = buildLocalDateFromInput(selectedEndDate);
+    return selectedEndDateValue
+      ? format(subYears(selectedEndDateValue, 2), "yyyy-MM-dd")
+      : undefined;
+  }, [selectedEndDate]);
+
+  const selectedStartDateMax = selectedEndDate || undefined;
+
+  const selectedEndDateMin = selectedStartDate || undefined;
+
+  const selectedEndDateMax = useMemo(() => {
+    if (!selectedStartDate) {
+      return undefined;
+    }
+
+    const selectedStartDateValue = buildLocalDateFromInput(selectedStartDate);
+    return selectedStartDateValue
+      ? format(addYears(selectedStartDateValue, 2), "yyyy-MM-dd")
+      : undefined;
+  }, [selectedStartDate]);
+
   const activeFilterCount =
-    selectedTipoVenda.length +
-    selectedRegional.length +
-    selectedLojaVenda.length +
-    selectedMarcaVeiculo.length +
-    selectedVersao.length +
-    selectedClassificacao.length +
-    (selectedStartDate !== initialStartDate || selectedEndDate !== initialEndDate ? 1 : 0);
+    appliedTipoVenda.length +
+    appliedRegional.length +
+    appliedLojaVenda.length +
+    appliedMarcaVeiculo.length +
+    appliedVersao.length +
+    appliedClassificacao.length +
+    (appliedStartDate !== initialStartDate || appliedEndDate !== initialEndDate ? 1 : 0);
 
   const lastUpdatedText = formatLastUpdatedAt(lastUpdatedAt);
   const exportFilePrefix = `detalhes-bandeira-${brandNameToSlug(brandName)}`;
@@ -771,8 +929,244 @@ export function BrandDetailsClient({
     setSelectedClassificacao([]);
     setSelectedStartDate(initialStartDate);
     setSelectedEndDate(initialEndDate);
+    setAppliedTipoVenda([]);
+    setAppliedRegional([]);
+    setAppliedLojaVenda([]);
+    setAppliedMarcaVeiculo([]);
+    setAppliedVersao([]);
+    setAppliedClassificacao([]);
+    setAppliedStartDate(initialStartDate);
+    setAppliedEndDate(initialEndDate);
     setIsMobileFiltersOpen(false);
   };
+
+  const applyFilters = () => {
+    setAppliedTipoVenda(selectedTipoVenda);
+    setAppliedRegional(selectedRegional);
+    setAppliedLojaVenda(selectedLojaVenda);
+    setAppliedMarcaVeiculo(selectedMarcaVeiculo);
+    setAppliedVersao(selectedVersao);
+    setAppliedClassificacao(selectedClassificacao);
+    setAppliedStartDate(selectedStartDate);
+    setAppliedEndDate(selectedEndDate);
+  };
+
+  const renderFiltersPanel = (panelId: string) => (
+    <section id={panelId} className={cn(themedPanelClass, "p-4")}>
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+              Filtros
+            </h2>
+            <TooltipIcon text="Use tipo de venda, regional, loja, marca, versão, classificação e período para refinar o recorte. A bandeira da rota permanece fixa nesta visão." />
+          </div>
+          <p className={cn("mt-2 text-xs", themedTextMutedClass)}>
+            Ajuste os filtros e clique em aplicar para atualizar os dados da página.
+          </p>
+        </div>
+
+        <div className="hidden flex-wrap items-center gap-2 tablet:flex">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={clearFilters}
+            className={cn(
+              "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
+              themedOutlineButtonClass,
+            )}
+          >
+            Limpar filtros
+          </Button>
+          <Button
+            type="button"
+            onClick={applyFilters}
+            disabled={!hasPendingFilterChanges}
+            className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Aplicar filtros
+          </Button>
+        </div>
+      </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <FilterSelectCard
+            label="Tipo de venda"
+            value={selectedTipoVenda}
+          appliedValue={appliedTipoVenda}
+          options={tipoVendaOptions}
+          onChange={setSelectedTipoVenda}
+          tooltip="Filtro aplicado por tipo de venda."
+          disabled={isLoading}
+          formatLabel={formatTipoVendaLabel}
+        />
+        <FilterSelectCard
+          label="Regional"
+          value={selectedRegional}
+          appliedValue={appliedRegional}
+          options={regionalOptions}
+          onChange={setSelectedRegional}
+          tooltip="Filtro aplicado por regional."
+          disabled={isLoading}
+        />
+        <FilterSelectCard
+          label="Loja de venda"
+          value={selectedLojaVenda}
+          appliedValue={appliedLojaVenda}
+          options={lojaVendaOptions}
+          onChange={setSelectedLojaVenda}
+          tooltip="Filtro aplicado por loja de venda."
+          disabled={isLoading}
+        />
+        <FilterSelectCard
+          label="Marca veículo"
+          value={selectedMarcaVeiculo}
+          appliedValue={appliedMarcaVeiculo}
+          options={marcaVeiculoOptions}
+          onChange={setSelectedMarcaVeiculo}
+          tooltip="Filtro aplicado por marca do veículo."
+          disabled={isLoading}
+        />
+        <FilterSelectCard
+          label="Versão"
+          value={selectedVersao}
+          appliedValue={appliedVersao}
+          options={versaoOptions}
+          onChange={setSelectedVersao}
+          tooltip="Filtro aplicado por versão."
+          disabled={isLoading}
+        />
+        <FilterSelectCard
+          label="Classificação"
+          value={selectedClassificacao}
+          appliedValue={appliedClassificacao}
+          options={classificacaoOptions}
+          onChange={setSelectedClassificacao}
+          tooltip="Filtro aplicado por classificação."
+          disabled={isLoading}
+        />
+
+        <div className={cn(themedSoftCardClass, "min-w-0 rounded-2xl p-2.5 sm:col-span-2 xl:col-span-2")}>
+          <div className="flex items-center gap-1.5">
+            <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Período</p>
+            <TooltipIcon text="Filtro aplicado por período da solicitação." />
+          </div>
+          <div
+            ref={periodChipDrag.ref}
+            onPointerDown={periodChipDrag.onPointerDown}
+            onPointerMove={periodChipDrag.onPointerMove}
+            onPointerUp={periodChipDrag.onPointerUp}
+            onPointerCancel={periodChipDrag.onPointerCancel}
+            className="mt-2 flex max-w-full cursor-grab items-center gap-1.5 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            title="Arraste para ver o período selecionado"
+          >
+            <FilterStatusChip
+              variant={
+                !selectedStartDate &&
+                !selectedEndDate &&
+                !appliedStartDate &&
+                !appliedEndDate
+                  ? "neutral"
+                  : selectedStartDate === appliedStartDate && selectedEndDate === appliedEndDate
+                    ? "applied"
+                    : "pending"
+              }
+            >
+              {formatPeriodSelectionLabel(selectedStartDate, selectedEndDate)}
+            </FilterStatusChip>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="min-w-0">
+              <span className="sr-only">De</span>
+              <FilterDateInput
+                value={selectedStartDate}
+                onChange={setSelectedStartDate}
+                min={selectedStartDateMin}
+                max={selectedStartDateMax}
+                className={cn(
+                  "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
+                  themedInputClass,
+                )}
+              />
+            </label>
+            <label className="min-w-0">
+              <span className="sr-only">Até</span>
+              <FilterDateInput
+                value={selectedEndDate}
+                onChange={setSelectedEndDate}
+                min={selectedEndDateMin}
+                max={selectedEndDateMax}
+                className={cn(
+                  "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
+                  themedInputClass,
+                )}
+              />
+            </label>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 tablet:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={clearFilters}
+              className={cn("h-10 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+            >
+              Limpar filtros
+            </Button>
+            <Button
+              type="button"
+              onClick={applyFilters}
+              disabled={!hasPendingFilterChanges}
+              className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Aplicar filtros
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  function DetailedTableModal() {
+    if (!isDetailedTableModalOpen) {
+      return null;
+    }
+
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[9999] overflow-hidden bg-slate-950/90 backdrop-blur-md"
+        onClick={() => setIsDetailedTableModalOpen(false)}
+        role="presentation"
+      >
+        <div
+          className="relative flex h-[100dvh] w-full flex-col overflow-hidden"
+          onClick={(event) => event.stopPropagation()}
+          role="presentation"
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setIsDetailedTableModalOpen(false)}
+            className="absolute right-3 top-3 z-20 shrink-0 border-white/10 bg-slate-950/85 text-white shadow-lg backdrop-blur hover:bg-slate-900 dark:border-white/10 dark:bg-slate-950/85 dark:text-white dark:hover:bg-slate-900"
+            aria-label="Fechar tabela detalhada"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+
+          <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3 pt-14">
+            <div className="mx-auto flex h-full min-h-0 w-full max-w-[920px]">
+              <SalesIntentionDataList
+                items={filteredItems}
+                exportFilePrefix={`${exportFilePrefix}-mobile`}
+                className="h-full min-h-0"
+              />
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
 
   if (error) {
     return (
@@ -783,8 +1177,8 @@ export function BrandDetailsClient({
           <HeroSection
             brandName={brandName}
             period={period}
-            startDate={selectedStartDate}
-            endDate={selectedEndDate}
+            startDate={appliedStartDate}
+            endDate={appliedEndDate}
             periodLabel={periodLabel}
             lastUpdatedText={lastUpdatedText}
             filteredCount={filteredItems.length}
@@ -814,8 +1208,8 @@ export function BrandDetailsClient({
           <LoadingState
             brandName={brandName}
             period={period}
-            startDate={selectedStartDate}
-            endDate={selectedEndDate}
+            startDate={appliedStartDate}
+            endDate={appliedEndDate}
             periodLabel={periodLabel}
           />
         </div>
@@ -831,8 +1225,8 @@ export function BrandDetailsClient({
         <HeroSection
           brandName={brandName}
           period={period}
-          startDate={selectedStartDate}
-          endDate={selectedEndDate}
+          startDate={appliedStartDate}
+          endDate={appliedEndDate}
           periodLabel={periodLabel}
           lastUpdatedText={lastUpdatedText}
           filteredCount={filteredItems.length}
@@ -847,138 +1241,81 @@ export function BrandDetailsClient({
             variant="outline"
             onClick={() => setIsMobileFiltersOpen((current) => !current)}
             aria-expanded={isMobileFiltersOpen}
-            aria-controls="brand-filters-panel"
+            aria-controls="brand-filters-panel-mobile"
             className={cn(
               "h-12 w-full rounded-full px-4 text-sm font-medium shadow-sm",
               themedOutlineButtonClass,
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
-          {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+            {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
           </Button>
         </div>
 
-        <section
-          id="brand-filters-panel"
-          className={cn(themedPanelClass, "p-4", isMobileFiltersOpen ? "block" : "hidden tablet:block")}
+        <div className="hidden tablet:block">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsDesktopFiltersOpen((current) => !current)}
+            aria-expanded={isDesktopFiltersOpen}
+            aria-controls="brand-filters-panel-desktop"
+            aria-label={isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtro"}
+            className={cn(
+              "fixed right-3 top-16 z-40 inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-xs font-medium shadow-md sm:right-4 tablet:right-6",
+              themedOutlineButtonClass,
+            )}
+          >
+            {isDesktopFiltersOpen ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <SlidersHorizontal className="h-4 w-4" />
+            )}
+            <span>{isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}</span>
+          </Button>
+        </div>
+
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out tablet:hidden",
+            isMobileFiltersOpen
+              ? "max-h-[4000px] opacity-100 translate-y-0"
+              : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
+          )}
         >
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
-                  Filtros
-                </h2>
-                <TooltipIcon text="Use tipo de venda, regional, loja, marca, versão, classificação e período para refinar o recorte. A bandeira da rota permanece fixa nesta visão." />
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={clearFilters}
-              className={cn(
-                "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
-                themedOutlineButtonClass,
-              )}
-            >
-              Limpar filtros
-            </Button>
-          </div>
+          <div className="pt-2">{renderFiltersPanel("brand-filters-panel-mobile")}</div>
+        </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <FilterSelectCard
-              label="Tipo de venda"
-              value={selectedTipoVenda}
-              options={tipoVendaOptions}
-              onChange={setSelectedTipoVenda}
-              tooltip="Filtro aplicado por tipo de venda."
-              disabled={isLoading}
-              formatLabel={formatTipoVendaLabel}
-            />
-            <FilterSelectCard
-              label="Regional"
-              value={selectedRegional}
-              options={regionalOptions}
-              onChange={setSelectedRegional}
-              tooltip="Filtro aplicado por regional."
-              disabled={isLoading}
-            />
-            <FilterSelectCard
-              label="Loja de venda"
-              value={selectedLojaVenda}
-              options={lojaVendaOptions}
-              onChange={setSelectedLojaVenda}
-              tooltip="Filtro aplicado por loja de venda."
-              disabled={isLoading}
-            />
-            <FilterSelectCard
-              label="Marca veículo"
-              value={selectedMarcaVeiculo}
-              options={marcaVeiculoOptions}
-              onChange={setSelectedMarcaVeiculo}
-              tooltip="Filtro aplicado por marca do veículo."
-              disabled={isLoading}
-            />
-            <FilterSelectCard
-              label="Versão"
-              value={selectedVersao}
-              options={versaoOptions}
-              onChange={setSelectedVersao}
-              tooltip="Filtro aplicado por versão."
-              disabled={isLoading}
-            />
-            <FilterSelectCard
-              label="Classificação"
-              value={selectedClassificacao}
-              options={classificacaoOptions}
-              onChange={setSelectedClassificacao}
-              tooltip="Filtro aplicado por classificação."
-              disabled={isLoading}
-            />
-
-            <div className={cn(themedSoftCardClass, "rounded-2xl p-2.5 sm:col-span-2 xl:col-span-2")}>
-              <div className="flex items-center gap-1.5">
-                <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Período</p>
-                <TooltipIcon text="Filtro aplicado por período da solicitação." />
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <label className="min-w-0">
-                  <span className="sr-only">De</span>
-                  <input
-                    type="date"
-                    max={selectedEndDate || undefined}
-                    className={cn(
-                      "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
-                      themedInputClass,
-                    )}
-                    value={selectedStartDate}
-                    onChange={(event) => setSelectedStartDate(event.target.value)}
-                  />
-                </label>
-                <label className="min-w-0">
-                  <span className="sr-only">Até</span>
-                  <input
-                    type="date"
-                    min={selectedStartDate || undefined}
-                    className={cn(
-                      "h-10 w-full min-w-0 rounded-xl border px-2 text-xs outline-none transition focus:ring-2",
-                      themedInputClass,
-                    )}
-                    value={selectedEndDate}
-                    onChange={(event) => setSelectedEndDate(event.target.value)}
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-        </section>
+        <div
+          className={cn(
+            "hidden overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out tablet:block",
+            isDesktopFiltersOpen
+              ? "max-h-[4000px] opacity-100 translate-y-0"
+              : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
+          )}
+        >
+          <div className="pt-2">{renderFiltersPanel("brand-filters-panel-desktop")}</div>
+        </div>
 
         <BrandDetailsAnalyticsSection
           items={filteredItems}
-          selectedStartDate={selectedStartDate}
-          selectedEndDate={selectedEndDate}
+          selectedStartDate={appliedStartDate}
+          selectedEndDate={appliedEndDate}
         />
 
-        <section className="space-y-3">
+        <section className="space-y-3 tablet:hidden">
+          <Button
+            type="button"
+            variant="default"
+            size="lg"
+            onClick={() => setIsDetailedTableModalOpen(true)}
+            className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
+          >
+            <NotebookText className="h-4 w-4" />
+            Abrir tabela detalhada
+          </Button>
+        </section>
+
+        <section className="space-y-3 hidden tablet:block">
           <SalesIntentionDataList
             items={filteredItems}
             exportFilePrefix={exportFilePrefix}
@@ -986,6 +1323,7 @@ export function BrandDetailsClient({
           />
         </section>
       </div>
+      <DetailedTableModal />
     </main>
   );
 }

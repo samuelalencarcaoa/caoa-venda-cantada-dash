@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
+  addYears,
   endOfDay,
   endOfMonth,
   format,
@@ -12,6 +13,7 @@ import {
   startOfMonth,
   subDays,
   subMonths,
+  subYears,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -36,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import {
   buildBrandDetailHref,
   dashboardBrandNames,
@@ -138,6 +141,11 @@ function DateField({
   max?: string;
   className?: string;
 }) {
+  function openDatePicker(target: HTMLInputElement) {
+    const pickerTarget = target as HTMLInputElement & { showPicker?: () => void };
+    pickerTarget.showPicker?.();
+  }
+
   return (
     <label className={cn("flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm", themedTextBodyClass, "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/70", className)}>
       <span className="shrink-0">{label}</span>
@@ -146,8 +154,30 @@ function DateField({
         value={value}
         min={min}
         max={max}
+        inputMode="none"
+        onFocus={(event) => {
+          openDatePicker(event.currentTarget);
+        }}
+        onClick={(event) => {
+          openDatePicker(event.currentTarget);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Tab" || event.key === "Shift") {
+            return;
+          }
+
+          if (event.metaKey || event.ctrlKey || event.altKey) {
+            return;
+          }
+
+          event.preventDefault();
+        }}
+        onPaste={(event) => event.preventDefault()}
         onChange={(event) => onChange(event.target.value)}
-        className={cn("min-w-0 bg-transparent text-sm font-semibold outline-none [color-scheme:light] dark:[color-scheme:dark]", themedTextStrongClass)}
+        className={cn(
+          "min-w-0 cursor-pointer bg-transparent text-sm font-semibold outline-none [color-scheme:light] dark:[color-scheme:dark]",
+          themedTextStrongClass,
+        )}
       />
     </label>
   );
@@ -216,6 +246,10 @@ function getIntervalRange(startValue: string, endValue: string) {
     start: start ?? new Date(0),
     end: end ?? new Date(8640000000000000),
   };
+}
+
+function formatDateInputValue(date: Date) {
+  return format(date, "yyyy-MM-dd");
 }
 
 function formatMonthTitle(date: Date) {
@@ -763,10 +797,14 @@ export default function DashboardV2Page() {
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [appliedStartDate, setAppliedStartDate] = useState("");
+  const [appliedEndDate, setAppliedEndDate] = useState("");
   const [isNoDataModalOpen, setIsNoDataModalOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [lastAutoOpenedNoticeKey, setLastAutoOpenedNoticeKey] = useState<string | null>(null);
   const mobileBrandRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+  const brandRailDrag = useHorizontalDragScroll<HTMLDivElement>();
+  const brandHighlightPillsDrag = useHorizontalDragScroll<HTMLDivElement>();
 
   const monthQuickFilters = useMemo(
     () =>
@@ -805,25 +843,81 @@ export default function DashboardV2Page() {
       return getDayRange(referenceDate, selectedDayOffset);
     }
 
-    return getIntervalRange(startDate, endDate);
+    return getIntervalRange(appliedStartDate, appliedEndDate);
   }, [
-    endDate,
+    appliedEndDate,
     period,
     referenceDate,
     selectedDayOffset,
     selectedMonthOffset,
-    startDate,
+    appliedStartDate,
   ]);
+
+  const hasPendingIntervalChanges =
+    period === "intervalo" &&
+    (startDate !== appliedStartDate || endDate !== appliedEndDate) &&
+    Boolean(startDate || endDate);
+
+  const intervalStartMinDate = useMemo(() => {
+    if (!endDate) {
+      return undefined;
+    }
+
+    const endDateValue = buildLocalDateFromInput(endDate);
+    return endDateValue ? formatDateInputValue(subYears(endDateValue, 2)) : undefined;
+  }, [endDate]);
+
+  const intervalStartMaxDate = endDate || undefined;
+
+  const intervalEndMinDate = startDate || undefined;
+
+  const intervalEndMaxDate = useMemo(() => {
+    if (!startDate) {
+      return undefined;
+    }
+
+    const startDateValue = buildLocalDateFromInput(startDate);
+    return startDateValue ? formatDateInputValue(addYears(startDateValue, 2)) : undefined;
+  }, [startDate]);
+
+  const handlePeriodChange = (nextPeriod: PeriodType) => {
+    if (
+      nextPeriod === "intervalo" &&
+      period !== "intervalo" &&
+      !startDate &&
+      !endDate &&
+      !appliedStartDate &&
+      !appliedEndDate
+    ) {
+      const currentStart = format(range.start, "yyyy-MM-dd");
+      const currentEnd = format(range.end, "yyyy-MM-dd");
+      setStartDate(currentStart);
+      setEndDate(currentEnd);
+      setAppliedStartDate(currentStart);
+      setAppliedEndDate(currentEnd);
+    }
+
+    setPeriod(nextPeriod);
+  };
+
+  const applyIntervalSelection = () => {
+    if (!hasPendingIntervalChanges) {
+      return;
+    }
+
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
+  };
 
   const salesQuery = useMemo(() => {
     if (period === "intervalo") {
-      if (!startDate && !endDate) {
+      if (!appliedStartDate && !appliedEndDate) {
         return undefined;
       }
 
       return {
-        ...(startDate ? { startDate } : {}),
-        ...(endDate ? { endDate } : {})
+        ...(appliedStartDate ? { startDate: appliedStartDate } : {}),
+        ...(appliedEndDate ? { endDate: appliedEndDate } : {})
       };
     }
 
@@ -831,24 +925,14 @@ export default function DashboardV2Page() {
       startDate: format(range.start, "yyyy-MM-dd"),
       endDate: format(range.end, "yyyy-MM-dd")
     };
-  }, [endDate, period, range.end, range.start, startDate]);
+  }, [appliedEndDate, appliedStartDate, period, range.end, range.start]);
 
   const brandDetailDateRange = useMemo(() => {
     if (period === "intervalo") {
-      if (!startDate && !endDate) {
-        const fallbackRange = getMonthRange(referenceDate, 0);
-
-        return {
-          period,
-          startDate: format(fallbackRange.start, "yyyy-MM-dd"),
-          endDate: format(fallbackRange.end, "yyyy-MM-dd"),
-        };
-      }
-
       return {
         period,
-        ...(startDate ? { startDate } : {}),
-        ...(endDate ? { endDate } : {}),
+        ...(appliedStartDate ? { startDate: appliedStartDate } : {}),
+        ...(appliedEndDate ? { endDate: appliedEndDate } : {}),
       };
     }
 
@@ -857,7 +941,7 @@ export default function DashboardV2Page() {
       startDate: format(range.start, "yyyy-MM-dd"),
       endDate: format(range.end, "yyyy-MM-dd"),
     };
-  }, [endDate, period, range.end, range.start, referenceDate, startDate]);
+  }, [appliedEndDate, appliedStartDate, period, range.end, range.start]);
 
   const {
     items: sales,
@@ -888,12 +972,12 @@ export default function DashboardV2Page() {
         ? capitalizeText(format(range.start, "MMMM 'de' yyyy", { locale: ptBR }))
         : period === "dia"
           ? format(range.start, "dd/MM/yyyy", { locale: ptBR })
-          : startDate && endDate
-            ? `${formatInputDateLabel(startDate)} a ${formatInputDateLabel(endDate)}`
-            : startDate
-              ? `a partir de ${formatInputDateLabel(startDate)}`
-              : endDate
-                ? `até ${formatInputDateLabel(endDate)}`
+          : appliedStartDate && appliedEndDate
+            ? `${formatInputDateLabel(appliedStartDate)} a ${formatInputDateLabel(appliedEndDate)}`
+            : appliedStartDate
+              ? `a partir de ${formatInputDateLabel(appliedStartDate)}`
+              : appliedEndDate
+                ? `até ${formatInputDateLabel(appliedEndDate)}`
                 : "este período";
 
     return {
@@ -902,7 +986,7 @@ export default function DashboardV2Page() {
         ? "Não encontramos registros para hoje. Use outro dia, mês ou intervalo para continuar."
         : `Não encontramos registros para ${periodLabel}. Ajuste as datas ou escolha outro recorte para continuar.`,
       chip: isTodayView ? "Hoje sem dados" : "Período sem dados",
-      key: `${period}:${range.start.toISOString()}:${range.end.toISOString()}:${startDate || "-"}:${endDate || "-"}:${selectedDayOffset}`,
+      key: `${period}:${range.start.toISOString()}:${range.end.toISOString()}:${appliedStartDate || "-"}:${appliedEndDate || "-"}:${selectedDayOffset}`,
     };
   }, [
     error,
@@ -913,8 +997,8 @@ export default function DashboardV2Page() {
     range.end,
     range.start,
     selectedDayOffset,
-    startDate,
-    endDate,
+    appliedStartDate,
+    appliedEndDate,
   ]);
 
   useEffect(() => {
@@ -976,20 +1060,20 @@ export default function DashboardV2Page() {
         : `Período ativo: ${format(range.start, "dd/MM/yyyy", { locale: ptBR })}`;
     }
 
-    if (startDate && endDate) {
-      return `Período ativo: ${formatInputDateLabel(startDate)} a ${formatInputDateLabel(endDate)}`;
+    if (appliedStartDate && appliedEndDate) {
+      return `Período ativo: ${formatInputDateLabel(appliedStartDate)} a ${formatInputDateLabel(appliedEndDate)}`;
     }
 
-    if (startDate) {
-      return `Período ativo: a partir de ${formatInputDateLabel(startDate)}`;
+    if (appliedStartDate) {
+      return `Período ativo: a partir de ${formatInputDateLabel(appliedStartDate)}`;
     }
 
-    if (endDate) {
-      return `Período ativo: até ${formatInputDateLabel(endDate)}`;
+    if (appliedEndDate) {
+      return `Período ativo: até ${formatInputDateLabel(appliedEndDate)}`;
     }
 
     return "Período ativo: intervalo livre";
-  }, [endDate, period, range.start, selectedDayOffset, startDate]);
+  }, [appliedEndDate, appliedStartDate, period, range.start, selectedDayOffset]);
 
   const fallbackNotice = periodNoDataNotice?.chip ?? null;
 
@@ -1259,7 +1343,7 @@ export default function DashboardV2Page() {
                 <PeriodPill
                   key={option.key}
                   active={period === option.key}
-                  onClick={() => setPeriod(option.key)}
+                  onClick={() => handlePeriodChange(option.key)}
                   className={cn(
                     "w-full px-3 py-2.5 text-[11px]",
                     option.key === "intervalo" && "col-span-2",
@@ -1287,7 +1371,7 @@ export default function DashboardV2Page() {
                       active={selectedMonthOffset === item.offset}
                       onClick={() => setSelectedMonthOffset(item.offset)}
                       title={item.title}
-                      className="px-3 py-2 text-[10px] shadow-none"
+                      className="px-2.5 py-1.5 text-[9px] shadow-none"
                       uppercase={false}
                     >
                       {item.label}
@@ -1314,7 +1398,7 @@ export default function DashboardV2Page() {
                       active={selectedDayOffset === item.offset}
                       onClick={() => setSelectedDayOffset(item.offset)}
                       title={item.title}
-                      className="px-3 py-2 text-[10px] shadow-none"
+                      className="px-2.5 py-1.5 text-[9px] shadow-none"
                       uppercase={false}
                     >
                       {item.label}
@@ -1337,16 +1421,28 @@ export default function DashboardV2Page() {
                     label="De"
                     value={startDate}
                     onChange={setStartDate}
-                    max={endDate || undefined}
+                    min={intervalStartMinDate}
+                    max={intervalStartMaxDate}
                     className="w-full"
                   />
                   <DateField
                     label="Até"
                     value={endDate}
                     onChange={setEndDate}
-                    min={startDate || undefined}
+                    min={intervalEndMinDate}
+                    max={intervalEndMaxDate}
                     className="w-full"
                   />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={applyIntervalSelection}
+                    disabled={!hasPendingIntervalChanges}
+                    className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    OK
+                  </Button>
                 </div>
               </div>
             )}
@@ -1387,7 +1483,12 @@ export default function DashboardV2Page() {
           </div>
 
           <div
-            className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            ref={brandRailDrag.ref}
+            onPointerDown={brandRailDrag.onPointerDown}
+            onPointerMove={brandRailDrag.onPointerMove}
+            onPointerUp={brandRailDrag.onPointerUp}
+            onPointerCancel={brandRailDrag.onPointerCancel}
+            className="flex cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Visão por bandeira"
             style={{
               paddingInline: "max(1rem, calc(50% - 80px))",
@@ -1424,13 +1525,21 @@ export default function DashboardV2Page() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div
+            ref={brandHighlightPillsDrag.ref}
+            onPointerDown={brandHighlightPillsDrag.onPointerDown}
+            onPointerMove={brandHighlightPillsDrag.onPointerMove}
+            onPointerUp={brandHighlightPillsDrag.onPointerUp}
+            onPointerCancel={brandHighlightPillsDrag.onPointerCancel}
+            className="flex cursor-grab snap-x snap-mandatory flex-nowrap items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label={`Bandeira em destaque: ${selectedMobileBrand}`}
+          >
             {brandTotals.map((brand) => (
               <PeriodPill
                 key={brand.brand}
                 active={selectedMobileBrand === brand.brand}
                 onClick={() => setSelectedMobileBrand(brand.brand)}
-                className="px-3 py-2 text-[10px] shadow-none"
+                className="w-[clamp(110px,31vw,132px)] shrink-0 snap-start px-3 py-2 text-[10px] whitespace-nowrap shadow-none"
                 uppercase={false}
               >
                 {brand.brand}
@@ -1577,7 +1686,7 @@ export default function DashboardV2Page() {
                     <PeriodPill
                       key={option.key}
                       active={period === option.key}
-                      onClick={() => setPeriod(option.key)}
+                      onClick={() => handlePeriodChange(option.key)}
                       className="px-4 py-2.5 text-[11px]"
                     >
                       {option.label}
@@ -1587,28 +1696,28 @@ export default function DashboardV2Page() {
 
                 {period === "mes" && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
-                          Atalhos do mês
-                        </p>
-                        <TooltipIcon text="Selecione um mês para aplicar o recorte rapidamente." />
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {monthQuickFilters.map((item) => (
-                        <PeriodPill
-                          key={item.offset}
-                          active={selectedMonthOffset === item.offset}
-                          onClick={() => setSelectedMonthOffset(item.offset)}
-                          title={item.title}
-                          className="px-3 py-2 text-[10px] shadow-none"
-                          uppercase={false}
-                        >
-                          {item.label}
-                        </PeriodPill>
-                      ))}
-                    </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
+                      Atalhos do mês
+                    </p>
+                    <TooltipIcon text="Selecione um mês para aplicar o recorte rapidamente." />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {monthQuickFilters.map((item) => (
+                    <PeriodPill
+                      key={item.offset}
+                      active={selectedMonthOffset === item.offset}
+                      onClick={() => setSelectedMonthOffset(item.offset)}
+                      title={item.title}
+                      className="px-2.5 py-1.5 text-[9px] shadow-none"
+                      uppercase={false}
+                    >
+                      {item.label}
+                    </PeriodPill>
+                  ))}
+                </div>
                   </div>
                 )}
 
@@ -1629,7 +1738,7 @@ export default function DashboardV2Page() {
                           active={selectedDayOffset === item.offset}
                           onClick={() => setSelectedDayOffset(item.offset)}
                           title={item.title}
-                          className="px-3 py-2 text-[10px] shadow-none"
+                          className="px-2.5 py-1.5 text-[9px] shadow-none"
                           uppercase={false}
                         >
                           {item.label}
@@ -1652,14 +1761,26 @@ export default function DashboardV2Page() {
                         label="De"
                         value={startDate}
                         onChange={setStartDate}
-                        max={endDate || undefined}
+                        min={intervalStartMinDate}
+                        max={intervalStartMaxDate}
                       />
                       <DateField
                         label="Até"
                         value={endDate}
                         onChange={setEndDate}
-                        min={startDate || undefined}
+                        min={intervalEndMinDate}
+                        max={intervalEndMaxDate}
                       />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        onClick={applyIntervalSelection}
+                        disabled={!hasPendingIntervalChanges}
+                        className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        OK
+                      </Button>
                     </div>
                   </div>
                 )}

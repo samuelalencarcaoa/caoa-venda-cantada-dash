@@ -1522,19 +1522,6 @@ export function BrandDetailsAnalyticsSection({
       aria-labelledby="brand-analytics-title"
       className={cn("min-w-0 space-y-4 max-w-full overflow-x-clip", className)}
     >
-      <div className="px-1">
-        <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Big Numbers</p>
-        <h2
-          id="brand-analytics-title"
-          className={cn("mt-1 text-lg font-medium tracking-[-0.02em]", themedTextTitleClass)}
-        >
-          Painel analítico da bandeira
-        </h2>
-        <p className={cn("mt-1 text-xs leading-5", themedTextBodyClass)}>
-          Os indicadores abaixo usam exatamente o mesmo recorte filtrado da tabela detalhada.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 gap-2 phone:grid-cols-2 sm:gap-3 xl:grid-cols-4">
         <MetricCard
           label="Total de Vendas Cantadas"
