@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -17,6 +17,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
+  ArrowLeft,
   ArrowRight,
   BarChart3,
   CalendarDays,
@@ -64,13 +65,22 @@ import { cn } from "@/lib/utils";
 const periodOptions = [
   { key: "mes", label: "Por mês" },
   { key: "dia", label: "Por dia" },
-  { key: "intervalo", label: "Intervalo de datas" },
+  { key: "intervalo", label: "Intervalo datas" },
 ] as const;
 
 const vehicleBrands = dashboardBrandNames.filter((brand) => brand !== "SEMINOVOS");
 
 type PeriodType = DashboardPeriod;
 type CountItem = { label: string; value: number };
+type BrandInsightSummary = {
+  brand: string;
+  total: number;
+  position: number;
+  detailHref: string;
+  modelData: CountItem[];
+  storeData: CountItem[];
+  regionData: CountItem[];
+};
 
 function TooltipIcon({ text }: { text: string }) {
   return (
@@ -98,6 +108,7 @@ function PeriodPill({
   title,
   className = "",
   uppercase = true,
+  style,
 }: {
   active: boolean;
   children: ReactNode;
@@ -105,6 +116,7 @@ function PeriodPill({
   title?: string;
   className?: string;
   uppercase?: boolean;
+  style?: CSSProperties;
 }) {
   return (
     <button
@@ -112,6 +124,7 @@ function PeriodPill({
       aria-pressed={active}
       title={title}
       onClick={onClick}
+      style={style}
       className={cn(
         "inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30",
         uppercase && "uppercase tracking-[0.24em]",
@@ -727,25 +740,83 @@ function MobileMetricCard({
   );
 }
 
+function TabletMetricCard({
+  icon,
+  value,
+  label,
+  helper,
+  valueClassName = "",
+}: {
+  icon: ReactNode;
+  value: ReactNode;
+  label: string;
+  helper?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <DashboardCard className="min-h-[102px] px-3 py-3 sm:px-4 sm:py-4">
+      <div className="flex h-full flex-col justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-emerald-400">{icon}</div>
+          {helper ? (
+            <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em]", themedChipClass)}>
+              {helper}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="space-y-0.5">
+          <p className={cn("text-2xl font-medium leading-none tracking-[-0.05em] sm:text-[2rem]", themedTextTitleClass, valueClassName)}>
+            {value}
+          </p>
+          <p className={cn("text-[9px] font-semibold uppercase tracking-[0.2em] sm:text-[10px]", themedTextMutedClass)}>
+            {label}
+          </p>
+        </div>
+      </div>
+    </DashboardCard>
+  );
+}
+
 function MobileBrandCard({
   brand,
   value,
   active,
-  href,
-  linkRef,
+  detailHref,
+  onSelect,
+  cardRef,
+  interactive = true,
 }: {
   brand: string;
   value: number;
   active: boolean;
-  href: string;
-  linkRef?: (element: HTMLAnchorElement | null) => void;
+  detailHref: string;
+  onSelect: () => void;
+  cardRef?: (element: HTMLDivElement | null) => void;
+  interactive?: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      ref={linkRef}
-      aria-label={`Abrir detalhes de ${brand}`}
-      title={`Abrir detalhes de ${brand}`}
+    <div
+      ref={cardRef}
+      role="button"
+      tabIndex={interactive ? 0 : -1}
+      aria-pressed={active}
+      aria-hidden={!interactive}
+      aria-label={`Selecionar visão de ${brand}`}
+      title={`Selecionar visão de ${brand}`}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (!interactive || event.currentTarget !== event.target) {
+          return;
+        }
+
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+
+        event.preventDefault();
+        onSelect();
+      }}
       className={cn(
         "group relative flex h-[236px] w-[210px] cursor-pointer shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[28px] border px-4 py-4 text-left text-slate-900 backdrop-blur transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:w-[182px] dark:text-slate-100",
         active
@@ -756,19 +827,6 @@ function MobileBrandCard({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.1),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.06),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.04),transparent_32%)]" />
 
       <div className="relative flex h-full flex-col gap-3">
-        <div className="flex items-start justify-end gap-3">
-          <span
-            className={cn(
-              "mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sky-600 shadow-[0_10px_20px_-16px_rgba(15,23,42,0.24)] transition group-hover:border-cyan-300 group-hover:bg-cyan-50 group-hover:text-cyan-600 dark:border-white/10 dark:bg-slate-950/90 dark:text-cyan-300 dark:group-hover:border-cyan-400/30 dark:group-hover:bg-cyan-400/10",
-              active
-                ? "border-cyan-400/80 bg-cyan-50 text-cyan-600 shadow-[0_0_0_6px_rgba(34,211,238,0.14)] dark:border-cyan-400/80 dark:bg-cyan-400/10 dark:text-cyan-300"
-                : "",
-            )}
-          >
-            <ArrowRight className="h-4 w-4" />
-          </span>
-        </div>
-
         <BrandLogoPanel brand={brand} compact />
 
         <div className="flex flex-1 flex-col justify-end gap-1">
@@ -778,14 +836,171 @@ function MobileBrandCard({
           <p className="text-4xl font-light leading-none tracking-[-0.06em] text-slate-900 dark:text-slate-100">
             {value.toLocaleString("pt-BR")}
           </p>
-          <BrandCardLinkHint
-            label="Ver detalhes"
-            active={active}
-            className="justify-start self-start whitespace-nowrap px-2.5 py-1 text-[9px] tracking-[0.18em]"
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            onClick={(event) => event.stopPropagation()}
+            className={cn(
+              "mt-1 h-8 justify-start self-start whitespace-nowrap rounded-full border-cyan-200/80 px-3 text-[9px] font-bold tracking-[0.24em] text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/15",
+              active && "border-cyan-400/60 bg-cyan-50 text-cyan-700 dark:bg-cyan-400/15",
+            )}
+          >
+            <Link
+              href={detailHref}
+              aria-label={`Ver detalhes de ${brand}`}
+              title={`Ver detalhes de ${brand}`}
+              tabIndex={interactive ? 0 : -1}
+            >
+              VER DETALHES
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabletBrandSection({
+  summary,
+  active = false,
+}: {
+  summary: BrandInsightSummary;
+  active?: boolean;
+}) {
+  return (
+    <DashboardCard
+      className={cn(
+        "group overflow-hidden px-4 py-4 transition duration-300",
+        active &&
+          "border-cyan-300/60 shadow-[0_24px_48px_-34px_rgba(14,165,233,0.28)] dark:border-cyan-400/30",
+      )}
+    >
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-400" />
+              <p className={cn("truncate text-[13px] font-semibold uppercase tracking-[0.18em]", themedTextTitleClass)}>
+                {summary.brand}
+              </p>
+            </div>
+            <p className={cn("text-[11px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
+              {summary.position ? `Posição geral ${formatOrdinal(summary.position)}` : "Posição geral --"}
+            </p>
+          </div>
+
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 shrink-0 rounded-full border-cyan-200/80 px-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/15"
+          >
+            <Link href={summary.detailHref} aria-label={`Ver detalhes de ${summary.brand}`}>
+              VER DETALHES
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <TabletMetricCard
+            icon={<BarChart3 className="h-4 w-4 text-emerald-400" />}
+            value={summary.total.toLocaleString("pt-BR")}
+            label="Total de vendas cantadas"
+          />
+          <TabletMetricCard
+            icon={<Crown className="h-4 w-4 text-amber-400" />}
+            value={summary.position ? formatOrdinal(summary.position) : "--"}
+            label="Posição geral"
+          />
+          <TabletMetricCard
+            icon={<Target className="h-4 w-4 text-cyan-400" />}
+            value="--"
+            label="Meta do dia"
+            helper="Sem meta"
+            valueClassName="text-slate-400 dark:text-slate-500"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <RankingCard
+            title="Venda Cantada x Modelo"
+            data={summary.modelData}
+            contextLabel={summary.brand}
+            tooltip="Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+          />
+          <RankingCard
+            title="Venda Cantada x Lojas"
+            data={summary.storeData}
+            contextLabel={summary.brand}
+            tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
+          />
+          <RankingCard
+            title="Venda Cantada x Região"
+            data={summary.regionData}
+            contextLabel={summary.brand}
+            tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
           />
         </div>
       </div>
-    </Link>
+    </DashboardCard>
+  );
+}
+
+function TabletBrandCarouselCard({
+  summary,
+  active,
+  onClick,
+  cardRef,
+  interactive = true,
+}: {
+  summary: BrandInsightSummary;
+  active: boolean;
+  onClick: () => void;
+  cardRef?: (element: HTMLButtonElement | null) => void;
+  interactive?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      ref={cardRef}
+      onClick={onClick}
+      tabIndex={interactive ? 0 : -1}
+      aria-hidden={!interactive}
+      aria-pressed={active}
+      aria-label={`Ir para ${summary.brand}`}
+      className={cn(
+        "group relative flex w-[clamp(190px,28vw,246px)] shrink-0 snap-center flex-col overflow-hidden rounded-[28px] border px-3 py-3 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/30",
+        active
+          ? "border-cyan-400/80 bg-white shadow-[0_20px_42px_-28px_rgba(14,165,233,0.34)] dark:border-cyan-400/70 dark:bg-slate-950/90 dark:shadow-[0_20px_42px_-28px_rgba(14,165,233,0.25)]"
+          : "border-slate-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-cyan-300/60 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/80 dark:hover:border-cyan-400/30 dark:hover:bg-white/5",
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_42%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.05),transparent_34%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.14),transparent_42%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.03),transparent_34%)]" />
+      <div className="relative space-y-3">
+        <BrandLogoPanel brand={summary.brand} compact />
+
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className={cn("truncate text-[12px] font-semibold uppercase tracking-[0.24em]", themedTextTitleClass)}>
+              {summary.brand}
+            </p>
+            <p className={cn("mt-1 text-[11px] font-medium", themedTextMutedClass)}>
+              {summary.total.toLocaleString("pt-BR")} vendas
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.22em]", themedTextMutedClass)}>
+              Posição
+            </p>
+            <p className={cn("mt-1 text-sm font-semibold", themedTextTitleClass)}>
+              {summary.position ? formatOrdinal(summary.position) : "--"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -802,9 +1017,19 @@ export default function DashboardV2Page() {
   const [isNoDataModalOpen, setIsNoDataModalOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [lastAutoOpenedNoticeKey, setLastAutoOpenedNoticeKey] = useState<string | null>(null);
-  const mobileBrandRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+  const mobileBrandRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const brandRailDrag = useHorizontalDragScroll<HTMLDivElement>();
-  const brandHighlightPillsDrag = useHorizontalDragScroll<HTMLDivElement>();
+  const tabletBrandNavDrag = useHorizontalDragScroll<HTMLDivElement>();
+  const tabletBrandContentDrag = useHorizontalDragScroll<HTMLDivElement>();
+  const mobileBrandRailMiddleGroupRef = useRef<HTMLDivElement | null>(null);
+  const mobileBrandRailLoopWidthRef = useRef(0);
+  const mobileBrandRailWrapResetFrameRef = useRef<number | null>(null);
+  const mobileBrandRailIsWrappingRef = useRef(false);
+  const tabletBrandNavMiddleGroupRef = useRef<HTMLDivElement | null>(null);
+  const tabletBrandNavLoopWidthRef = useRef(0);
+  const tabletBrandNavWrapResetFrameRef = useRef<number | null>(null);
+  const tabletBrandNavIsWrappingRef = useRef(false);
+  const tabletBrandCarouselRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const monthQuickFilters = useMemo(
     () =>
@@ -1045,7 +1270,179 @@ export default function DashboardV2Page() {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [selectedMobileBrand]);
+  }, [selectedMobileBrand, tabletBrandContentDrag.ref]);
+
+  useEffect(() => {
+    const measureTabletBrandNavRail = () => {
+      const middleGroup = tabletBrandNavMiddleGroupRef.current;
+
+      tabletBrandNavLoopWidthRef.current = middleGroup?.offsetWidth ?? 0;
+    };
+
+    measureTabletBrandNavRail();
+    window.addEventListener("resize", measureTabletBrandNavRail);
+
+    return () => {
+      window.removeEventListener("resize", measureTabletBrandNavRail);
+
+      if (tabletBrandNavWrapResetFrameRef.current !== null) {
+        window.cancelAnimationFrame(tabletBrandNavWrapResetFrameRef.current);
+        tabletBrandNavWrapResetFrameRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      tabletBrandCarouselRefs.current[selectedMobileBrand]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedMobileBrand, tabletBrandContentDrag.ref]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const container = tabletBrandContentDrag.ref.current;
+      if (!container) {
+        return;
+      }
+
+      const selectedIndex = dashboardBrandNames.findIndex((brand) => brand === selectedMobileBrand);
+      const slide = selectedIndex >= 0 ? (container.children.item(selectedIndex) as HTMLElement | null) : null;
+
+      if (!slide) {
+        return;
+      }
+
+      const targetLeft = slide.offsetLeft - (container.clientWidth - slide.offsetWidth) / 2;
+      container.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedMobileBrand, tabletBrandContentDrag.ref]);
+
+  const handleTabletBrandNavScroll = () => {
+    const container = tabletBrandNavDrag.ref.current;
+    const loopWidth = tabletBrandNavLoopWidthRef.current;
+
+    if (!container || !loopWidth || tabletBrandNavIsWrappingRef.current) {
+      return;
+    }
+
+    const wrapThreshold = 12;
+
+    if (container.scrollLeft <= wrapThreshold) {
+      tabletBrandNavIsWrappingRef.current = true;
+      container.scrollLeft += loopWidth;
+    } else if (container.scrollLeft >= loopWidth * 2 - wrapThreshold) {
+      tabletBrandNavIsWrappingRef.current = true;
+      container.scrollLeft -= loopWidth;
+    } else {
+      return;
+    }
+
+    if (tabletBrandNavWrapResetFrameRef.current !== null) {
+      window.cancelAnimationFrame(tabletBrandNavWrapResetFrameRef.current);
+    }
+
+    tabletBrandNavWrapResetFrameRef.current = window.requestAnimationFrame(() => {
+      tabletBrandNavIsWrappingRef.current = false;
+      tabletBrandNavWrapResetFrameRef.current = null;
+    });
+  };
+
+  const handleTabletBrandStep = (direction: -1 | 1) => {
+    setSelectedMobileBrand((currentBrand) => {
+      if (!brandTotals.length) {
+        return currentBrand;
+      }
+
+      const currentIndex = brandTotals.findIndex((brand) => brand.brand === currentBrand);
+      const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (safeCurrentIndex + direction + brandTotals.length) % brandTotals.length;
+
+      return brandTotals[nextIndex].brand;
+    });
+  };
+
+  useEffect(() => {
+    const measureMobileBrandRail = () => {
+      const middleGroup = mobileBrandRailMiddleGroupRef.current;
+
+      mobileBrandRailLoopWidthRef.current = middleGroup?.offsetWidth ?? 0;
+    };
+
+    measureMobileBrandRail();
+    window.addEventListener("resize", measureMobileBrandRail);
+
+    return () => {
+      window.removeEventListener("resize", measureMobileBrandRail);
+
+      if (mobileBrandRailWrapResetFrameRef.current !== null) {
+        window.cancelAnimationFrame(mobileBrandRailWrapResetFrameRef.current);
+        mobileBrandRailWrapResetFrameRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleMobileBrandRailScroll = () => {
+    const container = brandRailDrag.ref.current;
+    const loopWidth = mobileBrandRailLoopWidthRef.current;
+
+    if (!container || !loopWidth || mobileBrandRailIsWrappingRef.current) {
+      return;
+    }
+
+    const wrapThreshold = 12;
+
+    if (container.scrollLeft <= wrapThreshold) {
+      mobileBrandRailIsWrappingRef.current = true;
+      container.scrollLeft += loopWidth;
+    } else if (container.scrollLeft >= loopWidth * 2 - wrapThreshold) {
+      mobileBrandRailIsWrappingRef.current = true;
+      container.scrollLeft -= loopWidth;
+    } else {
+      return;
+    }
+
+    if (mobileBrandRailWrapResetFrameRef.current !== null) {
+      window.cancelAnimationFrame(mobileBrandRailWrapResetFrameRef.current);
+    }
+
+    mobileBrandRailWrapResetFrameRef.current = window.requestAnimationFrame(() => {
+      mobileBrandRailIsWrappingRef.current = false;
+      mobileBrandRailWrapResetFrameRef.current = null;
+    });
+  };
+
+  const handleMobileBrandStep = (direction: -1 | 1) => {
+    setSelectedMobileBrand((currentBrand) => {
+      if (!brandTotals.length) {
+        return currentBrand;
+      }
+
+      const currentIndex = brandTotals.findIndex((brand) => brand.brand === currentBrand);
+      const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (safeCurrentIndex + direction + brandTotals.length) % brandTotals.length;
+
+      return brandTotals[nextIndex].brand;
+    });
+  };
 
   const activePeriodText = useMemo(() => {
     if (period === "mes") {
@@ -1231,6 +1628,37 @@ export default function DashboardV2Page() {
     ? (selectedMobileBrandTotal / totalProposals) * 100
     : 0;
 
+  const tabletBrandInsights = useMemo<BrandInsightSummary[]>(
+    () =>
+      dashboardBrandNames.map((brand) => {
+        const total = brandTotals.find((item) => item.brand === brand)?.value ?? 0;
+        const rankIndex = mobileBrandRankings.findIndex((item) => item.brand === brand);
+        const sourceItems = brand === "SEMINOVOS"
+          ? seminovosSales
+          : novosSales.filter((item) => matchesBrand(item, brand));
+        const modelData = topTenWithOthers(
+          groupCounts(sourceItems, brand === "SEMINOVOS" ? "Marca_Veiculo" : "Versao"),
+        );
+        const storeData = topTenWithOthers(groupCounts(sourceItems, "Loja_Venda"));
+        const regionData = topTenWithOthers(groupCounts(sourceItems, "Regional"));
+
+        return {
+          brand,
+          total,
+          position: rankIndex >= 0 ? rankIndex + 1 : 0,
+          detailHref: buildBrandDetailHref(brand, brandDetailDateRange),
+          modelData,
+          storeData,
+          regionData,
+        };
+      }),
+    [brandDetailDateRange, brandTotals, mobileBrandRankings, novosSales, seminovosSales],
+  );
+
+  const handleTabletBrandJump = (brand: string) => {
+    setSelectedMobileBrand(brand);
+  };
+
   function DetailedTableModal() {
     if (!isDetailedTableModalOpen) {
       return null;
@@ -1338,16 +1766,19 @@ export default function DashboardV2Page() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid w-full grid-cols-3 gap-2">
               {periodOptions.map((option) => (
                 <PeriodPill
                   key={option.key}
                   active={period === option.key}
                   onClick={() => handlePeriodChange(option.key)}
                   className={cn(
-                    "w-full px-3 py-2.5 text-[11px]",
-                    option.key === "intervalo" && "col-span-2",
+                    "min-w-0 w-full whitespace-nowrap px-2.5 py-2 leading-none sm:px-3 sm:text-[11px]",
                   )}
+                  style={{
+                    fontSize: "clamp(8px, 0.9vw, 11px)",
+                    letterSpacing: "0.16em",
+                  }}
                 >
                   {option.label}
                 </PeriodPill>
@@ -1356,7 +1787,7 @@ export default function DashboardV2Page() {
 
             {period === "mes" && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex w-full items-center gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
                       Atalhos do mês
@@ -1364,15 +1795,16 @@ export default function DashboardV2Page() {
                     <TooltipIcon text="Selecione um mês para aplicar o recorte rapidamente." />
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid w-full grid-cols-5 gap-2">
                   {monthQuickFilters.map((item) => (
                     <PeriodPill
                       key={item.offset}
                       active={selectedMonthOffset === item.offset}
                       onClick={() => setSelectedMonthOffset(item.offset)}
                       title={item.title}
-                      className="px-2.5 py-1.5 text-[9px] shadow-none"
+                      className="min-w-0 w-full px-2.5 py-1.5 leading-none shadow-none"
                       uppercase={false}
+                      style={{ fontSize: "clamp(9px, 0.75vw, 11px)" }}
                     >
                       {item.label}
                     </PeriodPill>
@@ -1383,7 +1815,7 @@ export default function DashboardV2Page() {
 
             {period === "dia" && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex w-full items-center gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
                       Atalhos do dia
@@ -1391,15 +1823,16 @@ export default function DashboardV2Page() {
                     <TooltipIcon text="Volte alguns dias de forma rápida sem abrir o calendário." />
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid w-full grid-cols-5 gap-2">
                   {dayQuickFilters.map((item) => (
                     <PeriodPill
                       key={item.offset}
                       active={selectedDayOffset === item.offset}
                       onClick={() => setSelectedDayOffset(item.offset)}
                       title={item.title}
-                      className="px-2.5 py-1.5 text-[9px] shadow-none"
+                      className="min-w-0 w-full whitespace-nowrap px-1.5 py-1.5 leading-none shadow-none"
                       uppercase={false}
+                      style={{ fontSize: "clamp(7px, 1.6vw, 9px)" }}
                     >
                       {item.label}
                     </PeriodPill>
@@ -1410,13 +1843,13 @@ export default function DashboardV2Page() {
 
             {period === "intervalo" && (
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
+                <div className="flex w-full items-center gap-1.5">
                   <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
                     Intervalo personalizado
                   </p>
                   <TooltipIcon text="Escolha uma data inicial e uma data final para filtrar o período." />
                 </div>
-                <div className="grid grid-cols-1 gap-2 phone:grid-cols-2">
+                <div className="grid w-full grid-cols-2 gap-2">
                   <DateField
                     label="De"
                     value={startDate}
@@ -1475,11 +1908,36 @@ export default function DashboardV2Page() {
         ) : null}
 
         <section className="space-y-3">
-          <div className="flex items-center gap-1.5">
-            <Flag className="h-4 w-4 text-cyan-500 dark:text-cyan-300" />
-            <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>
-              Visão por bandeira
-            </p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Flag className="h-4 w-4 shrink-0 text-cyan-500 dark:text-cyan-300" />
+              <p className={cn(themedTinyLabelClass, "truncate tracking-[0.32em]")}>
+                Visão por bandeira
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => handleMobileBrandStep(-1)}
+                aria-label="Bandeira anterior"
+                className="h-9 w-9 rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-300"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => handleMobileBrandStep(1)}
+                aria-label="Próxima bandeira"
+                className="h-9 w-9 rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-300"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div
@@ -1488,23 +1946,39 @@ export default function DashboardV2Page() {
             onPointerMove={brandRailDrag.onPointerMove}
             onPointerUp={brandRailDrag.onPointerUp}
             onPointerCancel={brandRailDrag.onPointerCancel}
-            className="flex cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onScroll={handleMobileBrandRailScroll}
+            className="flex cursor-grab snap-x snap-mandatory overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Visão por bandeira"
             style={{
               paddingInline: "max(1rem, calc(50% - 80px))",
             }}
           >
-            {brandTotals.map((brand) => (
-              <MobileBrandCard
-                key={brand.brand}
-                brand={brand.brand}
-                value={brand.value}
-                href={buildBrandDetailHref(brand.brand, brandDetailDateRange)}
-                active={selectedMobileBrand === brand.brand}
-                linkRef={(element) => {
-                  mobileBrandRefs.current[brand.brand] = element;
-                }}
-              />
+            {Array.from({ length: 3 }, (_, copyIndex) => (
+              <div
+                key={`brand-carousel-copy-${copyIndex}`}
+                ref={copyIndex === 1 ? mobileBrandRailMiddleGroupRef : undefined}
+                aria-hidden={copyIndex !== 1}
+                className="flex shrink-0 gap-3 pr-3"
+              >
+                {brandTotals.map((brand) => (
+                  <MobileBrandCard
+                    key={`brand-carousel-${copyIndex}-${brand.brand}`}
+                    brand={brand.brand}
+                    value={brand.value}
+                    detailHref={buildBrandDetailHref(brand.brand, brandDetailDateRange)}
+                    active={selectedMobileBrand === brand.brand}
+                    onSelect={() => setSelectedMobileBrand(brand.brand)}
+                    interactive={copyIndex === 1}
+                    cardRef={
+                      copyIndex === 1
+                        ? (element) => {
+                            mobileBrandRefs.current[brand.brand] = element;
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </section>
@@ -1519,32 +1993,7 @@ export default function DashboardV2Page() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Bandeira em destaque</p>
-              <TooltipIcon text="Use os chips para alternar a visão mobile dos rankings. Os cards da faixa acima abrem a página de detalhes da bandeira." />
-            </div>
-          </div>
-
-          <div
-            ref={brandHighlightPillsDrag.ref}
-            onPointerDown={brandHighlightPillsDrag.onPointerDown}
-            onPointerMove={brandHighlightPillsDrag.onPointerMove}
-            onPointerUp={brandHighlightPillsDrag.onPointerUp}
-            onPointerCancel={brandHighlightPillsDrag.onPointerCancel}
-            className="flex cursor-grab snap-x snap-mandatory flex-nowrap items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label={`Bandeira em destaque: ${selectedMobileBrand}`}
-          >
-            {brandTotals.map((brand) => (
-              <PeriodPill
-                key={brand.brand}
-                active={selectedMobileBrand === brand.brand}
-                onClick={() => setSelectedMobileBrand(brand.brand)}
-                className="w-[clamp(110px,31vw,132px)] shrink-0 snap-start px-3 py-2 text-[10px] whitespace-nowrap shadow-none"
-                uppercase={false}
-              >
-                {brand.brand}
-              </PeriodPill>
-            ))}
+            <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Bandeira em destaque</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1618,13 +2067,347 @@ export default function DashboardV2Page() {
     );
   }
 
+  function TabletDashboardView() {
+    return (
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1160px] flex-col gap-4 px-4 pb-8 pt-4">
+        <header className={cn(themedHeroClass, "space-y-4 rounded-[28px] px-4 py-4 sm:px-5 sm:py-5")}>
+          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
+            <div aria-hidden="true" className="h-11 w-11" />
+            <BrandLogo
+              variant="header"
+              className="mx-auto h-10 w-[150px] sm:h-12 sm:w-[180px]"
+            />
+            <Link
+              href="/perfil"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
+              aria-label="Abrir perfil"
+            >
+              <UserRound className="h-5 w-5" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.04em] sm:text-[1.75rem]">
+                  Painel de Vendas Cantadas
+                </h1>
+              </div>
+              <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">Última atualização: {lastUpdatedText}</span>
+              </div>
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <Database className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">{isRefreshing ? "Atualizando..." : "Dados prontos"}</span>
+              </div>
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <NotebookText className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">Último registro: {lastRecordText}</span>
+              </div>
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span className="min-w-0">{activePeriodText}</span>
+              </div>
+            </div>
+
+            {fallbackNotice ? (
+              <div className="rounded-full border border-amber-400/20 bg-amber-400/12 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+                {fallbackNotice}
+              </div>
+            ) : null}
+          </div>
+        </header>
+
+        <DashboardCard className="border-white/20 bg-white/95 px-4 py-4 text-slate-900 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <p className={cn(themedTinyLabelClass, "tracking-[0.34em]")}>Período</p>
+                <TooltipIcon text="Escolha entre a visão por mês, por dia ou intervalo personalizado." />
+              </div>
+            </div>
+
+            <div className="grid w-full grid-cols-3 gap-2">
+              {periodOptions.map((option) => (
+                <PeriodPill
+                  key={option.key}
+                  active={period === option.key}
+                  onClick={() => handlePeriodChange(option.key)}
+                  className={cn(
+                    "min-w-0 w-full whitespace-nowrap px-2.5 py-2 leading-none sm:px-3 sm:text-[11px]",
+                  )}
+                  style={{
+                    fontSize: "clamp(8px, 0.9vw, 11px)",
+                    letterSpacing: "0.16em",
+                  }}
+                >
+                  {option.label}
+                </PeriodPill>
+              ))}
+            </div>
+
+            {period === "mes" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>Atalhos do mês</p>
+                    <TooltipIcon text="Selecione um mês para aplicar o recorte rapidamente." />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {monthQuickFilters.map((item) => (
+                    <PeriodPill
+                      key={item.offset}
+                      active={selectedMonthOffset === item.offset}
+                      onClick={() => setSelectedMonthOffset(item.offset)}
+                      title={item.title}
+                      className="min-w-0 px-2.5 py-1.5 leading-none shadow-none"
+                      uppercase={false}
+                      style={{ fontSize: "clamp(9px, 0.75vw, 11px)" }}
+                    >
+                      {item.label}
+                    </PeriodPill>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {period === "dia" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>Atalhos do dia</p>
+                    <TooltipIcon text="Volte alguns dias de forma rápida sem abrir o calendário." />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dayQuickFilters.map((item) => (
+                    <PeriodPill
+                      key={item.offset}
+                      active={selectedDayOffset === item.offset}
+                      onClick={() => setSelectedDayOffset(item.offset)}
+                      title={item.title}
+                      className="min-w-0 px-2.5 py-1.5 leading-none shadow-none"
+                      uppercase={false}
+                      style={{ fontSize: "clamp(9px, 0.75vw, 11px)" }}
+                    >
+                      {item.label}
+                    </PeriodPill>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {period === "intervalo" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <p className={cn(themedTinyLabelClass, "tracking-[0.32em]")}>Intervalo personalizado</p>
+                  <TooltipIcon text="Escolha uma data inicial e uma data final para filtrar o período." />
+                </div>
+                <div className="grid grid-cols-1 gap-2 phone:grid-cols-2">
+                  <DateField
+                    label="De"
+                    value={startDate}
+                    onChange={setStartDate}
+                    min={intervalStartMinDate}
+                    max={intervalStartMaxDate}
+                    className="w-full"
+                  />
+                  <DateField
+                    label="Até"
+                    value={endDate}
+                    onChange={setEndDate}
+                    min={intervalEndMinDate}
+                    max={intervalEndMaxDate}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={applyIntervalSelection}
+                    disabled={!hasPendingIntervalChanges}
+                    className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    OK
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DashboardCard>
+
+        {periodNoDataNotice ? (
+          <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-50">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{periodNoDataNotice.title}</p>
+                <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-100">
+                  {periodNoDataNotice.message}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNoDataModalOpen(true)}
+                className="shrink-0 border-amber-200 bg-white text-amber-900 hover:bg-amber-50 hover:text-amber-950 dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-50 dark:hover:bg-amber-500/10 dark:hover:text-white"
+              >
+                Ver detalhes
+              </Button>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-50">
+            Não conseguimos carregar os dados agora. Tente atualizar e, se o problema continuar, volte em alguns instantes.
+          </div>
+        ) : null}
+
+        <section className="sticky top-3 z-20 rounded-[24px] border border-white/15 bg-white/90 px-3 py-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/85">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className={cn("text-[11px] font-semibold uppercase tracking-[0.34em]", themedTextTitleClass)}>
+                {selectedMobileBrand}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => handleTabletBrandStep(-1)}
+                aria-label="Bandeira anterior"
+                className="h-9 w-9 rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-300"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => handleTabletBrandStep(1)}
+                aria-label="Próxima bandeira"
+                className="h-9 w-9 rounded-full border-slate-200 bg-white/90 text-slate-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/10 dark:hover:text-cyan-300"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <p className={cn("rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]", themedChipClass)}>
+                {tabletBrandInsights.length} bandeiras
+              </p>
+            </div>
+          </div>
+
+          <div
+            ref={tabletBrandNavDrag.ref}
+            onPointerDown={tabletBrandNavDrag.onPointerDown}
+            onPointerMove={tabletBrandNavDrag.onPointerMove}
+            onPointerUp={tabletBrandNavDrag.onPointerUp}
+            onPointerCancel={tabletBrandNavDrag.onPointerCancel}
+            onScroll={handleTabletBrandNavScroll}
+            className="flex cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Navegação por bandeiras"
+            style={{
+              paddingInline: "max(0.75rem, calc(50% - 120px))",
+            }}
+          >
+            {Array.from({ length: 3 }, (_, copyIndex) => (
+              <div
+                key={`tablet-brand-nav-copy-${copyIndex}`}
+                ref={copyIndex === 1 ? tabletBrandNavMiddleGroupRef : undefined}
+                aria-hidden={copyIndex !== 1}
+                className={cn(
+                  "flex shrink-0 gap-3 pr-3",
+                  copyIndex !== 1 && "pointer-events-none",
+                )}
+              >
+                {tabletBrandInsights.map((summary) => (
+                  <TabletBrandCarouselCard
+                    key={`tablet-brand-nav-${copyIndex}-${summary.brand}`}
+                    cardRef={
+                      copyIndex === 1
+                        ? (element) => {
+                            tabletBrandCarouselRefs.current[summary.brand] = element;
+                          }
+                        : undefined
+                    }
+                    interactive={copyIndex === 1}
+                    active={selectedMobileBrand === summary.brand}
+                    onClick={() => handleTabletBrandJump(summary.brand)}
+                    summary={summary}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className={cn("text-[11px] font-semibold uppercase tracking-[0.34em]", themedTextTitleClass)}>
+                Conteúdo da bandeira
+              </p>
+              <p className={cn("mt-1 text-[11px] leading-5", themedTextMutedClass)}>
+                O carrossel abaixo mostra apenas a bandeira selecionada no topo.
+              </p>
+            </div>
+            <p className={cn("rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]", themedChipClass)}>
+              {selectedMobileBrand}
+            </p>
+          </div>
+
+          <div
+            ref={tabletBrandContentDrag.ref}
+            onPointerDown={tabletBrandContentDrag.onPointerDown}
+            onPointerMove={tabletBrandContentDrag.onPointerMove}
+            onPointerUp={tabletBrandContentDrag.onPointerUp}
+            onPointerCancel={tabletBrandContentDrag.onPointerCancel}
+            className="flex cursor-grab snap-x snap-mandatory gap-4 overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Conteúdo da bandeira selecionada"
+          >
+            {tabletBrandInsights.map((summary) => (
+              <div
+                key={summary.brand}
+                className="w-full shrink-0 snap-center"
+              >
+                <div className="mx-auto w-full max-w-[1120px]">
+                  <TabletBrandSection
+                    summary={summary}
+                    active={selectedMobileBrand === summary.brand}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <Button
+          type="button"
+          variant="default"
+          size="lg"
+          onClick={() => setIsDetailedTableModalOpen(true)}
+          className="h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
+        >
+          <NotebookText className="h-4 w-4" />
+          Abrir tabela detalhada
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <main className={cn("min-h-[100dvh] overflow-x-hidden", themedPageBackgroundClass, themedPageTextClass)}>
-      <div className="tablet:hidden">
+      <div className="block min-[768px]:hidden">
         <MobileDashboardView />
-        <DetailedTableModal />
       </div>
-      <div className="hidden tablet:block">
+      <div className="hidden min-[768px]:block min-[1281px]:hidden">
+        <TabletDashboardView />
+      </div>
+      <div className="hidden min-[1281px]:block">
         <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4 p-3 sm:p-5">
           <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
           <div className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_minmax(340px,430px)] xl:items-start">
@@ -1711,8 +2494,9 @@ export default function DashboardV2Page() {
                       active={selectedMonthOffset === item.offset}
                       onClick={() => setSelectedMonthOffset(item.offset)}
                       title={item.title}
-                      className="px-2.5 py-1.5 text-[9px] shadow-none"
+                      className="min-w-0 px-2.5 py-1.5 leading-none shadow-none"
                       uppercase={false}
+                      style={{ fontSize: "clamp(9px, 0.75vw, 11px)" }}
                     >
                       {item.label}
                     </PeriodPill>
@@ -1738,8 +2522,9 @@ export default function DashboardV2Page() {
                           active={selectedDayOffset === item.offset}
                           onClick={() => setSelectedDayOffset(item.offset)}
                           title={item.title}
-                          className="px-2.5 py-1.5 text-[9px] shadow-none"
+                          className="min-w-0 px-2.5 py-1.5 leading-none shadow-none"
                           uppercase={false}
+                          style={{ fontSize: "clamp(9px, 0.75vw, 11px)" }}
                         >
                           {item.label}
                         </PeriodPill>
@@ -1900,16 +2685,17 @@ export default function DashboardV2Page() {
           />
         </section>
 
-        {periodNoDataNotice ? (
-          <PeriodNoDataModal
-            open={isNoDataModalOpen}
-            notice={periodNoDataNotice}
-            onClose={() => setIsNoDataModalOpen(false)}
-            onRefresh={() => void refresh({ silent: true })}
-          />
-        ) : null}
       </div>
       </div>
+      {periodNoDataNotice ? (
+        <PeriodNoDataModal
+          open={isNoDataModalOpen}
+          notice={periodNoDataNotice}
+          onClose={() => setIsNoDataModalOpen(false)}
+          onRefresh={() => void refresh({ silent: true })}
+        />
+      ) : null}
+      <DetailedTableModal />
     </main>
   );
 }
