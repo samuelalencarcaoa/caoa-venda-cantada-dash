@@ -42,6 +42,12 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
   }
 
   function handleLogout() {
+    setIsOpen(false);
+
+    if (!isCollapsed) {
+      onToggleCollapse?.();
+    }
+
     if (status === "authenticated") {
       signOut({ callbackUrl: "/login" });
       return;
@@ -51,8 +57,12 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
     window.location.href = "/login";
   }
 
-  function closeMobileDrawer() {
+  function handleNavigation() {
     setIsOpen(false);
+
+    if (!isCollapsed) {
+      onToggleCollapse?.();
+    }
   }
 
   function collapseDesktopDrawer() {
@@ -66,7 +76,7 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
           type="button"
           aria-label="Fechar menu lateral"
           className="fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-sm tablet:hidden"
-          onClick={closeMobileDrawer}
+          onClick={() => setIsOpen(false)}
         />
       ) : null}
       {!isCollapsed ? (
@@ -114,12 +124,12 @@ export default function SideNav({ isCollapsed = false, onToggleCollapse }: SideN
       >
         <div>
           <div className="border-b border-border p-3">
-            <Link href="/dashboard" className="block" onClick={closeMobileDrawer}>
+            <Link href="/dashboard" className="block" onClick={handleNavigation}>
               <BrandLogo className="mx-auto max-w-[180px]" />
             </Link>
           </div>
-          <User onNavigate={closeMobileDrawer} />
-          <Navigation onNavigate={closeMobileDrawer} />
+          <User onNavigate={handleNavigation} />
+          <Navigation onNavigate={handleNavigation} />
         </div>
 
         {isAuthenticated && (

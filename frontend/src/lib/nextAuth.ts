@@ -3,16 +3,10 @@ import AzureAD from "next-auth/providers/azure-ad";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
 
-function getStringField(value: unknown, key: string) {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-
-  const record = value as Record<string, unknown>;
-  const field = record[key];
-
-  return typeof field === "string" ? field : undefined;
-}
+import {
+  buildAzureAdDirectorySnapshot,
+  decodeAzureAdIdToken,
+} from "@/lib/azure-ad-profile";
 
 const allowFallbackAuth =
   process.env.NEXTAUTH_FALLBACK_AUTH === "true" ||
@@ -100,9 +94,11 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user = {
           ...session.user,
+          id: session.user?.id || token.sub || token.directory?.stableId || undefined,
           name: session.user?.name || token.name || undefined,
           email: session.user?.email || token.email || undefined,
           image: session.user?.image || token.picture || undefined,
+          directory: token.directory ?? null,
         };
       }
 
@@ -113,39 +109,21 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.name = token.name || user.name || undefined;
         token.email = token.email || user.email || undefined;
-        token.picture =
-          token.picture ||
-          user.image ||
-          getStringField(profile, "picture");
+        token.picture = token.picture || user.image || undefined;
       }
 
-      if (
-        account?.provider === "azure-ad" &&
-        account.access_token
-      ) {
-        try {
-          const response = await fetch(
-            "https://graph.microsoft.com/v1.0/me/photos/48x48/$value",
-            {
-              headers: {
-                Authorization: `Bearer ${account.access_token}`,
-              },
-            }
-          );
+      if (account?.provider === "azure-ad") {
+        const claimsSource = decodeAzureAdIdToken(account.id_token) ?? profile;
+        const snapshot = await buildAzureAdDirectorySnapshot({
+          claimsSource,
+          accessToken: account.access_token,
+        });
 
-          if (response.ok) {
-            const contentType =
-              response.headers.get("content-type") ?? "image/jpeg";
-
-            const buffer = Buffer.from(await response.arrayBuffer());
-
-            token.picture = `data:${contentType};base64,${buffer.toString(
-              "base64"
-            )}`;
-          }
-        } catch {
-          // Ignora erros ao buscar foto
-        }
+        token.directory = snapshot.directory;
+        token.picture = token.picture || snapshot.picture || undefined;
+        token.name = token.name || snapshot.displayName || undefined;
+        token.email = token.email || snapshot.email || undefined;
+        token.sub = token.sub || snapshot.stableId || undefined;
       }
 
       return token;

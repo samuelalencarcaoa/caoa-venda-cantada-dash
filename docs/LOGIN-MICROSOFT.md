@@ -119,6 +119,25 @@ console.log(session.user.name);
 console.log(session.user.email);
 ```
 
+### Mapeamento de perfil
+
+A tela `/perfil` passa a consumir um snapshot enriquecido do Microsoft Entra ID:
+
+* `session.user.name`
+  * Nome de exibição resolvido a partir do ID token ou do Microsoft Graph.
+* `session.user.email`
+  * E-mail, `preferred_username`, `mail` ou `userPrincipalName`, nessa ordem de fallback.
+* `session.user.image`
+  * Foto do usuário obtida em `https://graph.microsoft.com/v1.0/me/photos/48x48/$value`.
+* `session.user.directory.claims`
+  * Claims brutas do ID token, incluindo campos como `oid`, `tid`, `sub`, `upn`, `given_name`, `family_name`, `roles` e outros que o tenant devolver.
+* `session.user.directory.graph`
+  * Perfil corporativo do Microsoft Graph com campos como `displayName`, `jobTitle`, `department`, `companyName`, `mobilePhone`, `businessPhones`, `officeLocation`, `city`, `state`, `country`, `streetAddress`, `postalCode`, `preferredLanguage`, `employeeId`, `employeeType` e `usageLocation`.
+* `session.user.directory.adExportManager`
+  * Gestor direto encontrado na coluna `Manager` da exportação `EXPORT_AD.csv`, associado pelo `EmailAddress` ou `userPrincipalName`.
+
+O caminho da exportação deve ser configurado em `AD_EXPORT_PATH`. O arquivo não deve ser versionado, pois contém dados corporativos.
+
 ---
 
 ## RF07 - Validação pelo Azure AD
