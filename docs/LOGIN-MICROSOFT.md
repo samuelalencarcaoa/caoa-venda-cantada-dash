@@ -121,23 +121,17 @@ console.log(session.user.email);
 
 ---
 
-## RF07 - Restrição por Domínio
+## RF07 - Validação pelo Azure AD
 
-Implementar callback de autenticação que permita apenas usuários pertencentes ao domínio corporativo.
-
-Domínio permitido:
-
-```text
-@caoa.com.br
-```
+Implementar callback de autenticação que valide apenas se o usuário existe e foi autenticado pelo Microsoft Entra ID configurado.
 
 Exemplo:
 
-```typescript
-usuario@caoa.com.br
+```text
+usuario@qualquer-dominio.com
 ```
 
-Usuários externos devem ser bloqueados.
+Usuários fora do tenant configurado devem ser bloqueados pelo próprio provedor Microsoft.
 
 ---
 
@@ -299,11 +293,11 @@ Então deverá acessar normalmente o dashboard.
 
 ## Cenário 3
 
-Dado que o usuário possua e-mail fora do domínio corporativo
+Dado que o usuário possua e-mail em outro domínio, mas exista no tenant configurado
 
 Quando tentar autenticar
 
-Então o acesso deverá ser negado.
+Então o acesso deverá ser permitido se a conta existir no tenant do Azure AD.
 
 ---
 
@@ -337,4 +331,4 @@ A implementação deverá entregar:
 
 # Resultado Final Esperado
 
-A aplicação deverá permitir login corporativo Microsoft utilizando Microsoft Entra ID, mantendo sessão autenticada, protegendo rotas privadas e restringindo acesso apenas a usuários do domínio corporativo autorizado.
+A aplicação deverá permitir login corporativo Microsoft utilizando Microsoft Entra ID, mantendo sessão autenticada, protegendo rotas privadas e restringindo acesso apenas a usuários autenticados no tenant do Azure AD configurado.

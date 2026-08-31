@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import BrandLogo from "@/components/brand-logo";
@@ -17,6 +17,7 @@ import {
   themedTextTitleClass,
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
+import { getSafeCallbackUrl } from "@/lib/auth-routing";
 import { cn } from "@/lib/utils";
 
 const MIN_LOADING_MS = 1000;
@@ -43,6 +44,7 @@ function MicrosoftLogoMark({ className = "" }: { className?: string }) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [fallbackUsername, setFallbackUsername] = useState("admin");
@@ -50,12 +52,13 @@ export default function LoginPage() {
   const [fallbackError, setFallbackError] = useState<string | null>(null);
   const [isFallbackLoading, setIsFallbackLoading] = useState(false);
   const allowFallbackAuth = process.env.NEXT_PUBLIC_FALLBACK_AUTH === "true";
+  const callbackUrl = getSafeCallbackUrl(searchParams?.get("callbackUrl"));
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push("/sales-intention");
+      router.push(callbackUrl);
     }
-  }, [router, status]);
+  }, [callbackUrl, router, status]);
 
   if (status === "authenticated") {
     return null;
@@ -71,7 +74,7 @@ export default function LoginPage() {
       }
       await signIn("azure-ad", {
         redirect: true,
-        callbackUrl: "/sales-intention",
+        callbackUrl,
       });
     } catch {
       const elapsed = Date.now() - startedAt;
@@ -92,7 +95,7 @@ export default function LoginPage() {
       redirect: false,
       username: fallbackUsername,
       password: fallbackPassword,
-      callbackUrl: "/sales-intention",
+      callbackUrl,
     });
 
     const elapsed = Date.now() - startedAt;
@@ -107,7 +110,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(result.url ?? "/sales-intention");
+    router.push(getSafeCallbackUrl(result?.url ?? callbackUrl, window.location.origin));
   }
 
   return (

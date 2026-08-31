@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 
+import { redirectToLogin } from "@/lib/auth-redirect";
 import { authOptions } from "@/lib/nextAuth";
 
 export default async function PerfilLayout({
@@ -11,7 +11,7 @@ export default async function PerfilLayout({
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    redirect("/login?error=AccessDenied");
+    redirectToLogin("/perfil");
   }
 
   return <>{children}</>;

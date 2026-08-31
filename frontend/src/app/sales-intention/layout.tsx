@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
+
+import { redirectToLogin } from "@/lib/auth-redirect";
 import { authOptions } from "@/lib/nextAuth";
-import { redirect } from "next/navigation";
 
 export default async function SalesIntentionLayout({
   children,
@@ -11,7 +12,7 @@ export default async function SalesIntentionLayout({
 
   // Usuário não autenticado - redireciona para login
   if (!session?.user) {
-    redirect("/login?error=AccessDenied");
+    redirectToLogin("/sales-intention");
   }
 
   return <>{children}</>;

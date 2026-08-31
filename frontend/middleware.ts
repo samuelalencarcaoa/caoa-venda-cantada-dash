@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+import { buildLoginRedirectHref } from "@/lib/auth-routing";
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -19,10 +21,12 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/access-denied";
-    url.searchParams.set("error", "AccessDenied");
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(
+      new URL(
+        buildLoginRedirectHref(`${req.nextUrl.pathname}${req.nextUrl.search}`),
+        req.url,
+      ),
+    );
   }
 
   return NextResponse.next();
@@ -37,4 +41,3 @@ export const config = {
     // Note: /test-relatorios is intentionally public for testing
   ],
 };
-

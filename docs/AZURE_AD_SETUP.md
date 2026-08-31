@@ -82,10 +82,10 @@ pnpm run dev
 
 Acesse `http://localhost:3003` e clique em "Entrar com Microsoft" para testar.
 
-## Domínio Permitido
+## Validação de Acesso
 
-Apenas usuários com email no domínio `@caoa.com.br` podem fazer login.
-Usuários com outros domínios serão rejeitados no callback de login.
+O login é validado pelo Microsoft Entra ID usando o tenant configurado em `AZURE_AD_TENANT_ID`.
+Qualquer usuário existente nesse tenant pode autenticar, independentemente do domínio do e-mail.
 
 ## Solução de Problemas
 

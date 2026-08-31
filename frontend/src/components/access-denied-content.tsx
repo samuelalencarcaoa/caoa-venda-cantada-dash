@@ -20,16 +20,16 @@ export default function AccessDeniedContent() {
     CredentialsSignin: "Credenciais inválidas.",
     SessionCallback: "Erro ao criar sessão.",
     AccessDenied:
-      "Sua conta não está autorizada para acessar este sistema. Use um e-mail corporativo liberado ou peça acesso ao administrador.",
+      "Sua conta não pôde ser validada neste tenant do Microsoft Entra ID. Use uma conta Microsoft vinculada ao ambiente configurado ou peça acesso ao administrador.",
     Verification: "Token de verificação inválido ou expirado.",
   };
 
   const message =
     (error && errorMessages[error]) ||
-    "Sua conta não está autorizada para acessar este sistema. Use um e-mail corporativo liberado ou peça acesso ao administrador.";
+    "Sua conta não pôde ser validada neste tenant do Microsoft Entra ID. Use uma conta Microsoft vinculada ao ambiente configurado ou peça acesso ao administrador.";
 
   const finalMessage = email
-    ? `O e-mail ${email} não tem permissão para acessar este sistema. Use um e-mail corporativo liberado ou solicite acesso ao administrador.`
+    ? `A conta ${email} não pôde ser autenticada neste tenant do Microsoft Entra ID. Use uma conta Microsoft vinculada ao ambiente configurado ou solicite acesso ao administrador.`
     : message;
 
   return (
@@ -42,7 +42,7 @@ export default function AccessDeniedContent() {
         </div>
 
         <h1 className="mb-2 text-center text-2xl font-bold text-rose-600 dark:text-rose-400">
-          Conta sem permissão
+          Acesso não autorizado
         </h1>
 
         <p className="mb-6 text-center text-sm text-slate-600 dark:text-slate-400">
@@ -52,7 +52,7 @@ export default function AccessDeniedContent() {
         {email ? (
           <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center dark:border-white/10 dark:bg-white/5">
             <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-              E-mail utilizado
+              Conta utilizada
             </p>
             <p className="mt-1 break-all text-sm font-semibold text-slate-900 dark:text-slate-100">
               {email}
@@ -85,7 +85,7 @@ export default function AccessDeniedContent() {
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
-          Se você acredita que deveria ter acesso, entre em contato com o administrador do sistema.
+          Se você acredita que deveria ter acesso, verifique se está usando a conta Microsoft correta ou entre em contato com o administrador do sistema.
         </p>
       </div>
     </div>

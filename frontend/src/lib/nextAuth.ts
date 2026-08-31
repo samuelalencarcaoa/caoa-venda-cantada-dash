@@ -14,26 +14,6 @@ function getStringField(value: unknown, key: string) {
   return typeof field === "string" ? field : undefined;
 }
 
-function getMicrosoftUserEmail(user: { email?: string | null }, profile?: unknown) {
-  const candidates = [
-    user.email,
-    getStringField(profile, "email"),
-    getStringField(profile, "preferred_username"),
-    getStringField(profile, "upn"),
-    getStringField(profile, "unique_name"),
-  ];
-
-  return candidates
-    .find((candidate) => candidate?.includes("@"))
-    ?.trim()
-    .toLowerCase();
-}
-
-const allowedDomains = (process.env.AUTH_ALLOWED_DOMAINS || "caoa.com.br")
-  .split(",")
-  .map((domain) => domain.trim().replace(/^@/, "").toLowerCase())
-  .filter(Boolean);
-
 const allowFallbackAuth =
   process.env.NEXTAUTH_FALLBACK_AUTH === "true" ||
   process.env.NEXT_PUBLIC_FALLBACK_AUTH === "true";
@@ -107,23 +87,12 @@ export const authOptions: NextAuthOptions = {
       return `${baseUrl}/sales-intention`;
     },
 
-    async signIn({ user, profile, account }) {
+    async signIn({ account }) {
       if (account?.provider === "credentials") {
         return true;
       }
 
-      const userEmail = getMicrosoftUserEmail(user, profile);
-
-      if (!userEmail) {
-        return false;
-      }
-
-      const isAllowed = allowedDomains.some((domain) => userEmail.endsWith(`@${domain}`));
-
-      if (!isAllowed) {
-        return `/access-denied?error=AccessDenied&email=${encodeURIComponent(userEmail)}`;
-      }
-
+      // O provedor Azure AD já valida a identidade do usuário no tenant configurado.
       return true;
     },
 
