@@ -1562,7 +1562,7 @@ export function BrandDetailsAnalyticsSection({
               .map((item) => `${item.time}:${item.value}`)
               .join("|")}`}
             spec={trendChartSpec}
-            className={horizontalBarChartCardClassName}
+            className={cn(horizontalBarChartCardClassName, "xl:col-span-2")}
             contentClassName="h-[300px] sm:h-[340px]"
           />
 

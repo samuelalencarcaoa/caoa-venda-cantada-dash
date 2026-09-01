@@ -82,6 +82,19 @@ type BrandInsightSummary = {
   regionData: CountItem[];
 };
 
+function scrollElementIntoCenter(container: HTMLElement, element: HTMLElement) {
+  const containerRect = container.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  const elementCenter = elementRect.left + elementRect.width / 2;
+  const containerCenter = containerRect.left + containerRect.width / 2;
+  const targetLeft = container.scrollLeft + elementCenter - containerCenter;
+
+  container.scrollTo({
+    left: Math.max(0, targetLeft),
+    behavior: "smooth",
+  });
+}
+
 function TooltipIcon({ text }: { text: string }) {
   return (
     <Popover>
@@ -156,7 +169,13 @@ function DateField({
 }) {
   function openDatePicker(target: HTMLInputElement) {
     const pickerTarget = target as HTMLInputElement & { showPicker?: () => void };
-    pickerTarget.showPicker?.();
+
+    try {
+      pickerTarget.showPicker?.();
+    } catch {
+      // Browsers may reject showPicker when it is not tied to a direct click.
+      target.focus();
+    }
   }
 
   return (
@@ -168,9 +187,6 @@ function DateField({
         min={min}
         max={max}
         inputMode="none"
-        onFocus={(event) => {
-          openDatePicker(event.currentTarget);
-        }}
         onClick={(event) => {
           openDatePicker(event.currentTarget);
         }}
@@ -664,7 +680,7 @@ function RankingCard({
             </span>
           ) : null}
         </div>
-        <span className={cn("px-2.5 py-1 uppercase tracking-[0.22em]", themedChipClass)}>
+        <span className={cn("shrink-0 whitespace-nowrap px-2.5 py-1 uppercase tracking-[0.22em]", themedChipClass)}>
           Top 10
         </span>
       </div>
@@ -798,13 +814,13 @@ function MobileBrandCard({
   return (
     <div
       ref={cardRef}
-      role="button"
-      tabIndex={interactive ? 0 : -1}
-      aria-pressed={active}
-      aria-hidden={!interactive}
-      aria-label={`Selecionar visão de ${brand}`}
-      title={`Selecionar visão de ${brand}`}
-      onClick={onSelect}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      aria-pressed={interactive ? active : undefined}
+      aria-hidden={!interactive ? true : undefined}
+      aria-label={interactive ? `Selecionar visão de ${brand}` : undefined}
+      title={interactive ? `Selecionar visão de ${brand}` : undefined}
+      onClick={interactive ? onSelect : undefined}
       onKeyDown={(event) => {
         if (!interactive || event.currentTarget !== event.target) {
           return;
@@ -850,7 +866,7 @@ function MobileBrandCard({
               href={detailHref}
               aria-label={`Ver detalhes de ${brand}`}
               title={`Ver detalhes de ${brand}`}
-              tabIndex={interactive ? 0 : -1}
+              tabIndex={interactive ? 0 : undefined}
             >
               VER DETALHES
               <ArrowRight className="h-3.5 w-3.5" />
@@ -1021,14 +1037,6 @@ export default function DashboardV2Page() {
   const brandRailDrag = useHorizontalDragScroll<HTMLDivElement>();
   const tabletBrandNavDrag = useHorizontalDragScroll<HTMLDivElement>();
   const tabletBrandContentDrag = useHorizontalDragScroll<HTMLDivElement>();
-  const mobileBrandRailMiddleGroupRef = useRef<HTMLDivElement | null>(null);
-  const mobileBrandRailLoopWidthRef = useRef(0);
-  const mobileBrandRailWrapResetFrameRef = useRef<number | null>(null);
-  const mobileBrandRailIsWrappingRef = useRef(false);
-  const tabletBrandNavMiddleGroupRef = useRef<HTMLDivElement | null>(null);
-  const tabletBrandNavLoopWidthRef = useRef(0);
-  const tabletBrandNavWrapResetFrameRef = useRef<number | null>(null);
-  const tabletBrandNavIsWrappingRef = useRef(false);
   const tabletBrandCarouselRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const monthQuickFilters = useMemo(
@@ -1262,35 +1270,16 @@ export default function DashboardV2Page() {
     }
 
     const frame = window.requestAnimationFrame(() => {
-      mobileBrandRefs.current[selectedMobileBrand]?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
+      const container = brandRailDrag.ref.current;
+      const card = mobileBrandRefs.current[selectedMobileBrand];
+
+      if (container && card) {
+        scrollElementIntoCenter(container, card);
+      }
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [selectedMobileBrand, tabletBrandContentDrag.ref]);
-
-  useEffect(() => {
-    const measureTabletBrandNavRail = () => {
-      const middleGroup = tabletBrandNavMiddleGroupRef.current;
-
-      tabletBrandNavLoopWidthRef.current = middleGroup?.offsetWidth ?? 0;
-    };
-
-    measureTabletBrandNavRail();
-    window.addEventListener("resize", measureTabletBrandNavRail);
-
-    return () => {
-      window.removeEventListener("resize", measureTabletBrandNavRail);
-
-      if (tabletBrandNavWrapResetFrameRef.current !== null) {
-        window.cancelAnimationFrame(tabletBrandNavWrapResetFrameRef.current);
-        tabletBrandNavWrapResetFrameRef.current = null;
-      }
-    };
-  }, []);
+  }, [brandRailDrag.ref, selectedMobileBrand]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1298,15 +1287,16 @@ export default function DashboardV2Page() {
     }
 
     const frame = window.requestAnimationFrame(() => {
-      tabletBrandCarouselRefs.current[selectedMobileBrand]?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
+      const container = tabletBrandNavDrag.ref.current;
+      const card = tabletBrandCarouselRefs.current[selectedMobileBrand];
+
+      if (container && card) {
+        scrollElementIntoCenter(container, card);
+      }
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [selectedMobileBrand, tabletBrandContentDrag.ref]);
+  }, [selectedMobileBrand, tabletBrandNavDrag.ref]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1326,45 +1316,11 @@ export default function DashboardV2Page() {
         return;
       }
 
-      const targetLeft = slide.offsetLeft - (container.clientWidth - slide.offsetWidth) / 2;
-      container.scrollTo({
-        left: Math.max(0, targetLeft),
-        behavior: "smooth",
-      });
+      scrollElementIntoCenter(container, slide);
     });
 
     return () => window.cancelAnimationFrame(frame);
   }, [selectedMobileBrand, tabletBrandContentDrag.ref]);
-
-  const handleTabletBrandNavScroll = () => {
-    const container = tabletBrandNavDrag.ref.current;
-    const loopWidth = tabletBrandNavLoopWidthRef.current;
-
-    if (!container || !loopWidth || tabletBrandNavIsWrappingRef.current) {
-      return;
-    }
-
-    const wrapThreshold = 12;
-
-    if (container.scrollLeft <= wrapThreshold) {
-      tabletBrandNavIsWrappingRef.current = true;
-      container.scrollLeft += loopWidth;
-    } else if (container.scrollLeft >= loopWidth * 2 - wrapThreshold) {
-      tabletBrandNavIsWrappingRef.current = true;
-      container.scrollLeft -= loopWidth;
-    } else {
-      return;
-    }
-
-    if (tabletBrandNavWrapResetFrameRef.current !== null) {
-      window.cancelAnimationFrame(tabletBrandNavWrapResetFrameRef.current);
-    }
-
-    tabletBrandNavWrapResetFrameRef.current = window.requestAnimationFrame(() => {
-      tabletBrandNavIsWrappingRef.current = false;
-      tabletBrandNavWrapResetFrameRef.current = null;
-    });
-  };
 
   const handleTabletBrandStep = (direction: -1 | 1) => {
     setSelectedMobileBrand((currentBrand) => {
@@ -1377,56 +1333,6 @@ export default function DashboardV2Page() {
       const nextIndex = (safeCurrentIndex + direction + brandTotals.length) % brandTotals.length;
 
       return brandTotals[nextIndex].brand;
-    });
-  };
-
-  useEffect(() => {
-    const measureMobileBrandRail = () => {
-      const middleGroup = mobileBrandRailMiddleGroupRef.current;
-
-      mobileBrandRailLoopWidthRef.current = middleGroup?.offsetWidth ?? 0;
-    };
-
-    measureMobileBrandRail();
-    window.addEventListener("resize", measureMobileBrandRail);
-
-    return () => {
-      window.removeEventListener("resize", measureMobileBrandRail);
-
-      if (mobileBrandRailWrapResetFrameRef.current !== null) {
-        window.cancelAnimationFrame(mobileBrandRailWrapResetFrameRef.current);
-        mobileBrandRailWrapResetFrameRef.current = null;
-      }
-    };
-  }, []);
-
-  const handleMobileBrandRailScroll = () => {
-    const container = brandRailDrag.ref.current;
-    const loopWidth = mobileBrandRailLoopWidthRef.current;
-
-    if (!container || !loopWidth || mobileBrandRailIsWrappingRef.current) {
-      return;
-    }
-
-    const wrapThreshold = 12;
-
-    if (container.scrollLeft <= wrapThreshold) {
-      mobileBrandRailIsWrappingRef.current = true;
-      container.scrollLeft += loopWidth;
-    } else if (container.scrollLeft >= loopWidth * 2 - wrapThreshold) {
-      mobileBrandRailIsWrappingRef.current = true;
-      container.scrollLeft -= loopWidth;
-    } else {
-      return;
-    }
-
-    if (mobileBrandRailWrapResetFrameRef.current !== null) {
-      window.cancelAnimationFrame(mobileBrandRailWrapResetFrameRef.current);
-    }
-
-    mobileBrandRailWrapResetFrameRef.current = window.requestAnimationFrame(() => {
-      mobileBrandRailIsWrappingRef.current = false;
-      mobileBrandRailWrapResetFrameRef.current = null;
     });
   };
 
@@ -1946,39 +1852,24 @@ export default function DashboardV2Page() {
             onPointerMove={brandRailDrag.onPointerMove}
             onPointerUp={brandRailDrag.onPointerUp}
             onPointerCancel={brandRailDrag.onPointerCancel}
-            onScroll={handleMobileBrandRailScroll}
-            className="flex cursor-grab snap-x snap-mandatory overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Visão por bandeira"
             style={{
               paddingInline: "max(1rem, calc(50% - 80px))",
             }}
           >
-            {Array.from({ length: 3 }, (_, copyIndex) => (
-              <div
-                key={`brand-carousel-copy-${copyIndex}`}
-                ref={copyIndex === 1 ? mobileBrandRailMiddleGroupRef : undefined}
-                aria-hidden={copyIndex !== 1}
-                className="flex shrink-0 gap-3 pr-3"
-              >
-                {brandTotals.map((brand) => (
-                  <MobileBrandCard
-                    key={`brand-carousel-${copyIndex}-${brand.brand}`}
-                    brand={brand.brand}
-                    value={brand.value}
-                    detailHref={buildBrandDetailHref(brand.brand, brandDetailDateRange)}
-                    active={selectedMobileBrand === brand.brand}
-                    onSelect={() => setSelectedMobileBrand(brand.brand)}
-                    interactive={copyIndex === 1}
-                    cardRef={
-                      copyIndex === 1
-                        ? (element) => {
-                            mobileBrandRefs.current[brand.brand] = element;
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
+            {brandTotals.map((brand) => (
+              <MobileBrandCard
+                key={`brand-carousel-${brand.brand}`}
+                brand={brand.brand}
+                value={brand.value}
+                detailHref={buildBrandDetailHref(brand.brand, brandDetailDateRange)}
+                active={selectedMobileBrand === brand.brand}
+                onSelect={() => setSelectedMobileBrand(brand.brand)}
+                cardRef={(element) => {
+                  mobileBrandRefs.current[brand.brand] = element;
+                }}
+              />
             ))}
           </div>
         </section>
@@ -2307,40 +2198,22 @@ export default function DashboardV2Page() {
             onPointerMove={tabletBrandNavDrag.onPointerMove}
             onPointerUp={tabletBrandNavDrag.onPointerUp}
             onPointerCancel={tabletBrandNavDrag.onPointerCancel}
-            onScroll={handleTabletBrandNavScroll}
             className="flex cursor-grab snap-x snap-mandatory gap-3 overflow-x-auto pb-2 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Navegação por bandeiras"
             style={{
               paddingInline: "max(0.75rem, calc(50% - 120px))",
             }}
           >
-            {Array.from({ length: 3 }, (_, copyIndex) => (
-              <div
-                key={`tablet-brand-nav-copy-${copyIndex}`}
-                ref={copyIndex === 1 ? tabletBrandNavMiddleGroupRef : undefined}
-                aria-hidden={copyIndex !== 1}
-                className={cn(
-                  "flex shrink-0 gap-3 pr-3",
-                  copyIndex !== 1 && "pointer-events-none",
-                )}
-              >
-                {tabletBrandInsights.map((summary) => (
-                  <TabletBrandCarouselCard
-                    key={`tablet-brand-nav-${copyIndex}-${summary.brand}`}
-                    cardRef={
-                      copyIndex === 1
-                        ? (element) => {
-                            tabletBrandCarouselRefs.current[summary.brand] = element;
-                          }
-                        : undefined
-                    }
-                    interactive={copyIndex === 1}
-                    active={selectedMobileBrand === summary.brand}
-                    onClick={() => handleTabletBrandJump(summary.brand)}
-                    summary={summary}
-                  />
-                ))}
-              </div>
+            {tabletBrandInsights.map((summary) => (
+              <TabletBrandCarouselCard
+                key={`tablet-brand-nav-${summary.brand}`}
+                cardRef={(element) => {
+                  tabletBrandCarouselRefs.current[summary.brand] = element;
+                }}
+                active={selectedMobileBrand === summary.brand}
+                onClick={() => handleTabletBrandJump(summary.brand)}
+                summary={summary}
+              />
             ))}
           </div>
         </section>

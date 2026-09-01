@@ -2,6 +2,7 @@
 
 import { LoaderCircle, Sparkles } from "lucide-react";
 import { useTheme } from "next-themes";
+import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -240,5 +241,9 @@ export function GlobalRequestLoading() {
     };
   }, []);
 
-  return pendingRequests > 0 ? <LoadingOverlay /> : null;
+  if (pendingRequests === 0 || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(<LoadingOverlay />, document.body);
 }

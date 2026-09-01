@@ -1,40 +1,24 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   ArrowLeft,
-  AtSign,
   BadgeInfo,
   BriefcaseBusiness,
   Building2,
-  Clock3,
-  Fingerprint,
-  Globe,
-  IdCard,
-  ImageIcon,
-  Languages,
-  Mail,
   MapPin,
-  Phone,
-  ShieldCheck,
-  UserRound,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  findAdExportManager,
-  readRecordString,
-  readRecordStringArray,
-} from "@/lib/azure-ad-profile";
+import { findAdExportManager, readRecordString } from "@/lib/azure-ad-profile";
 import { authOptions } from "@/lib/nextAuth";
 import {
+  themedCardClass,
   themedChipClass,
-  themedHeroClass,
+  themedOutlineButtonClass,
   themedPageBackgroundClass,
   themedPageTextClass,
-  themedPanelClass,
   themedTextBodyClass,
   themedTextTitleClass,
   themedTinyLabelClass,
@@ -63,103 +47,32 @@ function getAvatarColor(seed: string) {
   return `hsl(${hue}, 68%, 44%)`;
 }
 
-function formatValue(value: unknown) {
-  if (typeof value === "string" && value.trim()) return value;
-  if (Array.isArray(value)) {
-    const items = value.filter(
-      (item): item is string => typeof item === "string" && Boolean(item.trim())
-    );
-    return items.length > 0 ? items.join(", ") : "Não informado";
-  }
-  if (typeof value === "boolean") return value ? "Sim" : "Não";
-  if (typeof value === "number") return String(value);
-  return "Não informado";
-}
-
 function formatDateTime(value?: string | null) {
-  if (!value) return "Não informado";
+  if (!value) return null;
 
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
 
-  return format(parsed, "dd/MM/yyyy HH:mm:ss", { locale: ptBR });
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(parsed);
 }
 
-function sanitizeImageValue(value?: string | null) {
-  if (!value) {
-    return undefined;
-  }
-
-  if (value.startsWith("data:")) {
-    return `[data-uri:${value.length} chars]`;
-  }
-
-  return value;
+function joinParts(values: Array<string | null | undefined>) {
+  return values
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.trim())
+    .join(" • ");
 }
 
-type ProfileRow = {
-  label: string;
-  value: unknown;
+type ProfileField = {
   icon: LucideIcon;
+  label: string;
+  value: string;
 };
-
-function ProfileSection({
-  badge,
-  description,
-  rows,
-  title,
-}: {
-  badge?: string;
-  description: string;
-  rows: ProfileRow[];
-  title: string;
-}) {
-  return (
-    <section className={cn(themedPanelClass, "p-4 sm:p-5")}>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className={themedTinyLabelClass}>{title}</p>
-          <h2 className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
-            {description}
-          </h2>
-        </div>
-        {badge ? <span className={cn(themedChipClass, "whitespace-nowrap")}>{badge}</span> : null}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {rows.map((row) => {
-          const Icon = row.icon;
-
-          return (
-            <div
-              key={row.label}
-              className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5"
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-cyan-300">
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className={cn(themedTinyLabelClass, "text-slate-500 dark:text-slate-400")}>
-                  {row.label}
-                </p>
-                <p className={cn("mt-1 break-words text-sm font-semibold", themedTextTitleClass)}>
-                  {formatValue(row.value)}
-                </p>
-                {row.label === "Sessão expira em" ? (
-                  <p className={cn("mt-1 text-xs leading-5", themedTextBodyClass)}>
-                    A validade exibida segue a sessão atual autenticada.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 
 export const metadata = {
   title: "Meu perfil",
@@ -188,6 +101,7 @@ export default async function PerfilPage() {
       mail: graph?.mail || user.email || undefined,
     },
   });
+
   const claimsDisplayName =
     readRecordString(claims, "name") ||
     graph?.displayName ||
@@ -197,167 +111,149 @@ export default async function PerfilPage() {
     readRecordString(claims, "preferred_username") ||
     graph?.mail ||
     graph?.userPrincipalName;
+
   const displayName = user.name || claimsDisplayName || "Usuário";
   const email = user.email || claimsEmail || "Email não informado";
   const initials = getInitials(displayName);
   const avatarColor = getAvatarColor(displayName);
+  const location = joinParts([graph?.city, graph?.state, graph?.country]);
+  const synchronizedAt = formatDateTime(directory?.fetchedAt);
 
-  const identityRows: ProfileRow[] = [
-    { label: "Nome", value: displayName, icon: UserRound },
-    { label: "Email", value: email, icon: Mail },
+  const profileFields: ProfileField[] = [
+    { label: "Cargo", value: graph?.jobTitle || "Não informado", icon: BriefcaseBusiness },
+    { label: "Empresa", value: graph?.companyName || "Não informado", icon: Building2 },
+    { label: "Departamento", value: graph?.department || "Não informado", icon: BadgeInfo },
     {
-      label: "Nome de usuário preferencial",
-      value: readRecordString(claims, "preferred_username"),
-      icon: AtSign,
+      label: "Gestor direto",
+      value: adExportManager?.displayName || "Não informado",
+      icon: Users,
     },
-    { label: "UPN", value: readRecordString(claims, "upn") || graph?.userPrincipalName, icon: Globe },
-    { label: "ID do objeto", value: readRecordString(claims, "oid") || graph?.id, icon: Fingerprint },
-    { label: "Subject (sub)", value: readRecordString(claims, "sub"), icon: Fingerprint },
-    { label: "Tenant ID", value: readRecordString(claims, "tid"), icon: Globe },
-    { label: "Emissor", value: readRecordString(claims, "iss"), icon: ShieldCheck },
-    { label: "Funções", value: readRecordStringArray(claims, "roles"), icon: BadgeInfo },
-    { label: "Foto", value: user.image ? "Disponível" : "Não informada", icon: ImageIcon },
-    { label: "Sessão expira em", value: formatDateTime(session.expires), icon: Clock3 },
-    { label: "Sincronizado em", value: formatDateTime(directory?.fetchedAt), icon: Clock3 },
-  ];
-
-  const graphRows: ProfileRow[] = [
-    { label: "Cargo", value: graph?.jobTitle, icon: BriefcaseBusiness },
-    { label: "Empresa", value: graph?.companyName, icon: Building2 },
-    { label: "Departamento", value: graph?.department, icon: Building2 },
-    { label: "Celular", value: graph?.mobilePhone, icon: Phone },
-    { label: "Telefones comerciais", value: graph?.businessPhones, icon: Phone },
-    { label: "Escritório", value: graph?.officeLocation, icon: MapPin },
-    { label: "Cidade", value: graph?.city, icon: MapPin },
-    { label: "Estado", value: graph?.state, icon: MapPin },
-    { label: "País", value: graph?.country, icon: Globe },
-    { label: "CEP", value: graph?.postalCode, icon: MapPin },
-    { label: "Endereço", value: graph?.streetAddress, icon: MapPin },
-    { label: "Idioma preferido", value: graph?.preferredLanguage, icon: Languages },
-    { label: "ID do colaborador", value: graph?.employeeId, icon: IdCard },
-    { label: "Tipo de colaborador", value: graph?.employeeType, icon: BadgeInfo },
-    { label: "Local de uso", value: graph?.usageLocation, icon: Globe },
-  ];
-
-  const managerRows: ProfileRow[] = [
-    { label: "Nome", value: adExportManager?.displayName, icon: UserRound },
-    { label: "Distinguished Name", value: adExportManager?.distinguishedName, icon: Fingerprint },
-  ];
-
-  const rawProfile = {
-    session: {
-      expires: session.expires,
+    {
+      label: "Localização",
+      value: location || "Não informado",
+      icon: MapPin,
     },
-    user: {
-      ...user,
-      image: sanitizeImageValue(user.image),
-    },
-    microsoftEntra: directory ? { ...directory, adExportManager } : directory,
-  };
-
-  const heroBackButtonClass =
-    "h-10 rounded-full border border-white/20 bg-white/10 px-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-white shadow-none backdrop-blur-sm transition hover:border-white/30 hover:bg-white/15 hover:text-white";
+  ].filter((field) => field.value !== "Não informado");
 
   return (
-    <main className={cn(themedPageBackgroundClass, themedPageTextClass, "min-h-[100dvh] px-4 py-4 sm:px-6 sm:py-6")}>
-      <div className="mx-auto w-full max-w-6xl space-y-4">
-        <section className={cn(themedHeroClass, "overflow-hidden")}>
-          <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
-            <Button asChild variant="ghost" className={heroBackButtonClass}>
-              <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4" />
-                Voltar
-              </Link>
-            </Button>
-            <span className={cn(themedChipClass, "border-white/15 bg-white/10 text-white/90 dark:bg-white/10 dark:text-white/90")}>
-              Meu perfil
-            </span>
-          </div>
+    <main
+      className={cn(
+        themedPageBackgroundClass,
+        themedPageTextClass,
+        "min-h-[100dvh] px-4 py-4 sm:px-6 sm:py-6",
+      )}
+    >
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <Button asChild variant="outline" className={themedOutlineButtonClass}>
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Link>
+          </Button>
 
-          <div className="flex flex-col gap-5 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-4">
-              {user.image ? (
-                <Image
-                  src={user.image}
-                  alt={displayName}
-                  className="h-20 w-20 rounded-[28px] object-cover ring-4 ring-white/15"
-                  width={80}
-                  height={80}
-                  unoptimized
-                />
+          <span className={cn(themedChipClass, "shrink-0")}>Meu perfil</span>
+        </div>
+
+        <section className={cn(themedCardClass, "overflow-hidden")}>
+          <div className="h-1 bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400" />
+
+          <div className="flex flex-col gap-6 p-5 sm:p-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                {user.image ? (
+                  <Image
+                    src={user.image}
+                    alt={displayName}
+                    className="h-20 w-20 rounded-full object-cover ring-4 ring-slate-200/70 dark:ring-white/10"
+                    width={80}
+                    height={80}
+                    unoptimized
+                  />
+                ) : (
+                  <div
+                    className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white ring-4 ring-slate-200/70 dark:ring-white/10"
+                    style={{ backgroundColor: avatarColor }}
+                  >
+                    {initials}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <p className={themedTinyLabelClass}>Conta autenticada</p>
+                  <h1
+                    className={cn(
+                      "mt-2 truncate text-3xl font-semibold tracking-[-0.03em]",
+                      themedTextTitleClass,
+                    )}
+                  >
+                    {displayName}
+                  </h1>
+                  <p className={cn("mt-1 truncate text-sm", themedTextBodyClass)}>{email}</p>
+                </div>
+              </div>
+
+              <span
+                className={cn(
+                  themedChipClass,
+                  directory
+                    ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-200"
+                    : "border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400",
+                )}
+              >
+                {directory ? "Microsoft Entra" : "Conta local"}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className={themedTinyLabelClass}>Resumo</p>
+                  <h2 className={cn("mt-1 text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+                    Informações relevantes
+                  </h2>
+                </div>
+
+                {synchronizedAt ? (
+                  <p className={cn("text-xs", themedTextBodyClass)}>Sincronizado em {synchronizedAt}</p>
+                ) : null}
+              </div>
+
+              {profileFields.length > 0 ? (
+                <dl className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/5">
+                  {profileFields.map((field, index) => {
+                    const Icon = field.icon;
+
+                    return (
+                      <div
+                        key={field.label}
+                        className={cn(
+                          "flex items-start gap-4 px-4 py-4 sm:px-5",
+                          index !== profileFields.length - 1 &&
+                            "border-b border-slate-200 dark:border-white/10",
+                        )}
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-cyan-300">
+                          <Icon className="h-5 w-5" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <dt className={themedTinyLabelClass}>{field.label}</dt>
+                          <dd className={cn("mt-1 break-words text-sm font-semibold", themedTextTitleClass)}>
+                            {field.value}
+                          </dd>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </dl>
               ) : (
-                <div
-                  className="flex h-20 w-20 items-center justify-center rounded-[28px] text-2xl font-semibold text-white ring-4 ring-white/15"
-                  style={{ backgroundColor: avatarColor }}
-                >
-                  {initials}
+                <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/80 p-5 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                  Nenhuma informação corporativa adicional foi sincronizada para esta conta.
                 </div>
               )}
-
-              <div className="min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
-                  Perfil do usuário
-                </p>
-                <h1 className="mt-2 truncate text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-                  {displayName}
-                </h1>
-                <p className="mt-1 truncate text-sm text-sky-50/85 dark:text-slate-300">
-                  {email}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 lg:justify-end">
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 shadow-none">
-                Sessão ativa
-              </span>
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 shadow-none">
-                {user.image ? "Foto disponível" : "Sem foto"}
-              </span>
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 shadow-none">
-                {directory ? "Perfil AD sincronizado" : "Perfil AD básico"}
-              </span>
             </div>
           </div>
-        </section>
-
-        <ProfileSection
-          badge={`${identityRows.length} itens`}
-          description="Informações principais"
-          rows={identityRows}
-          title="Detalhes da conta"
-        />
-
-        <ProfileSection
-          badge={`${graphRows.length} itens`}
-          description="Perfil corporativo capturado no Microsoft Graph"
-          rows={graphRows}
-          title="Dados do perfil"
-        />
-
-        <ProfileSection
-          badge={adExportManager ? "Encontrado na exportação AD" : "Não informado"}
-          description="Gestor direto conforme a exportação do Active Directory"
-          rows={managerRows}
-          title="Meu gestor"
-        />
-
-        <section className={cn(themedPanelClass, "p-4 sm:p-5")}>
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <p className={themedTinyLabelClass}>Dados brutos</p>
-              <h2 className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
-                Snapshot completo do AD
-              </h2>
-            </div>
-            <span className={cn(themedChipClass, "whitespace-nowrap")}>
-              JSON
-            </span>
-          </div>
-
-          <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap break-words rounded-3xl border border-slate-200 bg-slate-950 p-4 text-xs leading-6 text-slate-100 dark:border-white/10 dark:bg-slate-900">
-            {JSON.stringify(rawProfile, null, 2)}
-          </pre>
         </section>
       </div>
     </main>

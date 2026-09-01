@@ -138,9 +138,9 @@ const brandIdentityImageClassName = "max-w-[500px] max-h-[200px]";
 const brandIdentityCompactImageClassName = "max-w-[520px] max-h-[160px]";
 const brandIdentitySeminovosImageClassName = "max-w-[560px] max-h-[230px]";
 const quickAccessImageClassName =
-  "max-w-[68px] max-h-[38px] sm:max-w-[78px] sm:max-h-[44px]";
+  "max-w-[48px] max-h-[28px] sm:max-w-[78px] sm:max-h-[44px]";
 const quickAccessSeminovosImageClassName =
-  "max-w-[72px] max-h-[38px] sm:max-w-[82px] sm:max-h-[46px]";
+  "max-w-[52px] max-h-[28px] sm:max-w-[82px] sm:max-h-[46px]";
 
 function getBrandIdentityVisual(brandName: string): BrandIdentityVisual {
   switch (brandName) {
@@ -272,15 +272,15 @@ function QuickAccessCard({
   return (
     <div
       className={cn(
-        "flex h-full w-full min-w-0 flex-col items-center justify-center gap-3 text-center",
+        "flex h-full w-full min-w-0 flex-col items-center justify-center gap-2.5 text-center",
         className,
       )}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.42em] text-cyan-100/75">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-cyan-100/75 sm:text-[10px] sm:tracking-[0.42em]">
         Acesso rápido
       </p>
 
-      <div className="flex w-full snap-x snap-mandatory items-center justify-start gap-2 max-[319px]:gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:justify-center tablet:overflow-visible tablet:px-0 tablet:pb-0">
+      <div className="flex w-full items-center justify-center gap-2 px-1 pb-1 tablet:flex-wrap tablet:gap-3 tablet:px-0 tablet:pb-0">
         {quickAccessBrands.map((otherBrand) => {
           const visual = getQuickAccessBrandVisual(otherBrand);
 
@@ -290,8 +290,7 @@ function QuickAccessCard({
                 asChild
                 variant="outline"
                 className={cn(
-                  "group relative mx-auto flex aspect-square h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/12 p-0 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] ring-1 ring-inset ring-white/10 backdrop-blur-none",
-                  "max-[319px]:h-[84px] max-[319px]:w-[84px]",
+                  "group relative mx-auto flex aspect-square h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/12 p-0 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] ring-1 ring-inset ring-white/10 backdrop-blur-none",
                   "hover:border-white/25 hover:bg-white/18 hover:text-white tablet:h-[96px] tablet:w-[96px]",
                 )}
               >
@@ -345,17 +344,17 @@ function BrandIdentityCard({
         className,
       )}
     >
-      <div className="relative flex h-full min-h-[140px] flex-1 flex-col gap-0.5 sm:min-h-[184px]">
-        <div className="flex flex-wrap items-center justify-center gap-1">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-50/90 shadow-none">
+      <div className="relative flex h-full min-h-[124px] flex-1 flex-col gap-2 sm:min-h-[184px] sm:gap-0.5">
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
             Bandeira
           </span>
-          <span className="inline-flex max-w-full items-center rounded-full border border-white/12 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-50/90 shadow-none">
+          <span className="inline-flex max-w-full items-center rounded-full border border-white/12 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
             {brandName}
           </span>
         </div>
 
-        <div className="flex items-start justify-center py-0 sm:flex-1 sm:items-center">
+        <div className="flex flex-1 items-center justify-center py-1 sm:items-center sm:py-0">
           <Image
             alt={visual.alt}
             className={cn(
@@ -363,6 +362,7 @@ function BrandIdentityCard({
               brandName === "SEMINOVOS" &&
                 "dark:brightness-0 dark:invert dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.35)]",
               visual.imageClassName,
+              "max-h-[92px] max-w-[220px] sm:max-h-[160px] sm:max-w-[520px]",
             )}
             height={visual.imageHeight}
             priority
@@ -538,13 +538,13 @@ function HeroSection({
     <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between lg:gap-5">
         <div className="min-w-0 flex-1 basis-0 space-y-3 lg:self-stretch">
-          <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
+          <p className="text-[9px] font-medium uppercase tracking-[0.26em] text-sky-100/80 dark:text-cyan-200/80 sm:text-[10px] sm:tracking-[0.34em]">
             Detalhes da Bandeira
             <TooltipIcon text="Os filtros abaixo preservam o contexto da bandeira e atualizam os Big Numbers e a tabela detalhada no mesmo recorte de dados." />
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Flag className="h-5 w-5 text-cyan-300" />
-            <h1 className="text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
+            <h1 className="text-xl font-medium tracking-[-0.03em] sm:text-3xl">
               {brandName}
             </h1>
           </div>
@@ -554,7 +554,7 @@ function HeroSection({
             onPointerMove={statusChipsDrag.onPointerMove}
             onPointerUp={statusChipsDrag.onPointerUp}
             onPointerCancel={statusChipsDrag.onPointerCancel}
-            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80 dark:text-cyan-200/80"
+            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-100/80 dark:text-cyan-200/80 sm:text-[11px] sm:tracking-[0.24em]"
             title="Arraste para ver mais informações"
           >
             <span className={brandStatusChipClass}>Atualizado: {lastUpdatedText}</span>
@@ -568,7 +568,7 @@ function HeroSection({
             onPointerMove={summaryChipsDrag.onPointerMove}
             onPointerUp={summaryChipsDrag.onPointerUp}
             onPointerCancel={summaryChipsDrag.onPointerCancel}
-            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[11px] font-medium text-sky-50/90 dark:text-cyan-50/90"
+            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[10px] font-medium text-sky-50/90 dark:text-cyan-50/90 sm:text-[11px]"
             title="Arraste para ver mais informações"
           >
             <span className={brandStatusChipClass}>{periodLabel}</span>
@@ -581,7 +581,7 @@ function HeroSection({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 basis-0 flex-col gap-2.5 lg:self-stretch">
+      <div className="flex min-w-0 flex-1 basis-0 flex-col gap-4 lg:self-stretch">
           <QuickAccessCard
             brandName={brandName}
             period={period}
@@ -590,11 +590,16 @@ function HeroSection({
             className="flex-1 basis-0 lg:self-stretch"
           />
 
-          <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-1">
+        </div>
+
+        <div className="flex min-w-0 flex-1 basis-0 flex-col gap-3 lg:self-stretch">
+          <BrandIdentityCard brandName={brandName} />
+
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
             <Button
               asChild
               variant="outline"
-              className={cn("h-10 shrink-0 rounded-full px-4 text-xs font-medium", heroOutlineButtonClass)}
+              className={cn("h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium", heroOutlineButtonClass)}
             >
               <Link href="/dashboard">
                 <ArrowLeft className="h-4 w-4" />
@@ -605,16 +610,12 @@ function HeroSection({
               type="button"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className={cn("h-10 shrink-0 rounded-full px-4 text-xs font-medium", heroPrimaryButtonClass)}
+              className={cn("h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium", heroPrimaryButtonClass)}
             >
               <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
               Atualizar
             </Button>
           </div>
-        </div>
-
-        <div className="flex min-w-0 flex-1 basis-0 flex-col lg:self-stretch">
-          <BrandIdentityCard brandName={brandName} />
         </div>
       </div>
     </section>
