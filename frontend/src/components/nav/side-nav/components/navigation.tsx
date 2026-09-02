@@ -15,16 +15,17 @@ export default function Navigation({ onNavigate }: NavigationProps) {
     <nav className="flex flex-grow flex-col gap-y-1 p-2">
       {navigations.map((navigation) => {
         const Icon = navigation.icon;
+        const isActive = pathname === navigation.href;
         return (
           <Link
             key={navigation.name}
             href={navigation.href}
             onClick={onNavigate}
+            target={navigation.target}
+            rel={navigation.rel}
             className={cn(
               "flex min-w-0 w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-slate-200 dark:hover:bg-slate-800",
-              pathname === navigation.href
-                ? "bg-slate-200 dark:bg-slate-800"
-                : "bg-transparent",
+              isActive ? "bg-slate-200 dark:bg-slate-800" : "bg-transparent",
             )}
           >
             <Icon

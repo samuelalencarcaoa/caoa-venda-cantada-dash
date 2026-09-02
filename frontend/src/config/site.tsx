@@ -1,10 +1,19 @@
-import { type LucideIcon, FilePlus2, LayoutDashboard, Tag, Users } from "lucide-react";
+import {
+  ExternalLink,
+  FilePlus2,
+  LayoutDashboard,
+  Tag,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export type SiteConfig = typeof siteConfig;
 export type Navigation = {
   icon: LucideIcon;
   name: string;
   href: string;
+  target?: "_blank" | "_self" | "_parent" | "_top";
+  rel?: string;
 };
 
 export const siteConfig = {
@@ -32,5 +41,12 @@ export const navigations: Navigation[] = [
     icon: Users,
     name: "Vendedores",
     href: "/relatorios/vendedor",
+  },
+  {
+    icon: ExternalLink,
+    name: "Fluxo de loja",
+    href: "https://formulariosbi.caoa.com.br/fluxo-loja",
+    target: "_blank",
+    rel: "noreferrer noopener",
   },
 ];
