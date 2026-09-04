@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { VChart } from "@visactor/react-vchart";
 import type { ILineChartSpec } from "@visactor/vchart";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
@@ -14,7 +14,15 @@ import {
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
 import { addYears, format, subYears } from "date-fns";
-import { NotebookText, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, NotebookText, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
@@ -44,6 +52,7 @@ import type {
   SalesIntentionModelosDealerRecord,
   SalesIntentionModelosDealerResponse,
   SalesIntentionModelosDealerSources,
+  SalesIntentionReportRow,
 } from "@/lib/salesIntentionApi";
 
 const parseReportDate = (value: string): Date | null => {
@@ -162,12 +171,26 @@ type CompositionChartItem = { label: string; value: number; percentage: number }
 
 const monitoringPalette = [
   { hex: "#0ea5e9", dot: "bg-sky-500" },
+  { hex: "#f59e0b", dot: "bg-amber-500" },
   { hex: "#22d3ee", dot: "bg-cyan-400" },
+  { hex: "#f43f5e", dot: "bg-rose-500" },
   { hex: "#2dd4bf", dot: "bg-teal-400" },
+  { hex: "#f97316", dot: "bg-orange-500" },
   { hex: "#818cf8", dot: "bg-indigo-400" },
-  { hex: "#94a3b8", dot: "bg-slate-400" },
+  { hex: "#a855f7", dot: "bg-purple-500" },
   { hex: "#38bdf8", dot: "bg-sky-400" },
+  { hex: "#e11d48", dot: "bg-rose-600" },
 ] as const;
+const totalSeriesColor = "#0f172a";
+const totalSeriesLabel = "Total";
+
+function formatAxisValue(value: number) {
+  if (Math.abs(value) < 1000) {
+    return value.toLocaleString("pt-BR");
+  }
+
+  return `${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+}
 
 const rankingOptions = [
   { value: "bandeira", label: "Bandeiras" },
@@ -179,6 +202,18 @@ const trendOptions = [
   { value: "acumulado", label: "Acumulado" },
 ] as const;
 
+const trendMetricOptions = [
+  { value: "total", label: "Total" },
+  { value: "quant", label: "Quant." },
+] as const;
+
+const comparisonDimensionOptions = [
+  { value: "marca", label: "Marcas" },
+  { value: "versao", label: "Versões" },
+] as const;
+
+const MAX_COMPARISON_SERIES = 10;
+
 const compositionOptions = [
   { value: "tipoVenda", label: "Tipo de venda" },
   { value: "classificacao", label: "Classificação" },
@@ -187,6 +222,132 @@ const compositionOptions = [
 type RankingDimension = (typeof rankingOptions)[number]["value"];
 type TrendView = (typeof trendOptions)[number]["value"];
 type CompositionDimension = (typeof compositionOptions)[number]["value"];
+type TrendMetric = (typeof trendMetricOptions)[number]["value"];
+type ComparisonDimension = (typeof comparisonDimensionOptions)[number]["value"];
+
+const DEFAULT_TREND_VIEW: TrendView = "volume";
+const DEFAULT_TREND_METRIC: TrendMetric = "total";
+
+type MonitoringTrendPoint = {
+  label: string;
+  time: number;
+  hour: number;
+  series: string;
+  quantity: number;
+};
+
+type MonitoringTooltipSeriesDatum = { datum?: MonitoringTrendPoint[] };
+type MonitoringTooltipDataItem =
+  | MonitoringTooltipSeriesDatum
+  | { data?: MonitoringTooltipSeriesDatum[] };
+
+function getMonitoringTooltipPoints(data: MonitoringTooltipDataItem[] | undefined) {
+  return (data ?? []).flatMap((item) => {
+    if (Array.isArray((item as { data?: MonitoringTooltipSeriesDatum[] }).data)) {
+      return (item as { data: MonitoringTooltipSeriesDatum[] }).data;
+    }
+
+    return [item as MonitoringTooltipSeriesDatum];
+  });
+}
+
+function MonitoringSeriesLegend({ items }: { items: string[] }) {
+  return (
+    <div className="flex max-h-20 flex-wrap justify-center gap-x-4 gap-y-1.5 overflow-y-auto px-2">
+      {items.slice(0, MAX_COMPARISON_SERIES).map((item, index) => {
+        const color = item === totalSeriesLabel
+          ? totalSeriesColor
+          : monitoringPalette[
+              (index - (items[0] === totalSeriesLabel ? 1 : 0)) % monitoringPalette.length
+            ].hex;
+
+        return (
+          <span key={item} className="inline-flex min-w-0 items-center gap-1.5 text-[10px]" title={item}>
+            <span className="w-4 shrink-0 border-t-2" style={{ borderColor: color }} />
+            <span className={cn("max-w-32 truncate", item === totalSeriesLabel ? themedTextStrongClass : themedTextMutedClass)}>
+              {item}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function MonitoringComparisonSelector({
+  options,
+  value,
+  onChange,
+  dimension,
+  onDimensionChange,
+  trendView,
+  onTrendViewChange,
+  trendMetric,
+  onTrendMetricChange,
+}: {
+  options: string[];
+  value: string[];
+  onChange: (value: string[]) => void;
+  dimension: ComparisonDimension;
+  onDimensionChange: (value: ComparisonDimension) => void;
+  trendView: TrendView;
+  onTrendViewChange: (value: TrendView) => void;
+  trendMetric: TrendMetric;
+  onTrendMetricChange: (value: TrendMetric) => void;
+}) {
+  const limitReached = value.length >= MAX_COMPARISON_SERIES;
+  const displayValue = value.length
+    ? `${value.length} selecionada${value.length > 1 ? "s" : ""}`
+    : "Selecionar";
+
+  const toggleOption = (option: string, checked: boolean) => {
+    if (checked) {
+      if (limitReached && !value.includes(option)) return;
+      onChange([...new Set([...value, option])]);
+    } else {
+      onChange(value.filter((item) => item !== option));
+    }
+  };
+
+  return (
+    <div className={cn(themedSoftCardClass, "min-w-[250px] rounded-2xl p-3 sm:min-w-[270px]")}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Comparativo</p>
+          <TooltipIcon text="Selecione Total e até 9 marcas ou versões para comparar as linhas no período." />
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <ChartToggle options={trendOptions} value={trendView} onChange={(value) => onTrendViewChange(value as TrendView)} />
+        <ChartToggle options={trendMetricOptions} value={trendMetric} onChange={(value) => onTrendMetricChange(value as TrendMetric)} />
+      </div>
+
+      <div className="mt-2">
+        <ChartToggle options={comparisonDimensionOptions} value={dimension} onChange={(value) => onDimensionChange(value as ComparisonDimension)} />
+      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={!options.length}>
+          <button type="button" disabled={!options.length} className={cn("mt-3 flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs outline-none transition disabled:cursor-not-allowed disabled:opacity-60", themedInputClass)}>
+            <span className="truncate">{options.length ? displayValue : "Sem dados"}</span>
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0", themedTextMutedClass)} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={6} className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] min-w-56 overflow-y-auto rounded-xl p-1.5">
+          <DropdownMenuLabel className="px-2 py-1 text-xs">{comparisonDimensionOptions.find((item) => item.value === dimension)?.label}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {options.map((option) => (
+            <DropdownMenuCheckboxItem key={option} checked={value.includes(option)} disabled={limitReached && !value.includes(option)} onCheckedChange={(checked) => toggleOption(option, checked === true)}>
+              {option}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+    </div>
+  );
+}
 
 function ChartToggle({ options, value, onChange }: {
   options: ReadonlyArray<{ value: string; label: string }>;
@@ -233,16 +394,32 @@ function MonitoringTrendChartCard({
   spec,
   chartKey,
   hasData,
-  view,
-  onViewChange,
   grainLabel,
+  comparisonOptions,
+  selectedComparison,
+  legendItems,
+  onComparisonChange,
+  comparisonDimension,
+  onComparisonDimensionChange,
+  trendView,
+  onTrendViewChange,
+  trendMetric,
+  onTrendMetricChange,
 }: {
   spec: ILineChartSpec;
   chartKey: string;
   hasData: boolean;
-  view: TrendView;
-  onViewChange: (value: TrendView) => void;
   grainLabel: string;
+  comparisonOptions: string[];
+  selectedComparison: string[];
+  legendItems: string[];
+  onComparisonChange: (value: string[]) => void;
+  comparisonDimension: ComparisonDimension;
+  onComparisonDimensionChange: (value: ComparisonDimension) => void;
+  trendView: TrendView;
+  onTrendViewChange: (value: TrendView) => void;
+  trendMetric: TrendMetric;
+  onTrendMetricChange: (value: TrendMetric) => void;
 }) {
   return (
     <article className={cn(themedCardClass, "min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
@@ -258,14 +435,24 @@ function MonitoringTrendChartCard({
             {grainLabel}
           </span>
         </div>
-        <ChartToggle
-          options={trendOptions}
-          value={view}
-          onChange={(value) => onViewChange(value as TrendView)}
+        <MonitoringComparisonSelector
+          options={comparisonOptions}
+          value={selectedComparison}
+          onChange={onComparisonChange}
+          dimension={comparisonDimension}
+          onDimensionChange={onComparisonDimensionChange}
+          trendView={trendView}
+          onTrendViewChange={onTrendViewChange}
+          trendMetric={trendMetric}
+          onTrendMetricChange={onTrendMetricChange}
         />
       </div>
 
-      <div className="h-[300px] min-w-0 sm:h-[330px]">
+      <div className="mb-3 flex justify-center">
+        <MonitoringSeriesLegend items={legendItems} />
+      </div>
+
+      <div id="monitoring-trend-chart" className="relative h-[300px] min-w-0 sm:h-[330px]">
         {hasData ? (
           <VChart key={chartKey} spec={spec} />
         ) : (
@@ -493,7 +680,10 @@ export default function MarcaVeiculoRelatorioPage() {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
-  const [trendView, setTrendView] = useState<TrendView>("volume");
+  const [trendView, setTrendView] = useState<TrendView>(DEFAULT_TREND_VIEW);
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>(DEFAULT_TREND_METRIC);
+  const [comparisonDimension, setComparisonDimension] = useState<ComparisonDimension>("marca");
+  const [selectedComparison, setSelectedComparison] = useState<string[]>([totalSeriesLabel]);
   const [rankingDimension, setRankingDimension] = useState<RankingDimension>("bandeira");
   const [compositionDimension, setCompositionDimension] =
     useState<CompositionDimension>("tipoVenda");
@@ -847,127 +1037,105 @@ export default function MarcaVeiculoRelatorioPage() {
     [filteredItems],
   );
 
-  const trendChartData = useMemo(() => {
+  const getComparisonLabel = useCallback(
+    (item: SalesIntentionReportRow) =>
+      comparisonDimension === "marca"
+        ? item.Marca_Veiculo?.trim() || "Não informado"
+        : item.Versao?.trim() || "Não informado",
+    [comparisonDimension],
+  );
+
+  const comparisonOptions = useMemo(() => {
+    const totals = new Map<string, number>();
+    filteredItems.forEach((item) => {
+      const label = getComparisonLabel(item);
+      totals.set(label, (totals.get(label) || 0) + (Number(item.Quantidade) || 0));
+    });
+    return Array.from(totals.keys()).sort((left, right) => {
+      return (totals.get(right) || 0) - (totals.get(left) || 0) || left.localeCompare(right, "pt-BR");
+    });
+  }, [filteredItems, getComparisonLabel]);
+
+  const comparisonFilterOptions = useMemo(
+    () => [totalSeriesLabel, ...comparisonOptions],
+    [comparisonOptions],
+  );
+
+  const trendChartData = useMemo<MonitoringTrendPoint[]>(() => {
+    const selectedLabels = selectedComparison
+      .filter((label) => label === totalSeriesLabel || comparisonOptions.includes(label))
+      .slice(0, MAX_COMPARISON_SERIES);
+
     const isSingleDay = Boolean(appliedStartDate && appliedEndDate && appliedStartDate === appliedEndDate);
-
-    if (isSingleDay) {
-      const hourlyValues = Array.from({ length: 24 }, (_, hour) => ({
-        time: hour,
-        label: formatHourLabel(hour),
-        value: 0,
-      }));
-      let firstHour = 24;
-      let lastHour = -1;
-
-      filteredItems.forEach((item) => {
-        const createdAt = parseReportDate(item.Criado);
-        if (!createdAt) return;
-        if (formatInputDate(createdAt) !== appliedStartDate) return;
-
-        const hour = createdAt.getHours();
-        hourlyValues[hour].value += Number(item.Quantidade) || 0;
-
-        if (hour < firstHour) {
-          firstHour = hour;
-        }
-
-        if (hour > lastHour) {
-          lastHour = hour;
-        }
-      });
-
-      if (firstHour === 24 || lastHour < 0) {
-        return {
-          grainLabel: "Visão por hora",
-          values: [],
-        };
-      }
-
-      const windowStart = Math.max(0, firstHour - 1);
-      const windowEnd = Math.min(23, lastHour + 1);
-      const visibleValues = hourlyValues.slice(windowStart, windowEnd + 1);
-
-      let accumulated = 0;
-      return {
-        grainLabel: "Visão por hora",
-        values: visibleValues.map((item) => {
-          accumulated += item.value;
-          return {
-            ...item,
-            quantity: trendView === "acumulado" ? accumulated : item.value,
-          };
-        }),
-      };
-    }
-
-    const grouped = new Map<string, { time: number; label: string; value: number }>();
+    const grouped = new Map<string, { time: number; label: string; totals: Map<string, number> }>();
 
     filteredItems.forEach((item) => {
-      const date = parseReportDate(item.Data_solicitacao);
+      const date = parseReportDate(isSingleDay ? item.Criado : item.Data_solicitacao);
       if (!date) return;
+      if (isSingleDay && formatInputDate(date) !== appliedStartDate) return;
 
-      const dateKey = format(date, "yyyy-MM-dd");
-      const time = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-      const current = grouped.get(dateKey);
-      grouped.set(dateKey, {
+      const key = isSingleDay ? String(date.getHours()) : format(date, "yyyy-MM-dd");
+      const time = isSingleDay
+        ? date.getHours()
+        : new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      const current = grouped.get(key) || {
         time,
-        label: format(date, "dd/MM/yy"),
-        value: (current?.value || 0) + (Number(item.Quantidade) || 0),
-      });
+        label: isSingleDay ? formatHourLabel(date.getHours()) : format(date, "dd/MM/yy"),
+        totals: new Map<string, number>(),
+      };
+      const label = getComparisonLabel(item);
+      const value = trendMetric === "total" ? 1 : Number(item.Quantidade) || 0;
+      current.totals.set(label, (current.totals.get(label) || 0) + value);
+      grouped.set(key, current);
     });
 
-    const dailyValues = Array.from(grouped.values()).sort((a, b) => a.time - b.time);
-    const useMonthlyGrain = dailyValues.length > 45;
-    const values = useMonthlyGrain
-      ? Array.from(
-          dailyValues.reduce((months, item) => {
-            const date = new Date(item.time);
-            const key = format(date, "yyyy-MM");
-            const current = months.get(key);
-            months.set(key, {
-              time: new Date(date.getFullYear(), date.getMonth(), 1).getTime(),
-              label: format(date, "MM/yy"),
-              value: (current?.value || 0) + item.value,
-            });
-            return months;
-          }, new Map<string, { time: number; label: string; value: number }>()).values(),
-        ).sort((a, b) => a.time - b.time)
-      : dailyValues;
-
-    let accumulated = 0;
-    return {
-      grainLabel: useMonthlyGrain ? "Visão mensal" : "Visão diária",
-      values: values.map((item) => {
-        accumulated += item.value;
-        return {
-          ...item,
-          quantity: trendView === "acumulado" ? accumulated : item.value,
-        };
-      }),
-    };
-  }, [appliedEndDate, appliedStartDate, filteredItems, trendView]);
+    const rows = Array.from(grouped.values()).sort((a, b) => a.time - b.time);
+    const seriesLabels = selectedLabels;
+    const accumulated = new Map(seriesLabels.map((label) => [label, 0]));
+    return rows.flatMap((row) => seriesLabels.map((label) => {
+      const value = label === totalSeriesLabel
+        ? Array.from(row.totals.values()).reduce((sum, current) => sum + current, 0)
+        : row.totals.get(label) || 0;
+      const nextValue = trendView === "acumulado" ? (accumulated.get(label) || 0) + value : value;
+      accumulated.set(label, nextValue);
+      return { label: row.label, time: row.time, hour: isSingleDay ? row.time : new Date(row.time).getHours(), series: label, quantity: nextValue };
+    }));
+  }, [appliedEndDate, appliedStartDate, comparisonOptions, filteredItems, getComparisonLabel, selectedComparison, trendMetric, trendView]);
 
   const trendHourRange = useMemo(() => {
-    if (trendChartData.grainLabel !== "Visão por hora" || trendChartData.values.length === 0) {
+    if (appliedStartDate !== appliedEndDate || trendChartData.length === 0) {
       return null;
     }
 
-    const hours = trendChartData.values.map((item) => item.time);
+    const hours = trendChartData.map((item) => item.hour);
     return {
       min: Math.min(...hours),
       max: Math.max(...hours),
     };
-  }, [trendChartData]);
+  }, [appliedEndDate, appliedStartDate, trendChartData]);
+
+  const trendGrainLabel = appliedStartDate === appliedEndDate ? "Visão por hora" : "Visão diária";
+  const trendSeriesLabels = useMemo(
+    () => Array.from(new Set(trendChartData.map((point) => point.series))),
+    [trendChartData],
+  );
 
   const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
       type: "line",
-      data: [{ id: "monitoringTrend", values: trendChartData.values }],
-      xField: trendChartData.grainLabel === "Visão por hora" ? "time" : "label",
+      data: [{ id: "monitoringTrend", values: trendChartData }],
+      xField: appliedStartDate === appliedEndDate ? "hour" : "label",
       yField: "quantity",
+      seriesField: "series",
       smooth: true,
       padding: [20, 24, 42, 42],
-      color: ["#0ea5e9"],
+      color: trendSeriesLabels.map((series, index) =>
+        series === totalSeriesLabel
+          ? totalSeriesColor
+          : monitoringPalette[
+              (index - (trendSeriesLabels[0] === totalSeriesLabel ? 1 : 0)) % monitoringPalette.length
+            ].hex,
+      ),
       axes: [
         trendHourRange
           ? {
@@ -998,31 +1166,62 @@ export default function MarcaVeiculoRelatorioPage() {
           orient: "left",
           label: {
             formatMethod: (text: string | string[]) =>
-              Number(Array.isArray(text) ? text[0] : text).toLocaleString("pt-BR"),
+              formatAxisValue(Number(Array.isArray(text) ? text[0] : text)),
           },
         },
       ],
       tooltip: {
         trigger: ["hover", "click"],
-        confine: true,
-        mark: {
-          title: { value: (datum) => datum?.label || "Período" },
-          content: [
-            {
-              key: trendView === "acumulado" ? "Volume acumulado" : "Volume",
-              value: (datum) => Number(datum?.quantity || 0).toLocaleString("pt-BR"),
-            },
-          ],
+        confine: false,
+        parentElement: "monitoring-trend-chart",
+        activeType: "dimension",
+        dimension: {
+          title: {
+            visible: true,
+            value: (datum) => datum?.label || "Período",
+          },
+          updateContent: (_prev, data) => {
+            const points = getMonitoringTooltipPoints(data as MonitoringTooltipDataItem[]);
+            const referencePoint = points[0]?.datum?.[0];
+
+            if (!referencePoint) {
+              return [];
+            }
+
+            return trendChartData
+              .filter((point) => point.time === referencePoint.time)
+              .map((point) => ({
+                key: point.series,
+                value: Number(point.quantity || 0).toLocaleString("pt-BR"),
+                visible: true as const,
+                hasShape: true as const,
+                shapeType: "line" as const,
+                shapeFill:
+                  point.series === totalSeriesLabel
+                    ? totalSeriesColor
+                    : monitoringPalette[
+                        (trendSeriesLabels.indexOf(point.series) -
+                          (trendSeriesLabels[0] === totalSeriesLabel ? 1 : 0)) %
+                          monitoringPalette.length
+                      ].hex,
+                shapeStroke: "transparent",
+                shapeLineWidth: 0,
+                shapeSize: 10,
+              }));
+          },
         },
       },
-      point: {
-        visible: true,
-        style: { size: 7, fill: "#22d3ee", stroke: "#ffffff", lineWidth: 2 },
-      },
+      point: { visible: true, style: { size: 6, fill: "#ffffff", stroke: "#0ea5e9", lineWidth: 2 } },
       line: { style: { lineWidth: 3, curveType: "monotone" } },
       area: { visible: true, style: { fillOpacity: 0.12 } },
     }),
-    [trendChartData, trendHourRange, trendView],
+    [
+      appliedEndDate,
+      appliedStartDate,
+      trendChartData,
+      trendHourRange,
+      trendSeriesLabels,
+    ],
   );
 
   const rankingChartData = useMemo(() => {
@@ -1580,11 +1779,22 @@ export default function MarcaVeiculoRelatorioPage() {
 
           <MonitoringTrendChartCard
             spec={trendChartSpec}
-            chartKey={`${trendView}-${JSON.stringify(trendChartData.values)}`}
-            hasData={trendChartData.values.length > 0}
-            view={trendView}
-            onViewChange={setTrendView}
-            grainLabel={trendChartData.grainLabel}
+            chartKey={`${trendView}-${trendMetric}-${comparisonDimension}-${JSON.stringify(trendChartData)}`}
+            hasData={trendChartData.length > 0}
+            grainLabel={trendGrainLabel}
+            comparisonOptions={comparisonFilterOptions}
+            selectedComparison={selectedComparison}
+            legendItems={selectedComparison.filter((item) => comparisonFilterOptions.includes(item))}
+            onComparisonChange={setSelectedComparison}
+            comparisonDimension={comparisonDimension}
+            onComparisonDimensionChange={(value) => {
+              setComparisonDimension(value);
+              setSelectedComparison([totalSeriesLabel]);
+            }}
+            trendView={trendView}
+            onTrendViewChange={setTrendView}
+            trendMetric={trendMetric}
+            onTrendMetricChange={setTrendMetric}
           />
 
           <div className="grid min-w-0 gap-4 lg:grid-cols-2">

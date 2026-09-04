@@ -941,22 +941,26 @@ function TabletBrandSection({
 
         <div className="space-y-3">
           <RankingCard
-            title="Venda Cantada x Modelo"
+            title="Venda Cantada x Região"
+            data={summary.regionData}
+            contextLabel={summary.brand}
+            tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+          />
+          <RankingCard
+            title={summary.brand === "SEMINOVOS" ? "Venda Cantada x Bandeira" : "Venda Cantada x Modelo"}
             data={summary.modelData}
             contextLabel={summary.brand}
-            tooltip="Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+            tooltip={
+              summary.brand === "SEMINOVOS"
+                ? "Quantidade Total de Vendas Cantadas por bandeira no período selecionado."
+                : "Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+            }
           />
           <RankingCard
             title="Venda Cantada x Lojas"
             data={summary.storeData}
             contextLabel={summary.brand}
             tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
-          />
-          <RankingCard
-            title="Venda Cantada x Região"
-            data={summary.regionData}
-            contextLabel={summary.brand}
-            tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
           />
         </div>
       </div>
@@ -1924,22 +1928,26 @@ export default function DashboardV2Page() {
 
           <div className="space-y-3">
             <RankingCard
-              title="Venda Cantada x Modelo"
+              title="Venda Cantada x Região"
+              data={selectedMobileBrandRegionData}
+              contextLabel={selectedMobileBrand}
+              tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+            />
+            <RankingCard
+              title={selectedMobileBrand === "SEMINOVOS" ? "Venda Cantada x Bandeira" : "Venda Cantada x Modelo"}
               data={selectedMobileBrandModelData}
               contextLabel={selectedMobileBrand}
-              tooltip="Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+              tooltip={
+                selectedMobileBrand === "SEMINOVOS"
+                  ? "Quantidade Total de Vendas Cantadas por bandeira no período selecionado."
+                  : "Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+              }
             />
             <RankingCard
               title="Venda Cantada x Lojas"
               data={selectedMobileBrandStoreData}
               contextLabel={selectedMobileBrand}
               tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
-            />
-            <RankingCard
-              title="Venda Cantada x Região"
-              data={selectedMobileBrandRegionData}
-              contextLabel={selectedMobileBrand}
-              tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
             />
           </div>
         </section>
@@ -2485,6 +2493,29 @@ export default function DashboardV2Page() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+            {vehicleBrands.map((brand) => (
+              <RankingCard
+                key={brand}
+                title="Venda Cantada x Região"
+                data={topTenWithOthers(
+                  groupCounts(
+                    novosSales.filter((item) => matchesBrand(item, brand)),
+                    "Regional",
+                  ),
+                )}
+                contextLabel={brand}
+                tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+              />
+            ))}
+
+            <RankingCard
+              title="Venda Cantada x Região"
+              data={regionData}
+              tooltip="Quantidade Total de Vendas Cantadas por região no período selecionado."
+            />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
             {brandModelData.map(({ brand, data }) => (
               <RankingCard
                 key={brand}
@@ -2516,29 +2547,6 @@ export default function DashboardV2Page() {
               title="Venda Cantada x Lojas"
               data={storeData}
               tooltip="Quantidade Total de Vendas Cantadas por loja no período selecionado."
-            />
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
-            {vehicleBrands.map((brand) => (
-              <RankingCard
-                key={brand}
-                title="Venda Cantada x Região"
-                data={topTenWithOthers(
-                  groupCounts(
-                    novosSales.filter((item) => matchesBrand(item, brand)),
-                    "Regional",
-                  ),
-                )}
-                contextLabel={brand}
-                tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
-              />
-            ))}
-
-            <RankingCard
-              title="Venda Cantada x Região"
-              data={regionData}
-              tooltip="Quantidade Total de Vendas Cantadas por região no período selecionado."
             />
           </div>
 
