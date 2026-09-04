@@ -331,13 +331,19 @@ function groupCounts(
 
 function matchesBrand(item: SalesIntentionReportRow, brand: string) {
   if (brand === "SEMINOVOS") {
-    return String(item.Tipo_Venda).toUpperCase() === "SEMINOVOS";
+    return isSeminovosVehicleType(item.Tipo_Venda);
   }
 
   const salesFlag = String(item.Bandeira || "").trim().toUpperCase();
   return brand === "CAOA CHANGAN"
     ? salesFlag.includes("CAOA CHANGAN") || salesFlag.includes("CHANGAN")
     : salesFlag.includes(brand);
+}
+
+function isSeminovosVehicleType(value: unknown) {
+  const normalizedType = String(value ?? "").trim().toUpperCase();
+
+  return normalizedType === "SEMINOVO" || normalizedType === "SEMINOVOS";
 }
 
 function topTenWithOthers(items: CountItem[]) {
@@ -1392,10 +1398,7 @@ export default function DashboardV2Page() {
     [filteredSales],
   );
   const seminovosSales = useMemo(
-    () =>
-      filteredSales.filter(
-        (item) => String(item.Tipo_Venda).trim().toUpperCase() === "SEMINOVOS",
-      ),
+    () => filteredSales.filter((item) => isSeminovosVehicleType(item.Tipo_Venda)),
     [filteredSales],
   );
 

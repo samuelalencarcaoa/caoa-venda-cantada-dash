@@ -767,7 +767,9 @@ export function BrandDetailsClient({
 
   const query = useMemo(
     () => ({
-      bandeira: brandName,
+      ...(brandName === "SEMINOVOS"
+        ? { tipoVenda: "SEMINOVOS" as const }
+        : { bandeira: brandName }),
       ...(appliedStartDate ? { startDate: appliedStartDate } : {}),
       ...(appliedEndDate ? { endDate: appliedEndDate } : {}),
     }),
