@@ -166,6 +166,27 @@ function areStringSelectionsEqual(left: string[], right: string[]) {
   return left.every((value) => normalizedRight.has(normalizeValue(value)));
 }
 
+function buildVehicleCatalogKey(tipoVenda: string, marca: string, versao: string) {
+  return [tipoVenda, marca, versao].map(normalizeValue).join("|");
+}
+
+function groupSalesVolume(
+  items: SalesIntentionReportRow[],
+  getLabel: (item: SalesIntentionReportRow) => string,
+) {
+  const totals = new Map<string, number>();
+
+  items.forEach((item) => {
+    const label = getLabel(item).trim() || "Não informado";
+    totals.set(label, (totals.get(label) || 0) + (Number(item.Quantidade) || 0));
+  });
+
+  return Array.from(totals, ([label, value]) => ({ label, value })).sort(
+    (left, right) =>
+      right.value - left.value || left.label.localeCompare(right.label, "pt-BR"),
+  );
+}
+
 type RankingChartItem = { label: string; value: number };
 type CompositionChartItem = { label: string; value: number; percentage: number };
 
@@ -423,8 +444,8 @@ function MonitoringTrendChartCard({
 }) {
   return (
     <article className={cn(themedCardClass, "min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(250px,270px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start">
+        <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           <div className="flex items-center gap-2">
             <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
               Ritmo das vendas cantadas
@@ -435,26 +456,95 @@ function MonitoringTrendChartCard({
             {grainLabel}
           </span>
         </div>
-        <MonitoringComparisonSelector
-          options={comparisonOptions}
-          value={selectedComparison}
-          onChange={onComparisonChange}
-          dimension={comparisonDimension}
-          onDimensionChange={onComparisonDimensionChange}
-          trendView={trendView}
-          onTrendViewChange={onTrendViewChange}
-          trendMetric={trendMetric}
-          onTrendMetricChange={onTrendMetricChange}
-        />
+
+        <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+          <MonitoringComparisonSelector
+            options={comparisonOptions}
+            value={selectedComparison}
+            onChange={onComparisonChange}
+            dimension={comparisonDimension}
+            onDimensionChange={onComparisonDimensionChange}
+            trendView={trendView}
+            onTrendViewChange={onTrendViewChange}
+            trendMetric={trendMetric}
+            onTrendMetricChange={onTrendMetricChange}
+          />
+        </div>
+
+        <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+          <div className="mb-3 flex justify-center">
+            <MonitoringSeriesLegend items={legendItems} />
+          </div>
+
+          <div id="monitoring-trend-chart" className="relative h-[300px] min-w-0 sm:h-[330px]">
+            {hasData ? (
+              <VChart key={chartKey} spec={spec} />
+            ) : (
+              <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>
+                Nenhum dado no período.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function MonitoringBreakdownCard({
+  title,
+  data,
+  contextLabel,
+  tooltip,
+}: {
+  title: string;
+  data: RankingChartItem[];
+  contextLabel: string;
+  tooltip: string;
+}) {
+  const max = data[0]?.value || 1;
+
+  return (
+    <article className={cn(themedCardClass, "min-h-[420px] min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
+      <div className="mb-4 min-w-0">
+        <div className="flex items-center gap-2">
+          <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            {title}
+          </h2>
+          <TooltipIcon text={tooltip} />
+        </div>
+        <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>
+          {contextLabel}
+        </span>
       </div>
 
-      <div className="mb-3 flex justify-center">
-        <MonitoringSeriesLegend items={legendItems} />
-      </div>
-
-      <div id="monitoring-trend-chart" className="relative h-[300px] min-w-0 sm:h-[330px]">
-        {hasData ? (
-          <VChart key={chartKey} spec={spec} />
+      <div className="h-[332px] space-y-3 overflow-y-auto pr-2">
+        {data.length ? (
+          data.map((item) => (
+            <div
+              key={item.label}
+              title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}
+            >
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className={cn("truncate font-medium", themedTextStrongClass)}>
+                  {item.label}
+                </span>
+                <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-medium", themedBadgeClass)}>
+                  {item.value.toLocaleString("pt-BR")}
+                </span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400"
+                  style={{
+                    width: item.value > 0
+                      ? `${Math.max(5, (item.value / max) * 100)}%`
+                      : "0%",
+                  }}
+                />
+              </div>
+            </div>
+          ))
         ) : (
           <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>
             Nenhum dado no período.
@@ -1060,6 +1150,58 @@ export default function MarcaVeiculoRelatorioPage() {
     () => [totalSeriesLabel, ...comparisonOptions],
     [comparisonOptions],
   );
+
+  const modelByVehicleCombination = useMemo(() => {
+    const models = new Map<string, string>();
+
+    vehicleCatalogRows.forEach((row) => {
+      const key = buildVehicleCatalogKey(row.tipoVenda, row.marca, row.versaoModelo);
+      if (!models.has(key)) {
+        models.set(key, row.modelo.trim() || "Modelo não identificado");
+      }
+    });
+
+    return models;
+  }, [vehicleCatalogRows]);
+
+  const storeBreakdownData = useMemo(
+    () =>
+      groupSalesVolume(
+        filteredItems,
+        (item) => item.Loja_Venda?.trim() || "Loja não informada",
+      ),
+    [filteredItems],
+  );
+
+  const modelBreakdownData = useMemo(
+    () =>
+      groupSalesVolume(filteredItems, (item) => {
+        const key = buildVehicleCatalogKey(
+          item.Tipo_Venda || "",
+          item.Marca_Veiculo || "",
+          item.Versao || "",
+        );
+
+        return modelByVehicleCombination.get(key) || "Modelo não identificado";
+      }),
+    [filteredItems, modelByVehicleCombination],
+  );
+
+  const breakdownContextLabel = useMemo(() => {
+    const activeBrands = appliedMarcaVeiculo.length
+      ? appliedMarcaVeiculo
+      : appliedBandeira;
+
+    if (activeBrands.length === 1) {
+      return activeBrands[0];
+    }
+
+    if (activeBrands.length > 1) {
+      return `${activeBrands.length} marcas selecionadas`;
+    }
+
+    return "Todas as marcas";
+  }, [appliedBandeira, appliedMarcaVeiculo]);
 
   const trendChartData = useMemo<MonitoringTrendPoint[]>(() => {
     const selectedLabels = selectedComparison
@@ -1796,6 +1938,22 @@ export default function MarcaVeiculoRelatorioPage() {
             trendMetric={trendMetric}
             onTrendMetricChange={setTrendMetric}
           />
+
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+            <MonitoringBreakdownCard
+              title="Venda Cantada x Lojas"
+              data={storeBreakdownData}
+              contextLabel={breakdownContextLabel}
+              tooltip="Lista todas as lojas com vendas cantadas no recorte atual, sem limitar aos dez primeiros resultados."
+            />
+
+            <MonitoringBreakdownCard
+              title="Venda Cantada x Modelo"
+              data={modelBreakdownData}
+              contextLabel={breakdownContextLabel}
+              tooltip="Lista todos os modelos com vendas cantadas no recorte atual, sem limitar aos dez primeiros resultados."
+            />
+          </div>
 
           <div className="grid min-w-0 gap-4 lg:grid-cols-2">
             <MonitoringRankingChartCard
