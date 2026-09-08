@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { BrandDetailsClient } from "./brand-details-client";
 import {
+  buildBrandDetailHref,
+  getBrandDetailTipoVenda,
   type DashboardPeriod,
   resolveBrandFromSlug,
 } from "@/lib/brand-routing";
@@ -35,6 +37,14 @@ function normalizePeriodValue(value?: string | null): DashboardPeriod | null {
   return null;
 }
 
+function normalizeTipoVendaValue(value?: string | null) {
+  if (value === "NOVOS" || value === "SEMINOVOS") {
+    return value;
+  }
+
+  return null;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = (await params) ?? { bandeira: "" };
   const brandName = resolveBrandFromSlug(resolvedParams.bandeira);
@@ -56,6 +66,18 @@ export default async function BrandDetailsPage({ params, searchParams }: PagePro
   const period = normalizePeriodValue(readSingleQueryValue(resolvedSearchParams.period));
   const startDate = readSingleQueryValue(resolvedSearchParams.startDate);
   const endDate = readSingleQueryValue(resolvedSearchParams.endDate);
+  const tipoVenda = normalizeTipoVendaValue(readSingleQueryValue(resolvedSearchParams.tipoVenda));
+  const expectedTipoVenda = getBrandDetailTipoVenda(brandName);
+
+  if (expectedTipoVenda && tipoVenda !== expectedTipoVenda) {
+    redirect(
+      buildBrandDetailHref(brandName, {
+        period: period ?? undefined,
+        startDate,
+        endDate,
+      }),
+    );
+  }
 
   return (
     <BrandDetailsClient

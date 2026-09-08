@@ -8,12 +8,21 @@ export const dashboardBrandNames = [
 
 export type DashboardBrand = (typeof dashboardBrandNames)[number];
 export type DashboardPeriod = "mes" | "dia" | "intervalo";
+export type BrandDetailTipoVenda = "NOVOS" | "SEMINOVOS";
 
 type BrandDetailDateRange = {
   startDate?: string;
   endDate?: string;
   period?: DashboardPeriod;
+  tipoVenda?: BrandDetailTipoVenda;
 };
+
+const brandsWithNewVehicleOnlyView = new Set([
+  "CAOA CHERY",
+  "CAOA CHANGAN",
+  "HYUNDAI",
+  "FORD",
+]);
 
 function normalizeSlugValue(value: string) {
   return value
@@ -45,6 +54,41 @@ export function resolveBrandFromSlug(slug: string) {
   );
 }
 
+export function getBrandDetailTipoVenda(brandName: string): BrandDetailTipoVenda | undefined {
+  const normalizedBrandName = brandName.trim().toUpperCase();
+
+  if (normalizedBrandName === "SEMINOVOS") {
+    return "SEMINOVOS";
+  }
+
+  if (brandsWithNewVehicleOnlyView.has(normalizedBrandName)) {
+    return "NOVOS";
+  }
+
+  return undefined;
+}
+
+export type BrandDetailSalesIntentionQuery = {
+  bandeira?: string;
+  tipoVenda?: BrandDetailTipoVenda;
+};
+
+export function getBrandDetailSalesIntentionQuery(
+  brandName: string,
+): BrandDetailSalesIntentionQuery {
+  const tipoVenda = getBrandDetailTipoVenda(brandName);
+
+  if (tipoVenda === "SEMINOVOS") {
+    return { tipoVenda };
+  }
+
+  if (tipoVenda === "NOVOS") {
+    return { bandeira: brandName, tipoVenda };
+  }
+
+  return { bandeira: brandName };
+}
+
 export function buildBrandDetailHref(brandName: string, dateRange?: BrandDetailDateRange) {
   const searchParams = new URLSearchParams();
 
@@ -58,6 +102,11 @@ export function buildBrandDetailHref(brandName: string, dateRange?: BrandDetailD
 
   if (dateRange?.endDate) {
     searchParams.set("endDate", dateRange.endDate);
+  }
+
+  const tipoVenda = dateRange?.tipoVenda ?? getBrandDetailTipoVenda(brandName);
+  if (tipoVenda) {
+    searchParams.set("tipoVenda", tipoVenda);
   }
 
   const queryString = searchParams.toString();

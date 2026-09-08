@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   addYears,
@@ -41,6 +41,8 @@ import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import {
   buildBrandDetailHref,
   dashboardBrandNames,
+  getBrandDetailSalesIntentionQuery,
+  getBrandDetailTipoVenda,
   brandNameToSlug,
   type DashboardPeriod,
 } from "@/lib/brand-routing";
@@ -743,6 +745,8 @@ export function BrandDetailsClient({
 }: BrandDetailsClientProps) {
   const initialStartDate = startDate ?? "";
   const initialEndDate = endDate ?? "";
+  const fixedTipoVenda = getBrandDetailTipoVenda(brandName);
+  const initialTipoVendaSelection = fixedTipoVenda ? [fixedTipoVenda] : [];
 
   const [selectedStartDate, setSelectedStartDate] = useState(initialStartDate);
   const [selectedEndDate, setSelectedEndDate] = useState(initialEndDate);
@@ -750,13 +754,13 @@ export function BrandDetailsClient({
   const [appliedEndDate, setAppliedEndDate] = useState(initialEndDate);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
-  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>([]);
+  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>(initialTipoVendaSelection);
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedLojaVenda, setSelectedLojaVenda] = useState<string[]>([]);
   const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string[]>([]);
   const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
   const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
-  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>([]);
+  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>(initialTipoVendaSelection);
   const [appliedRegional, setAppliedRegional] = useState<string[]>([]);
   const [appliedLojaVenda, setAppliedLojaVenda] = useState<string[]>([]);
   const [appliedMarcaVeiculo, setAppliedMarcaVeiculo] = useState<string[]>([]);
@@ -764,16 +768,42 @@ export function BrandDetailsClient({
   const [appliedClassificacao, setAppliedClassificacao] = useState<string[]>([]);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const periodChipDrag = useHorizontalDragScroll<HTMLDivElement>();
+  const brandDetailQuery = useMemo(
+    () => getBrandDetailSalesIntentionQuery(brandName),
+    [brandName],
+  );
+
+  useEffect(() => {
+    const nextTipoVendaSelection = fixedTipoVenda ? [fixedTipoVenda] : [];
+
+    setSelectedStartDate(initialStartDate);
+    setSelectedEndDate(initialEndDate);
+    setAppliedStartDate(initialStartDate);
+    setAppliedEndDate(initialEndDate);
+    setSelectedTipoVenda(nextTipoVendaSelection);
+    setAppliedTipoVenda(nextTipoVendaSelection);
+    setSelectedRegional([]);
+    setSelectedLojaVenda([]);
+    setSelectedMarcaVeiculo([]);
+    setSelectedVersao([]);
+    setSelectedClassificacao([]);
+    setAppliedRegional([]);
+    setAppliedLojaVenda([]);
+    setAppliedMarcaVeiculo([]);
+    setAppliedVersao([]);
+    setAppliedClassificacao([]);
+    setIsMobileFiltersOpen(false);
+    setIsDesktopFiltersOpen(false);
+    setIsDetailedTableModalOpen(false);
+  }, [brandName, fixedTipoVenda, initialEndDate, initialStartDate]);
 
   const query = useMemo(
     () => ({
-      ...(brandName === "SEMINOVOS"
-        ? { tipoVenda: "SEMINOVOS" as const }
-        : { bandeira: brandName }),
+      ...brandDetailQuery,
       ...(appliedStartDate ? { startDate: appliedStartDate } : {}),
       ...(appliedEndDate ? { endDate: appliedEndDate } : {}),
     }),
-    [appliedEndDate, appliedStartDate, brandName],
+    [appliedEndDate, appliedStartDate, brandDetailQuery],
   );
 
   const { items, isLoading, isRefreshing, error, lastUpdatedAt, refresh } =
@@ -923,8 +953,13 @@ export function BrandDetailsClient({
 
   const lastUpdatedText = formatLastUpdatedAt(lastUpdatedAt);
   const exportFilePrefix = `detalhes-bandeira-${brandNameToSlug(brandName)}`;
+  const tipoVendaTooltip = fixedTipoVenda
+    ? fixedTipoVenda === "NOVOS"
+      ? "Nesta bandeira, a lista é restrita a veículos novos."
+      : "Nesta bandeira, a lista é restrita a veículos seminovos."
+    : "Filtro aplicado por tipo de venda.";
   const clearFilters = () => {
-    setSelectedTipoVenda([]);
+    setSelectedTipoVenda(initialTipoVendaSelection);
     setSelectedRegional([]);
     setSelectedLojaVenda([]);
     setSelectedMarcaVeiculo([]);
@@ -932,7 +967,7 @@ export function BrandDetailsClient({
     setSelectedClassificacao([]);
     setSelectedStartDate(initialStartDate);
     setSelectedEndDate(initialEndDate);
-    setAppliedTipoVenda([]);
+    setAppliedTipoVenda(initialTipoVendaSelection);
     setAppliedRegional([]);
     setAppliedLojaVenda([]);
     setAppliedMarcaVeiculo([]);
@@ -992,15 +1027,15 @@ export function BrandDetailsClient({
         </div>
       </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <FilterSelectCard
-            label="Tipo de venda"
-            value={selectedTipoVenda}
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <FilterSelectCard
+          label="Tipo de venda"
+          value={selectedTipoVenda}
           appliedValue={appliedTipoVenda}
           options={tipoVendaOptions}
           onChange={setSelectedTipoVenda}
-          tooltip="Filtro aplicado por tipo de venda."
-          disabled={isLoading}
+          tooltip={tipoVendaTooltip}
+          disabled={isLoading || Boolean(fixedTipoVenda)}
           formatLabel={formatTipoVendaLabel}
         />
         <FilterSelectCard
