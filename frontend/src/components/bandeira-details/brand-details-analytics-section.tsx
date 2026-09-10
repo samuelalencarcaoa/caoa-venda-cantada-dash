@@ -24,8 +24,11 @@ import {
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
+import { formatCompactAxisValue } from "@/lib/chart-formatters";
 import {
+  getSalesCantadasTrendBucketSpan as getTrendBucketSpan,
   resolveSalesCantadasTrendGranularity,
+  salesCantadasTrendGranularityLabels as trendGranularityLabels,
   type SalesCantadasTrendGranularity,
 } from "@/lib/period-metrics";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
@@ -82,16 +85,6 @@ type PrimaryClassification = {
 
 const TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT = 5;
 const ONE_HOUR_IN_MS = 60 * 60 * 1000;
-
-const trendGranularityLabels: Record<SalesCantadasTrendGranularity, string> = {
-  hour: "hora",
-  day: "dia",
-  week: "semana",
-  month: "mês",
-  bimonth: "bimestre",
-  quarter: "trimestre",
-  year: "ano",
-};
 
 function stripDiacritics(value: string) {
   return value.normalize("NFD").replace(/\p{Diacritic}/gu, "");
@@ -260,32 +253,6 @@ function countDistinctCategories(
   ).size;
 }
 
-type TrendBucketSpan = {
-  unit: "hour" | "day";
-  amount: number;
-};
-
-function getTrendBucketSpan(granularity: SalesCantadasTrendGranularity): TrendBucketSpan {
-  switch (granularity) {
-    case "hour":
-      return { unit: "hour", amount: 1 };
-    case "day":
-      return { unit: "day", amount: 1 };
-    case "week":
-      return { unit: "day", amount: 7 };
-    case "month":
-      return { unit: "day", amount: 30 };
-    case "bimonth":
-      return { unit: "day", amount: 60 };
-    case "quarter":
-      return { unit: "day", amount: 90 };
-    case "year":
-      return { unit: "day", amount: 365 };
-    default:
-      return { unit: "day", amount: 1 };
-  }
-}
-
 function getTrendBucketStart(date: Date, granularity: SalesCantadasTrendGranularity) {
   if (granularity === "hour") {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), 0, 0, 0);
@@ -321,29 +288,6 @@ function formatTrendHourAxisLabel(value: string | number | string[]) {
   }
 
   return format(new Date(timestamp), "HH:00", { locale: ptBR });
-}
-
-function formatTrendYAxisLabel(value: string | string[]) {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const numeric = Number(raw);
-
-  if (!Number.isFinite(numeric)) {
-    return String(raw);
-  }
-
-  if (Math.abs(numeric) >= 1000) {
-    const compactValue = numeric / 1000;
-    const compactText = Number.isInteger(compactValue)
-      ? String(compactValue)
-      : compactValue.toLocaleString("pt-BR", {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        });
-
-    return `${compactText}k`;
-  }
-
-  return formatNumber(numeric);
 }
 
 function formatTrendTooltipLabel(start: Date, end: Date, granularity: SalesCantadasTrendGranularity) {
@@ -950,7 +894,7 @@ export function BrandDetailsAnalyticsSection({
               fill: chartMutedColor,
               fontSize: isCompactChartLayout ? 10 : 11,
             },
-            formatMethod: (value: string | string[]) => formatTrendYAxisLabel(value),
+            formatMethod: formatCompactAxisValue,
           },
           tick: {
             tickCount: 6,

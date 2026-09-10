@@ -54,6 +54,8 @@ PORT=4000
 Na produção, prefira definir `DATABASE_PROVIDER` e `DATABASE_URL` explicitamente no `.env.production`.
 O backend usa SQL Server por padrão, e a camada Prisma continua preparada para outros providers se você precisar adaptar o ambiente.
 
+O prazo padrão para abrir conexões SQL Server é de 30 segundos, para acomodar conexões por VPN com maior latência. Ajuste `DATABASE_CONNECT_TIMEOUT_SECONDS` se necessário. Sem essa variável, um prazo já definido na `DATABASE_URL` é preservado. Esse limite é separado de `DATABASE_POOL_TIMEOUT_SECONDS`, que controla a espera por uma conexão livre no pool.
+
 Importante: no Prisma, o `provider` do schema precisa continuar alinhado com o banco alvo do deploy e as migrations precisam ser recriadas para o novo dialeto. Ou seja, o app fica agnóstico na configuração e na camada de acesso, mas a troca entre dialetos ainda exige regenerar o client e revisar as migrations.
 
 Se você não estiver usando Docker, garanta uma instância SQL Server acessível em `localhost:1433`; se preferir subir tudo em container, use `pnpm docker:up`.

@@ -84,7 +84,10 @@ function parseOptionalPositiveInteger(value: string | undefined, fieldName: stri
 }
 
 function normalizeSqlServerOptionKey(key: string) {
-  return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return normalized === 'logintimeout' || normalized === 'connectiontimeout'
+    ? 'connecttimeout'
+    : normalized;
 }
 
 function appendSqlServerOptions(url: string, options: Record<string, string | undefined>) {
@@ -114,10 +117,6 @@ function appendSqlServerOptions(url: string, options: Record<string, string | un
 
     const nextQuery = params.toString();
     return nextQuery ? `${baseUrl}?${nextQuery}` : baseUrl;
-  }
-
-  if (!url.includes(';')) {
-    return url;
   }
 
   const [baseUrl, ...segments] = url.split(';');
@@ -159,6 +158,10 @@ function appendSqlServerOptions(url: string, options: Record<string, string | un
 }
 
 function applySqlServerPoolSettings(url: string): string {
+  const connectTimeout = parseOptionalPositiveInteger(
+    process.env.DATABASE_CONNECT_TIMEOUT_SECONDS,
+    'DATABASE_CONNECT_TIMEOUT_SECONDS'
+  );
   const connectionLimit = parseOptionalPositiveInteger(
     process.env.DATABASE_CONNECTION_LIMIT,
     'DATABASE_CONNECTION_LIMIT'
@@ -167,8 +170,12 @@ function applySqlServerPoolSettings(url: string): string {
     process.env.DATABASE_POOL_TIMEOUT_SECONDS,
     'DATABASE_POOL_TIMEOUT_SECONDS'
   );
+  const hasConnectTimeout = /(?:[;?&])(?:connect|connection|login)[ _-]?timeout\s*=/i.test(url);
 
   return appendSqlServerOptions(url, {
+    connectTimeout: connectTimeout !== undefined || !hasConnectTimeout
+      ? String(connectTimeout ?? 30)
+      : undefined,
     connectionLimit: connectionLimit !== undefined ? String(connectionLimit) : undefined,
     poolTimeout: String(poolTimeout ?? 60)
   });

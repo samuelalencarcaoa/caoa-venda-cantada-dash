@@ -20,7 +20,7 @@ import {
   type SalesIntentionModelosDealerSources
 } from '@/lib/salesIntentionApi';
 import type { SalesIntentionPayload } from '@/types/types';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const emptyCatalogSources: SalesIntentionCatalogSources = {
   tipoVenda: [],
@@ -369,54 +369,72 @@ function SearchableField({
       />
       <div className="relative">
         <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
-        <input
-          ref={inputRef}
-          id={inputId}
-          type="text"
-          value={query}
-          onFocus={handleFocus}
-          onChange={(event) => {
-            const nextQuery = event.target.value;
-            setQuery(nextQuery);
-            setShowAllOptions(false);
-            setIsOpen(true);
-          }}
-          onBlur={() => {
-            setIsOpen(false);
-            setShowAllOptions(false);
-            setQuery(value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              setIsOpen(false);
+        <Popover
+          open={showDropdown}
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) {
               setShowAllOptions(false);
               setQuery(value);
-              return;
-            }
-
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              if (filteredOptions.length === 1) {
-                selectOption(filteredOptions[0]);
-              }
             }
           }}
-          placeholder={placeholder}
-          className={`${fieldClasses} pl-12 sm:pl-12`}
-          disabled={disabled}
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={showDropdown}
-          aria-controls={showDropdown ? listboxId : undefined}
-          autoComplete="off"
-        />
+        >
+          <PopoverAnchor asChild>
+            <input
+              ref={inputRef}
+              id={inputId}
+              type="text"
+              value={query}
+              onFocus={handleFocus}
+              onChange={(event) => {
+                const nextQuery = event.target.value;
+                setQuery(nextQuery);
+                setShowAllOptions(false);
+                setIsOpen(true);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setIsOpen(false);
+                  setShowAllOptions(false);
+                  setQuery(value);
+                  return;
+                }
 
-        {showDropdown ? (
-          <div
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (filteredOptions.length === 1) {
+                    selectOption(filteredOptions[0]);
+                  }
+                }
+              }}
+              placeholder={placeholder}
+              className={`${fieldClasses} pl-12 sm:pl-12`}
+              disabled={disabled}
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={showDropdown}
+              aria-controls={showDropdown ? listboxId : undefined}
+              autoComplete="off"
+            />
+          </PopoverAnchor>
+
+          <PopoverContent
             id={listboxId}
             role="listbox"
-            className="absolute z-30 mt-2 max-h-60 w-full overflow-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-xl ring-1 ring-slate-200/70 dark:border-white/10 dark:bg-slate-950 dark:ring-white/10"
+            aria-label={label}
+            align="start"
+            side="bottom"
+            sideOffset={8}
+            collisionPadding={12}
+            onOpenAutoFocus={(event) => event.preventDefault()}
+            onCloseAutoFocus={(event) => event.preventDefault()}
+            onInteractOutside={(event) => {
+              if (event.target === inputRef.current) {
+                event.preventDefault();
+              }
+            }}
+            className="z-50 max-h-[min(15rem,50dvh,var(--radix-popover-content-available-height))] w-[var(--radix-popover-trigger-width)] overflow-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-1 shadow-xl ring-1 ring-slate-200/70 dark:border-white/10 dark:bg-slate-950 dark:ring-white/10"
           >
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => (
@@ -439,8 +457,8 @@ function SearchableField({
                 Nenhuma opção encontrada.
               </div>
             )}
-          </div>
-        ) : null}
+          </PopoverContent>
+        </Popover>
       </div>
       {error ? <span className={errorTextClasses}>{error}</span> : null}
     </label>
@@ -453,9 +471,9 @@ const fieldClasses =
 const labelClasses = 'flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300';
 const errorTextClasses = 'text-xs text-rose-600 dark:text-rose-300';
 const pageCardClasses =
-  'mx-auto w-full max-w-6xl overflow-hidden rounded-[28px] border border-slate-200/60 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/50 sm:rounded-[32px] dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)] dark:ring-white/5';
+  'mx-auto w-full max-w-6xl overflow-visible rounded-[28px] border border-slate-200/60 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/50 sm:rounded-[32px] dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)] dark:ring-white/5';
 const headerCardClasses =
-  'border-b border-slate-200/70 bg-gradient-to-br from-sky-700 via-sky-600 to-cyan-500 p-4 text-white sm:p-6 dark:border-white/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700';
+  'rounded-t-[inherit] border-b border-slate-200/70 bg-gradient-to-br from-sky-700 via-sky-600 to-cyan-500 p-4 text-white sm:p-6 dark:border-white/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700';
 const notificationBackdropClasses =
   'fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:items-center sm:p-6';
 const notificationCardBaseClasses =

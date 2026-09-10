@@ -15,6 +15,43 @@ type PeriodAverageMetric = {
 
 export type SalesCantadasTrendGranularity = "hour" | "day" | "week" | "month" | "bimonth" | "quarter" | "year";
 
+export const salesCantadasTrendGranularityLabels: Record<SalesCantadasTrendGranularity, string> = {
+  hour: "hora",
+  day: "dia",
+  week: "semana",
+  month: "mês",
+  bimonth: "bimestre",
+  quarter: "trimestre",
+  year: "ano",
+};
+
+type TrendBucketSpan = {
+  unit: "hour" | "day";
+  amount: number;
+};
+
+// Os intervalos partem do início do filtro e seguem as durações usadas nas médias.
+export function getSalesCantadasTrendBucketSpan(
+  granularity: SalesCantadasTrendGranularity,
+): TrendBucketSpan {
+  switch (granularity) {
+    case "hour":
+      return { unit: "hour", amount: 1 };
+    case "day":
+      return { unit: "day", amount: 1 };
+    case "week":
+      return { unit: "day", amount: 7 };
+    case "month":
+      return { unit: "day", amount: 30 };
+    case "bimonth":
+      return { unit: "day", amount: 60 };
+    case "quarter":
+      return { unit: "day", amount: 90 };
+    case "year":
+      return { unit: "day", amount: 365 };
+  }
+}
+
 type SalesCantadasPeriodWindow = {
   averageMetric: PeriodAverageMetric;
   trendGranularity: SalesCantadasTrendGranularity;

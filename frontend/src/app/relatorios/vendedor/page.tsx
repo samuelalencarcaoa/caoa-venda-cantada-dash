@@ -68,6 +68,7 @@ import {
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
+import { formatCompactAxisValue } from "@/lib/chart-formatters";
 import type {
   SalesIntentionCatalogResponse,
   SalesIntentionCatalogSources,
@@ -2476,6 +2477,11 @@ export default function VendedorRelatorioPage() {
     [hiddenTrendSeries, trendChartData],
   );
 
+  const trendSeriesColors = useMemo(
+    () => new Map(trendSeriesSummaries.map((series) => [series.vendor, series.color])),
+    [trendSeriesSummaries],
+  );
+
   const trendTooltipTrailingNonZeroTimes = useMemo(
     () => getTrendTooltipTrailingNonZeroTimes(visibleTrendChartData),
     [visibleTrendChartData],
@@ -2512,7 +2518,12 @@ export default function VendedorRelatorioPage() {
       seriesField: "vendor",
       smooth: true,
       padding: [20, 24, 42, 42],
-      color: [...trendPalette],
+      color: {
+        type: "ordinal",
+        // Keep hidden vendors in the domain so visible lines retain their card colors.
+        domain: trendSeriesSummaries.map((series) => series.vendor),
+        range: trendSeriesSummaries.map((series) => series.color),
+      },
       legends: {
         visible: true,
         orient: "bottom",
@@ -2569,15 +2580,7 @@ export default function VendedorRelatorioPage() {
         {
           orient: "left",
           label: {
-            formatMethod: (text: string | string[]) => {
-              const value = Number(Array.isArray(text) ? text[0] : text);
-
-              return Number.isFinite(value)
-                ? value.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 0,
-                  })
-                : String(Array.isArray(text) ? text[0] : text);
-            },
+            formatMethod: formatCompactAxisValue,
           },
         },
       ],
@@ -2607,10 +2610,16 @@ export default function VendedorRelatorioPage() {
       },
       point: {
         visible: true,
-        style: { size: 4.5, fill: "#ffffff", stroke: "#64748b", lineWidth: 1.4 },
+        style: {
+          size: 4.5,
+          fill: "#ffffff",
+          stroke: (datum) => trendSeriesColors.get(datum.vendor) ?? trendPalette[0],
+          lineWidth: 1.4,
+        },
       },
       line: {
         style: {
+          stroke: (datum) => trendSeriesColors.get(datum.vendor) ?? trendPalette[0],
           lineWidth: 2.3,
           lineCap: "round",
           lineJoin: "round",
@@ -2624,6 +2633,8 @@ export default function VendedorRelatorioPage() {
       inlineTrendTooltipParentElementId,
       isSingleDayPeriod,
       trendHourRange,
+      trendSeriesColors,
+      trendSeriesSummaries,
       trendTooltipTrailingNonZeroTimes,
       visibleTrendSeriesSummaries,
       visibleTrendChartData,
@@ -2682,12 +2693,10 @@ export default function VendedorRelatorioPage() {
         visible: false,
       },
       line: {
+        ...trendChartSpec.line,
         style: {
+          ...trendChartSpec.line?.style,
           lineWidth: 3,
-          lineCap: "round",
-          lineJoin: "round",
-          curveType: "monotone",
-          strokeOpacity: 0.98,
         },
       },
     }),
