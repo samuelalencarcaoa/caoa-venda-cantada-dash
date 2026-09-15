@@ -6,7 +6,12 @@ import {
   BadgeInfo,
   BriefcaseBusiness,
   Building2,
+  ContactRound,
+  Globe2,
+  IdCard,
+  Mail,
   MapPin,
+  Phone,
   Users,
 } from "lucide-react";
 
@@ -61,18 +66,26 @@ function formatDateTime(value?: string | null) {
   }).format(parsed);
 }
 
-function joinParts(values: Array<string | null | undefined>) {
-  return values
-    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-    .map((value) => value.trim())
-    .join(" • ");
-}
-
 type ProfileField = {
   icon: LucideIcon;
   label: string;
   value: string;
 };
+
+type ProfileSection = {
+  title: string;
+  icon: LucideIcon;
+  fields: ProfileField[];
+};
+
+function profileField(label: string, value: string | string[] | null | undefined, icon: LucideIcon): ProfileField | null {
+  const formatted = Array.isArray(value) ? value.filter(Boolean).join(" • ") : value?.trim();
+  return formatted ? { label, value: formatted, icon } : null;
+}
+
+function availableFields(fields: Array<ProfileField | null>): ProfileField[] {
+  return fields.filter((field): field is ProfileField => field !== null);
+}
 
 export const metadata = {
   title: "Meu perfil",
@@ -116,24 +129,63 @@ export default async function PerfilPage() {
   const email = user.email || claimsEmail || "Email não informado";
   const initials = getInitials(displayName);
   const avatarColor = getAvatarColor(displayName);
-  const location = joinParts([graph?.city, graph?.state, graph?.country]);
   const synchronizedAt = formatDateTime(directory?.fetchedAt);
 
-  const profileFields: ProfileField[] = [
-    { label: "Cargo", value: graph?.jobTitle || "Não informado", icon: BriefcaseBusiness },
-    { label: "Empresa", value: graph?.companyName || "Não informado", icon: Building2 },
-    { label: "Departamento", value: graph?.department || "Não informado", icon: BadgeInfo },
+  const profileSections: ProfileSection[] = [
     {
-      label: "Gestor direto",
-      value: adExportManager?.displayName || "Não informado",
-      icon: Users,
+      title: "Dados pessoais",
+      icon: ContactRound,
+      fields: availableFields([
+        profileField("Nome de exibição", graph?.displayName, ContactRound),
+        profileField("Nome", graph?.givenName || readRecordString(claims, "given_name"), ContactRound),
+        profileField("Sobrenome", graph?.surname || readRecordString(claims, "family_name"), ContactRound),
+        profileField("Idioma preferido", graph?.preferredLanguage || readRecordString(claims, "locale"), Globe2),
+      ]),
     },
     {
-      label: "Localização",
-      value: location || "Não informado",
+      title: "Informações profissionais",
+      icon: BriefcaseBusiness,
+      fields: availableFields([
+        profileField("Cargo", graph?.jobTitle, BriefcaseBusiness),
+        profileField("Empresa", graph?.companyName, Building2),
+        profileField("Departamento", graph?.department, BadgeInfo),
+        profileField("Matrícula", graph?.employeeId, IdCard),
+        profileField("Tipo de colaborador", graph?.employeeType, IdCard),
+        profileField("Gestor direto (export AD)", adExportManager?.displayName, Users),
+      ]),
+    },
+    {
+      title: "Contato",
+      icon: Phone,
+      fields: availableFields([
+        profileField("Email", graph?.mail, Mail),
+        profileField("Celular", graph?.mobilePhone, Phone),
+        profileField("Telefones comerciais", graph?.businessPhones, Phone),
+      ]),
+    },
+    {
+      title: "Endereço e localização",
       icon: MapPin,
+      fields: availableFields([
+        profileField("Local do escritório", graph?.officeLocation, Building2),
+        profileField("Endereço", graph?.streetAddress, MapPin),
+        profileField("Cidade", graph?.city, MapPin),
+        profileField("Estado", graph?.state, MapPin),
+        profileField("País", graph?.country, MapPin),
+        profileField("CEP", graph?.postalCode, MapPin),
+        profileField("País/região de uso", graph?.usageLocation, Globe2),
+      ]),
     },
-  ].filter((field) => field.value !== "Não informado");
+    {
+      title: "Conta Microsoft Entra",
+      icon: IdCard,
+      fields: availableFields([
+        profileField("Nome principal do usuário (UPN)", graph?.userPrincipalName || readRecordString(claims, "upn") || readRecordString(claims, "preferred_username"), IdCard),
+        profileField("ID do usuário", graph?.id || directory?.stableId, IdCard),
+        profileField("ID do tenant", readRecordString(claims, "tid"), IdCard),
+      ]),
+    },
+  ].filter((section) => section.fields.length > 0);
 
   return (
     <main
@@ -208,9 +260,9 @@ export default async function PerfilPage() {
             <div className="space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className={themedTinyLabelClass}>Resumo</p>
+                  <p className={themedTinyLabelClass}>Diretório</p>
                   <h2 className={cn("mt-1 text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
-                    Informações relevantes
+                    Informações disponíveis
                   </h2>
                 </div>
 
@@ -219,37 +271,37 @@ export default async function PerfilPage() {
                 ) : null}
               </div>
 
-              {profileFields.length > 0 ? (
-                <dl className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/5">
-                  {profileFields.map((field, index) => {
-                    const Icon = field.icon;
-
+              {profileSections.length > 0 ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {profileSections.map((section) => {
+                    const SectionIcon = section.icon;
                     return (
-                      <div
-                        key={field.label}
-                        className={cn(
-                          "flex items-start gap-4 px-4 py-4 sm:px-5",
-                          index !== profileFields.length - 1 &&
-                            "border-b border-slate-200 dark:border-white/10",
-                        )}
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-cyan-300">
-                          <Icon className="h-5 w-5" />
-                        </div>
-
-                        <div className="min-w-0">
-                          <dt className={themedTinyLabelClass}>{field.label}</dt>
-                          <dd className={cn("mt-1 break-words text-sm font-semibold", themedTextTitleClass)}>
-                            {field.value}
-                          </dd>
-                        </div>
-                      </div>
+                      <section key={section.title} className="min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/5">
+                        <h3 className={cn("flex items-center gap-2 border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-white/10", themedTextTitleClass)}>
+                          <SectionIcon className="h-4 w-4 text-sky-700 dark:text-cyan-300" />
+                          {section.title}
+                        </h3>
+                        <dl className="divide-y divide-slate-200 dark:divide-white/10">
+                          {section.fields.map((field) => {
+                            const Icon = field.icon;
+                            return (
+                              <div key={field.label} className="flex min-w-0 items-start gap-3 px-4 py-3">
+                                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-sky-700 dark:text-cyan-300" />
+                                <div className="min-w-0">
+                                  <dt className={themedTinyLabelClass}>{field.label}</dt>
+                                  <dd className={cn("mt-1 break-words text-sm font-semibold", themedTextTitleClass)}>{field.value}</dd>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </dl>
+                      </section>
                     );
                   })}
-                </dl>
+                </div>
               ) : (
                 <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/80 p-5 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                  Nenhuma informação corporativa adicional foi sincronizada para esta conta.
+                  Nenhuma informação adicional foi sincronizada para esta conta.
                 </div>
               )}
             </div>

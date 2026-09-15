@@ -286,7 +286,7 @@ async function fetchAzureAdPhoto(accessToken?: string | null) {
   }
 
   try {
-    const response = await fetch("https://graph.microsoft.com/v1.0/me/photos/48x48/$value", {
+    const response = await fetch("https://graph.microsoft.com/v1.0/me/photos/240x240/$value", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

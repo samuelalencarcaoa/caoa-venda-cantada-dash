@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
       tenantId: process.env.AZURE_AD_TENANT_ID || "",
       authorization: {
         params: {
-          scope: "openid profile email User.Read",
+          scope: "openid profile email offline_access User.Read",
         },
       },
     }),
@@ -97,7 +97,9 @@ export const authOptions: NextAuthOptions = {
           id: session.user?.id || token.sub || token.directory?.stableId || undefined,
           name: session.user?.name || token.name || undefined,
           email: session.user?.email || token.email || undefined,
-          image: session.user?.image || token.picture || undefined,
+          image: token.directory
+            ? token.directory.photoAvailable ? "/api/perfil/foto" : undefined
+            : session.user?.image || token.picture || undefined,
           directory: token.directory ?? null,
         };
       }
@@ -109,7 +111,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.name = token.name || user.name || undefined;
         token.email = token.email || user.email || undefined;
-        token.picture = token.picture || user.image || undefined;
+        if (account?.provider !== "azure-ad") {
+          token.picture = token.picture || user.image || undefined;
+        }
       }
 
       if (account?.provider === "azure-ad") {
@@ -120,10 +124,17 @@ export const authOptions: NextAuthOptions = {
         });
 
         token.directory = snapshot.directory;
-        token.picture = token.picture || snapshot.picture || undefined;
+        token.picture = undefined;
+        token.graphAccessToken = account.access_token;
+        token.graphRefreshToken = account.refresh_token;
+        token.graphAccessTokenExpiresAt = account.expires_at;
         token.name = token.name || snapshot.displayName || undefined;
         token.email = token.email || snapshot.email || undefined;
         token.sub = token.sub || snapshot.stableId || undefined;
+      }
+
+      if (token.directory && typeof token.picture === "string" && token.picture.startsWith("data:image/")) {
+        token.picture = undefined;
       }
 
       return token;
