@@ -1,9 +1,5 @@
 "use client";
 
-import { createPortal } from "react-dom";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import {
   addYears,
   endOfMonth,
@@ -22,44 +18,53 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-
-import { ReportErrorCard } from "@/components/report-error-card";
-import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
+import Image from "next/image";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   BrandDetailsAnalyticsSection,
   BrandDetailsAnalyticsSkeleton,
 } from "@/components/bandeira-details/brand-details-analytics-section";
+import { ReportErrorCard } from "@/components/report-error-card";
+import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import {
-  FilterSelectCard,
   FilterDateInput,
+  FilterSelectCard,
   FilterStatusChip,
   TooltipIcon,
 } from "@/components/sales-intention-filter-select-card";
 import { Button } from "@/components/ui/button";
-import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
+import { useSalesIntentions } from "@/hooks/useSalesIntentions";
+import { getPreviousPeriodRange } from "@/lib/brand-period-comparison";
 import {
+  type DashboardPeriod,
+  brandNameToSlug,
   buildBrandDetailHref,
   dashboardBrandNames,
   getBrandDetailSalesIntentionQuery,
   getBrandDetailTipoVenda,
-  brandNameToSlug,
-  type DashboardPeriod,
 } from "@/lib/brand-routing";
-import { cn } from "@/lib/utils";
 import {
-  themedHeroClass,
+  type SalesIntentionReportRow,
+  fetchSalesIntentions,
+  formatSalesIntentionApiError,
+} from "@/lib/salesIntentionApi";
+import {
   themedCardClass,
+  themedHeroClass,
   themedInputClass,
   themedOutlineButtonClass,
   themedPageBackgroundClass,
   themedPageTextClass,
   themedPanelClass,
   themedSoftCardClass,
-  themedTinyLabelClass,
   themedTextMutedClass,
   themedTextTitleClass,
+  themedTinyLabelClass,
 } from "@/lib/theme-classes";
+import { cn } from "@/lib/utils";
 
 type BrandDetailsClientProps = {
   brandName: string;
@@ -87,7 +92,9 @@ function areStringSelectionsEqual(left: string[], right: string[]) {
 
   const normalizedRightValues = new Set(right.map(normalizeSelectionValue));
 
-  return left.every((item) => normalizedRightValues.has(normalizeSelectionValue(item)));
+  return left.every((item) =>
+    normalizedRightValues.has(normalizeSelectionValue(item)),
+  );
 }
 
 function formatPeriodSelectionLabel(start?: string, end?: string) {
@@ -139,10 +146,8 @@ type QuickAccessBrandVisual = {
 const brandIdentityImageClassName = "max-w-[500px] max-h-[200px]";
 const brandIdentityCompactImageClassName = "max-w-[520px] max-h-[160px]";
 const brandIdentitySeminovosImageClassName = "max-w-[560px] max-h-[230px]";
-const quickAccessImageClassName =
-  "max-w-[48px] max-h-[28px] sm:max-w-[78px] sm:max-h-[44px]";
-const quickAccessSeminovosImageClassName =
-  "max-w-[52px] max-h-[28px] sm:max-w-[82px] sm:max-h-[46px]";
+const quickAccessImageClassName = "max-w-[70%] max-h-[52%]";
+const quickAccessSeminovosImageClassName = "max-w-[76%] max-h-[50%]";
 
 function getBrandIdentityVisual(brandName: string): BrandIdentityVisual {
   switch (brandName) {
@@ -269,12 +274,14 @@ function QuickAccessCard({
   endDate?: string;
   className?: string;
 }) {
-  const quickAccessBrands = dashboardBrandNames.filter((candidate) => candidate !== brandName);
+  const quickAccessBrands = dashboardBrandNames.filter(
+    (candidate) => candidate !== brandName,
+  );
 
   return (
     <div
       className={cn(
-        "flex h-full w-full min-w-0 flex-col items-center justify-center gap-2.5 text-center",
+        "flex h-full w-full min-w-0 flex-col items-center justify-center gap-2 text-center",
         className,
       )}
     >
@@ -282,28 +289,29 @@ function QuickAccessCard({
         Acesso rápido
       </p>
 
-      <div className="flex w-full items-center justify-center gap-2 px-1 pb-1 tablet:flex-wrap tablet:gap-3 tablet:px-0 tablet:pb-0">
+      <div className="phone:gap-2 tablet:gap-2.5 grid w-full min-w-0 grid-cols-4 items-center justify-items-center gap-1.5 px-1">
         {quickAccessBrands.map((otherBrand) => {
           const visual = getQuickAccessBrandVisual(otherBrand);
 
           return (
-            <div key={otherBrand} className="flex shrink-0 snap-center justify-center">
+            <div
+              key={otherBrand}
+              className="flex w-full min-w-0 justify-center"
+            >
               <Button
                 asChild
                 variant="outline"
                 className={cn(
-                  "group relative mx-auto flex aspect-square h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/12 p-0 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] ring-1 ring-inset ring-white/10 backdrop-blur-none",
-                  "hover:border-white/25 hover:bg-white/18 hover:text-white tablet:h-[96px] tablet:w-[96px]",
+                  "bg-white/12 group relative flex aspect-square h-auto w-full max-w-[84px] items-center justify-center overflow-hidden rounded-full border border-white/15 p-0 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] ring-1 ring-inset ring-white/10 backdrop-blur-none",
+                  "hover:bg-white/18 hover:border-white/25 hover:text-white",
                 )}
               >
                 <Link
-                  href={
-                    buildBrandDetailHref(otherBrand, {
-                      period: period ?? undefined,
-                      startDate,
-                      endDate,
-                    })
-                  }
+                  href={buildBrandDetailHref(otherBrand, {
+                    period: period ?? undefined,
+                    startDate,
+                    endDate,
+                  })}
                   aria-label={`Abrir detalhes de ${otherBrand}`}
                   title={`Abrir detalhes de ${otherBrand}`}
                   className="flex h-full w-full items-center justify-center"
@@ -314,7 +322,7 @@ function QuickAccessCard({
                       "h-auto w-auto object-contain transition duration-200 group-hover:scale-[1.08]",
                       visual.imageClassName,
                       otherBrand === "SEMINOVOS" &&
-                        "dark:brightness-0 dark:invert dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]",
+                        "dark:brightness-0 dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] dark:invert",
                     )}
                     height={visual.imageHeight}
                     src={visual.src}
@@ -348,10 +356,10 @@ function BrandIdentityCard({
     >
       <div className="relative flex h-full min-h-[124px] flex-1 flex-col gap-2 sm:min-h-[184px] sm:gap-0.5">
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
+          <span className="border-white/12 inline-flex items-center gap-2 rounded-full border bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
             Bandeira
           </span>
-          <span className="inline-flex max-w-full items-center rounded-full border border-white/12 bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
+          <span className="border-white/12 inline-flex max-w-full items-center rounded-full border bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
             {brandName}
           </span>
         </div>
@@ -362,7 +370,7 @@ function BrandIdentityCard({
             className={cn(
               "h-auto w-auto object-contain drop-shadow-[0_16px_30px_rgba(15,23,42,0.16)]",
               brandName === "SEMINOVOS" &&
-                "dark:brightness-0 dark:invert dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.35)]",
+                "dark:brightness-0 dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.35)] dark:invert",
               visual.imageClassName,
               "max-h-[92px] max-w-[220px] sm:max-h-[160px] sm:max-w-[520px]",
             )}
@@ -407,9 +415,44 @@ function matchesSelectedValues(selected: string[], value: string) {
   );
 }
 
-function normalizeOptionalValue(value: string | null | undefined, fallback: string) {
+function normalizeOptionalValue(
+  value: string | null | undefined,
+  fallback: string,
+) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return trimmed || fallback;
+}
+
+type BrandDetailFilterSelections = {
+  tipoVenda: string[];
+  regional: string[];
+  lojaVenda: string[];
+  marcaVeiculo: string[];
+  versao: string[];
+  classificacao: string[];
+};
+
+function matchesBrandDetailFilters(
+  item: SalesIntentionReportRow,
+  filters: BrandDetailFilterSelections,
+) {
+  return (
+    matchesSelectedValues(filters.tipoVenda, item.Tipo_Venda?.trim() ?? "") &&
+    matchesSelectedValues(filters.regional, item.Regional?.trim() ?? "") &&
+    matchesSelectedValues(filters.lojaVenda, item.Loja_Venda?.trim() ?? "") &&
+    matchesSelectedValues(
+      filters.marcaVeiculo,
+      normalizeOptionalValue(item.Marca_Veiculo, "Sem marca"),
+    ) &&
+    matchesSelectedValues(
+      filters.versao,
+      normalizeOptionalValue(item.Versao, "Sem versão"),
+    ) &&
+    matchesSelectedValues(
+      filters.classificacao,
+      normalizeOptionalValue(item.Classificacao, "Sem classificação"),
+    )
+  );
 }
 
 function parseInputDate(value?: string) {
@@ -478,9 +521,13 @@ function formatPeriodLabel(
       return capitalizeText(format(start, "MMMM 'de' yyyy", { locale: ptBR }));
     }
 
-    return `${format(start, "dd/MM/yyyy", { locale: ptBR })} a ${format(end, "dd/MM/yyyy", {
-      locale: ptBR,
-    })}`;
+    return `${format(start, "dd/MM/yyyy", { locale: ptBR })} a ${format(
+      end,
+      "dd/MM/yyyy",
+      {
+        locale: ptBR,
+      },
+    )}`;
   }
 
   if (period === "mes" && start) {
@@ -540,7 +587,7 @@ function HeroSection({
     <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between lg:gap-5">
         <div className="min-w-0 flex-1 basis-0 space-y-3 lg:self-stretch">
-          <p className="text-[9px] font-medium uppercase tracking-[0.26em] text-sky-100/80 dark:text-cyan-200/80 sm:text-[10px] sm:tracking-[0.34em]">
+          <p className="text-[9px] font-medium uppercase tracking-[0.26em] text-sky-100/80 sm:text-[10px] sm:tracking-[0.34em] dark:text-cyan-200/80">
             Detalhes da Bandeira
             <TooltipIcon text="Os filtros abaixo preservam o contexto da bandeira e atualizam os Big Numbers e a tabela detalhada no mesmo recorte de dados." />
           </p>
@@ -556,10 +603,12 @@ function HeroSection({
             onPointerMove={statusChipsDrag.onPointerMove}
             onPointerUp={statusChipsDrag.onPointerUp}
             onPointerCancel={statusChipsDrag.onPointerCancel}
-            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-100/80 dark:text-cyan-200/80 sm:text-[11px] sm:tracking-[0.24em]"
+            className="tablet:flex-wrap tablet:overflow-visible tablet:pb-0 flex max-w-full cursor-grab select-none items-center gap-2 overflow-x-auto pb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-100/80 [scrollbar-width:none] active:cursor-grabbing sm:text-[11px] sm:tracking-[0.24em] dark:text-cyan-200/80 [&::-webkit-scrollbar]:hidden"
             title="Arraste para ver mais informações"
           >
-            <span className={brandStatusChipClass}>Atualizado: {lastUpdatedText}</span>
+            <span className={brandStatusChipClass}>
+              Atualizado: {lastUpdatedText}
+            </span>
             <span className={brandStatusChipClass}>
               {isRefreshing ? "Atualizando..." : "Pronto"}
             </span>
@@ -570,7 +619,7 @@ function HeroSection({
             onPointerMove={summaryChipsDrag.onPointerMove}
             onPointerUp={summaryChipsDrag.onPointerUp}
             onPointerCancel={summaryChipsDrag.onPointerCancel}
-            className="flex max-w-full cursor-grab items-center gap-2 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden tablet:flex-wrap tablet:overflow-visible tablet:pb-0 text-[10px] font-medium text-sky-50/90 dark:text-cyan-50/90 sm:text-[11px]"
+            className="tablet:flex-wrap tablet:overflow-visible tablet:pb-0 flex max-w-full cursor-grab select-none items-center gap-2 overflow-x-auto pb-1 text-[10px] font-medium text-sky-50/90 [scrollbar-width:none] active:cursor-grabbing sm:text-[11px] dark:text-cyan-50/90 [&::-webkit-scrollbar]:hidden"
             title="Arraste para ver mais informações"
           >
             <span className={brandStatusChipClass}>{periodLabel}</span>
@@ -583,7 +632,7 @@ function HeroSection({
           </div>
         </div>
 
-      <div className="flex min-w-0 flex-1 basis-0 flex-col gap-4 lg:self-stretch">
+        <div className="flex min-w-0 flex-1 basis-0 flex-col gap-4 lg:self-stretch">
           <QuickAccessCard
             brandName={brandName}
             period={period}
@@ -591,7 +640,6 @@ function HeroSection({
             endDate={endDate}
             className="flex-1 basis-0 lg:self-stretch"
           />
-
         </div>
 
         <div className="flex min-w-0 flex-1 basis-0 flex-col gap-3 lg:self-stretch">
@@ -601,7 +649,10 @@ function HeroSection({
             <Button
               asChild
               variant="outline"
-              className={cn("h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium", heroOutlineButtonClass)}
+              className={cn(
+                "h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium",
+                heroOutlineButtonClass,
+              )}
             >
               <Link href="/dashboard">
                 <ArrowLeft className="h-4 w-4" />
@@ -612,9 +663,14 @@ function HeroSection({
               type="button"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className={cn("h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium", heroPrimaryButtonClass)}
+              className={cn(
+                "h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium",
+                heroPrimaryButtonClass,
+              )}
             >
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <RefreshCw
+                className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+              />
               Atualizar
             </Button>
           </div>
@@ -658,7 +714,8 @@ function LoadingState({
               <div className="h-6 w-32 animate-pulse rounded-full bg-white/20" />
             </div>
             <p className="text-sm leading-6 text-sky-50/90">
-              Estamos buscando as intenções de venda de {brandName} para {periodLabel}.
+              Estamos buscando as intenções de venda de {brandName} para{" "}
+              {periodLabel}.
             </p>
           </div>
 
@@ -685,7 +742,7 @@ function LoadingState({
         </div>
       </section>
 
-      <div className="sticky top-3 z-30 tablet:hidden">
+      <div className="tablet:hidden sticky top-3 z-30">
         <div className="h-12 w-full animate-pulse rounded-full bg-slate-200/80 dark:bg-white/10" />
       </div>
 
@@ -732,7 +789,6 @@ function LoadingState({
           </div>
         </div>
       </section>
-
     </div>
   );
 }
@@ -754,19 +810,36 @@ export function BrandDetailsClient({
   const [appliedEndDate, setAppliedEndDate] = useState(initialEndDate);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
-  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>(initialTipoVendaSelection);
+  const [selectedTipoVenda, setSelectedTipoVenda] = useState<string[]>(
+    initialTipoVendaSelection,
+  );
   const [selectedRegional, setSelectedRegional] = useState<string[]>([]);
   const [selectedLojaVenda, setSelectedLojaVenda] = useState<string[]>([]);
-  const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string[]>([]);
+  const [selectedMarcaVeiculo, setSelectedMarcaVeiculo] = useState<string[]>(
+    [],
+  );
   const [selectedVersao, setSelectedVersao] = useState<string[]>([]);
-  const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>([]);
-  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>(initialTipoVendaSelection);
+  const [selectedClassificacao, setSelectedClassificacao] = useState<string[]>(
+    [],
+  );
+  const [appliedTipoVenda, setAppliedTipoVenda] = useState<string[]>(
+    initialTipoVendaSelection,
+  );
   const [appliedRegional, setAppliedRegional] = useState<string[]>([]);
   const [appliedLojaVenda, setAppliedLojaVenda] = useState<string[]>([]);
   const [appliedMarcaVeiculo, setAppliedMarcaVeiculo] = useState<string[]>([]);
   const [appliedVersao, setAppliedVersao] = useState<string[]>([]);
-  const [appliedClassificacao, setAppliedClassificacao] = useState<string[]>([]);
-  const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
+  const [appliedClassificacao, setAppliedClassificacao] = useState<string[]>(
+    [],
+  );
+  const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] =
+    useState(false);
+  const [comparePreviousPeriod, setComparePreviousPeriod] = useState(false);
+  const [comparisonItems, setComparisonItems] = useState<
+    SalesIntentionReportRow[] | null
+  >(null);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
   const periodChipDrag = useHorizontalDragScroll<HTMLDivElement>();
   const brandDetailQuery = useMemo(
     () => getBrandDetailSalesIntentionQuery(brandName),
@@ -832,7 +905,9 @@ export function BrandDetailsClient({
   const marcaVeiculoOptions = useMemo(
     () =>
       sortUniqueOptions(
-        items.map((item) => normalizeOptionalValue(item.Marca_Veiculo, "Sem marca")),
+        items.map((item) =>
+          normalizeOptionalValue(item.Marca_Veiculo, "Sem marca"),
+        ),
       ),
     [items],
   );
@@ -848,35 +923,23 @@ export function BrandDetailsClient({
   const classificacaoOptions = useMemo(
     () =>
       sortUniqueOptions(
-        items.map((item) => normalizeOptionalValue(item.Classificacao, "Sem classificação")),
+        items.map((item) =>
+          normalizeOptionalValue(item.Classificacao, "Sem classificação"),
+        ),
       ),
     [items],
   );
 
-  const filteredItems = useMemo(
-    () =>
-      items.filter((item) => {
-        const itemTipoVenda = item.Tipo_Venda?.trim() ?? "";
-        const itemRegional = item.Regional?.trim() ?? "";
-        const itemLojaVenda = item.Loja_Venda?.trim() ?? "";
-        const itemMarcaVeiculo = normalizeOptionalValue(item.Marca_Veiculo, "Sem marca");
-        const itemVersao = normalizeOptionalValue(item.Versao, "Sem versão");
-        const itemClassificacao = normalizeOptionalValue(
-          item.Classificacao,
-          "Sem classificação",
-        );
-
-        return (
-          matchesSelectedValues(appliedTipoVenda, itemTipoVenda) &&
-          matchesSelectedValues(appliedRegional, itemRegional) &&
-          matchesSelectedValues(appliedLojaVenda, itemLojaVenda) &&
-          matchesSelectedValues(appliedMarcaVeiculo, itemMarcaVeiculo) &&
-          matchesSelectedValues(appliedVersao, itemVersao) &&
-          matchesSelectedValues(appliedClassificacao, itemClassificacao)
-        );
-      }),
+  const appliedFilters = useMemo<BrandDetailFilterSelections>(
+    () => ({
+      tipoVenda: appliedTipoVenda,
+      regional: appliedRegional,
+      lojaVenda: appliedLojaVenda,
+      marcaVeiculo: appliedMarcaVeiculo,
+      versao: appliedVersao,
+      classificacao: appliedClassificacao,
+    }),
     [
-      items,
       appliedClassificacao,
       appliedLojaVenda,
       appliedMarcaVeiculo,
@@ -885,6 +948,76 @@ export function BrandDetailsClient({
       appliedVersao,
     ],
   );
+  const filterAppliedItems = useCallback(
+    (rows: SalesIntentionReportRow[]) =>
+      rows.filter((item) => matchesBrandDetailFilters(item, appliedFilters)),
+    [appliedFilters],
+  );
+  const filteredItems = useMemo(
+    () => filterAppliedItems(items),
+    [filterAppliedItems, items],
+  );
+  const comparisonRange = useMemo(() => {
+    if (!comparePreviousPeriod || !filteredItems.length) return null;
+    let first: Date | null = null;
+    let last: Date | null = null;
+    for (const item of filteredItems) {
+      const [day, month, year] =
+        item.Data_solicitacao.split(/\s+/)[0]?.split("/").map(Number) ?? [];
+      if (!day || !month || !year) continue;
+      const date = new Date(year, month - 1, day);
+      if (!first || date < first) first = date;
+      if (!last || date > last) last = date;
+    }
+    const start =
+      appliedStartDate || (first ? format(first, "yyyy-MM-dd") : "");
+    const end = appliedEndDate || (last ? format(last, "yyyy-MM-dd") : "");
+    return getPreviousPeriodRange(start, end);
+  }, [appliedEndDate, appliedStartDate, comparePreviousPeriod, filteredItems]);
+  const comparisonStartDate = comparisonRange?.previous.startDate;
+  const comparisonEndDate = comparisonRange?.previous.endDate;
+  useEffect(() => {
+    if (
+      !comparePreviousPeriod ||
+      !comparisonStartDate ||
+      !comparisonEndDate ||
+      isLoading
+    ) {
+      setComparisonItems(null);
+      setIsComparisonLoading(false);
+      setComparisonError(null);
+      return;
+    }
+
+    let active = true;
+    setComparisonItems(null);
+    setComparisonError(null);
+    setIsComparisonLoading(true);
+    void fetchSalesIntentions({
+      ...brandDetailQuery,
+      startDate: comparisonStartDate,
+      endDate: comparisonEndDate,
+    })
+      .then((rows) => {
+        if (active) setComparisonItems(filterAppliedItems(rows));
+      })
+      .catch((cause) => {
+        if (active) setComparisonError(formatSalesIntentionApiError(cause));
+      })
+      .finally(() => {
+        if (active) setIsComparisonLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    brandDetailQuery,
+    comparisonEndDate,
+    comparePreviousPeriod,
+    comparisonStartDate,
+    filterAppliedItems,
+    isLoading,
+  ]);
 
   const hasPendingFilterChanges = useMemo(
     () =>
@@ -949,7 +1082,9 @@ export function BrandDetailsClient({
     appliedMarcaVeiculo.length +
     appliedVersao.length +
     appliedClassificacao.length +
-    (appliedStartDate !== initialStartDate || appliedEndDate !== initialEndDate ? 1 : 0);
+    (appliedStartDate !== initialStartDate || appliedEndDate !== initialEndDate
+      ? 1
+      : 0);
 
   const lastUpdatedText = formatLastUpdatedAt(lastUpdatedAt);
   const exportFilePrefix = `detalhes-bandeira-${brandNameToSlug(brandName)}`;
@@ -994,17 +1129,23 @@ export function BrandDetailsClient({
       <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+            <h2
+              className={cn(
+                "text-base font-medium tracking-[-0.02em]",
+                themedTextTitleClass,
+              )}
+            >
               Filtros
             </h2>
             <TooltipIcon text="Use tipo de venda, regional, loja, marca, versão, classificação e período para refinar o recorte. A bandeira da rota permanece fixa nesta visão." />
           </div>
           <p className={cn("mt-2 text-xs", themedTextMutedClass)}>
-            Ajuste os filtros e clique em aplicar para atualizar os dados da página.
+            Ajuste os filtros e clique em aplicar para atualizar os dados da
+            página.
           </p>
         </div>
 
-        <div className="hidden flex-wrap items-center gap-2 tablet:flex">
+        <div className="tablet:flex hidden flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -1084,9 +1225,16 @@ export function BrandDetailsClient({
           disabled={isLoading}
         />
 
-        <div className={cn(themedSoftCardClass, "min-w-0 rounded-2xl p-2.5 sm:col-span-2 xl:col-span-2")}>
+        <div
+          className={cn(
+            themedSoftCardClass,
+            "min-w-0 rounded-2xl p-2.5 sm:col-span-2 xl:col-span-2",
+          )}
+        >
           <div className="flex items-center gap-1.5">
-            <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Período</p>
+            <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>
+              Período
+            </p>
             <TooltipIcon text="Filtro aplicado por período da solicitação." />
           </div>
           <div
@@ -1095,7 +1243,7 @@ export function BrandDetailsClient({
             onPointerMove={periodChipDrag.onPointerMove}
             onPointerUp={periodChipDrag.onPointerUp}
             onPointerCancel={periodChipDrag.onPointerCancel}
-            className="mt-2 flex max-w-full cursor-grab items-center gap-1.5 overflow-x-auto pb-1 select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="mt-2 flex max-w-full cursor-grab select-none items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
             title="Arraste para ver o período selecionado"
           >
             <FilterStatusChip
@@ -1105,7 +1253,8 @@ export function BrandDetailsClient({
                 !appliedStartDate &&
                 !appliedEndDate
                   ? "neutral"
-                  : selectedStartDate === appliedStartDate && selectedEndDate === appliedEndDate
+                  : selectedStartDate === appliedStartDate &&
+                      selectedEndDate === appliedEndDate
                     ? "applied"
                     : "pending"
               }
@@ -1141,12 +1290,15 @@ export function BrandDetailsClient({
               />
             </label>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 tablet:hidden">
+          <div className="tablet:hidden mt-3 grid grid-cols-2 gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={clearFilters}
-              className={cn("h-10 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+              className={cn(
+                "h-10 rounded-full px-3 text-xs font-medium",
+                themedOutlineButtonClass,
+              )}
             >
               Limpar filtros
             </Button>
@@ -1209,7 +1361,11 @@ export function BrandDetailsClient({
   if (error) {
     return (
       <main
-        className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}
+        className={cn(
+          "min-h-[100dvh] p-3 sm:p-5",
+          themedPageBackgroundClass,
+          themedPageTextClass,
+        )}
       >
         <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
           <HeroSection
@@ -1240,7 +1396,11 @@ export function BrandDetailsClient({
   if (isLoading) {
     return (
       <main
-        className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}
+        className={cn(
+          "min-h-[100dvh] p-3 sm:p-5",
+          themedPageBackgroundClass,
+          themedPageTextClass,
+        )}
       >
         <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
           <LoadingState
@@ -1257,7 +1417,11 @@ export function BrandDetailsClient({
 
   return (
     <main
-      className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}
+      className={cn(
+        "min-h-[100dvh] p-3 sm:p-5",
+        themedPageBackgroundClass,
+        themedPageTextClass,
+      )}
     >
       <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
         <HeroSection
@@ -1273,7 +1437,7 @@ export function BrandDetailsClient({
           onRefresh={() => void refresh({ silent: true })}
         />
 
-        <div className="sticky top-3 z-30 tablet:hidden">
+        <div className="tablet:hidden sticky top-3 z-30">
           <Button
             type="button"
             variant="outline"
@@ -1290,16 +1454,18 @@ export function BrandDetailsClient({
           </Button>
         </div>
 
-        <div className="hidden tablet:block">
+        <div className="tablet:block hidden">
           <Button
             type="button"
             variant="outline"
             onClick={() => setIsDesktopFiltersOpen((current) => !current)}
             aria-expanded={isDesktopFiltersOpen}
             aria-controls="brand-filters-panel-desktop"
-            aria-label={isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtro"}
+            aria-label={
+              isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtro"
+            }
             className={cn(
-              "fixed right-3 top-16 z-40 inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-xs font-medium shadow-md sm:right-4 tablet:right-6",
+              "tablet:right-6 fixed right-3 top-16 z-40 inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-xs font-medium shadow-md sm:right-4",
               themedOutlineButtonClass,
             )}
           >
@@ -1308,39 +1474,51 @@ export function BrandDetailsClient({
             ) : (
               <SlidersHorizontal className="h-4 w-4" />
             )}
-            <span>{isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}</span>
+            <span>
+              {isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+            </span>
           </Button>
         </div>
 
         <div
           className={cn(
-            "overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out tablet:hidden",
+            "tablet:hidden overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out",
             isMobileFiltersOpen
-              ? "max-h-[4000px] opacity-100 translate-y-0"
+              ? "max-h-[4000px] translate-y-0 opacity-100"
               : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
           )}
         >
-          <div className="pt-2">{renderFiltersPanel("brand-filters-panel-mobile")}</div>
+          <div className="pt-2">
+            {renderFiltersPanel("brand-filters-panel-mobile")}
+          </div>
         </div>
 
         <div
           className={cn(
-            "hidden overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out tablet:block",
+            "tablet:block hidden overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out",
             isDesktopFiltersOpen
-              ? "max-h-[4000px] opacity-100 translate-y-0"
+              ? "max-h-[4000px] translate-y-0 opacity-100"
               : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
           )}
         >
-          <div className="pt-2">{renderFiltersPanel("brand-filters-panel-desktop")}</div>
+          <div className="pt-2">
+            {renderFiltersPanel("brand-filters-panel-desktop")}
+          </div>
         </div>
 
         <BrandDetailsAnalyticsSection
           items={filteredItems}
           selectedStartDate={appliedStartDate}
           selectedEndDate={appliedEndDate}
+          comparePreviousPeriod={comparePreviousPeriod}
+          onComparePreviousPeriodChange={setComparePreviousPeriod}
+          comparisonItems={comparisonItems}
+          comparisonRange={comparisonRange?.previous ?? null}
+          isComparisonLoading={isComparisonLoading}
+          comparisonError={comparisonError}
         />
 
-        <section className="space-y-3 tablet:hidden">
+        <section className="tablet:hidden space-y-3">
           <Button
             type="button"
             variant="default"
@@ -1353,7 +1531,7 @@ export function BrandDetailsClient({
           </Button>
         </section>
 
-        <section className="space-y-3 hidden tablet:block">
+        <section className="tablet:block hidden space-y-3">
           <SalesIntentionDataList
             items={filteredItems}
             exportFilePrefix={exportFilePrefix}

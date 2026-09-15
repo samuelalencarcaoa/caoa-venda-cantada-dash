@@ -5,18 +5,18 @@ import {
   addDays,
   addHours,
   differenceInCalendarDays,
-  differenceInHours,
   format,
 } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { VChart } from "@visactor/react-vchart";
 import type { IBarChartSpec, ILineChartSpec } from "@visactor/vchart";
 import { useTheme } from "next-themes";
+import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 
 import { TooltipIcon } from "@/components/sales-intention-filter-select-card";
 import {
   themedCardClass,
   themedChipClass,
+  themedInputClass,
   themedSoftCardClass,
   themedTextBodyClass,
   themedTextMutedClass,
@@ -32,11 +32,18 @@ import {
   type SalesCantadasTrendGranularity,
 } from "@/lib/period-metrics";
 import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
+import { alignComparisonBuckets, calculateComparisonVariation, parseLocalInputDate } from "@/lib/brand-period-comparison";
 
 type BrandDetailsAnalyticsSectionProps = {
   items: SalesIntentionReportRow[];
   selectedStartDate?: string;
   selectedEndDate?: string;
+  comparePreviousPeriod?: boolean;
+  onComparePreviousPeriodChange?: (value: boolean) => void;
+  comparisonItems?: SalesIntentionReportRow[] | null;
+  comparisonRange?: { startDate: string; endDate: string } | null;
+  isComparisonLoading?: boolean;
+  comparisonError?: string | null;
   className?: string;
 };
 
@@ -52,7 +59,29 @@ type TrendPoint = {
   axisLabel: string;
   value: number;
   series: string;
+  hour?: number;
+  comparison?: boolean;
+  baseSeries?: string;
+  comparisonDateLabel?: string;
 };
+
+type TrendGrouping = "auto" | SalesCantadasTrendGranularity;
+type TrendView = "volume" | "acumulado";
+type TrendMetric = "total" | "quant";
+
+const trendGroupingOptions = [
+  { value: "auto", label: "Automático" },
+  { value: "hour", label: "Hora" },
+  { value: "day", label: "Dia" },
+  { value: "week", label: "Semana" },
+  { value: "month", label: "Mês" },
+  { value: "bimonth", label: "Bimestre" },
+  { value: "quarter", label: "Trimestre" },
+  { value: "year", label: "Ano" },
+] as const;
+const trendViewOptions = [{ value: "volume", label: "Volume" }, { value: "acumulado", label: "Acumulado" }] as const;
+const trendMetricOptions = [{ value: "total", label: "Total" }, { value: "quant", label: "Quant." }] as const;
+const totalSeriesLabel = "Total";
 
 type TrendTooltipSeriesDatum = {
   datum?: TrendPoint[];
@@ -64,27 +93,11 @@ type TrendTooltipDimensionInfo = {
 
 type TrendTooltipDataItem = TrendTooltipSeriesDatum | TrendTooltipDimensionInfo;
 
-type TrendTooltipContentItem = {
-  key: string;
-  value: string;
-  visible: true;
-  hasShape: true;
-  shapeType: "circle";
-  shapeFill: string;
-  shapeStroke: string;
-  shapeLineWidth: number;
-  shapeSize: number;
-  shapeHollow: false;
-};
-
 type PrimaryClassification = {
   label: string;
   value: number;
   percentage: number;
 };
-
-const TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT = 5;
-const ONE_HOUR_IN_MS = 60 * 60 * 1000;
 
 function stripDiacritics(value: string) {
   return value.normalize("NFD").replace(/\p{Diacritic}/gu, "");
@@ -253,62 +266,6 @@ function countDistinctCategories(
   ).size;
 }
 
-function getTrendBucketStart(date: Date, granularity: SalesCantadasTrendGranularity) {
-  if (granularity === "hour") {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), 0, 0, 0);
-  }
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-}
-
-function getTrendBucketEnd(date: Date, granularity: SalesCantadasTrendGranularity) {
-  const span = getTrendBucketSpan(granularity);
-
-  if (span.unit === "hour") {
-    return addHours(date, span.amount);
-  }
-
-  return addDays(date, span.amount);
-}
-
-function formatTrendAxisLabel(date: Date, granularity: SalesCantadasTrendGranularity) {
-  if (granularity === "hour") {
-    return format(date, "HH:00", { locale: ptBR });
-  }
-
-  return format(date, "dd/MM/yy", { locale: ptBR });
-}
-
-function formatTrendHourAxisLabel(value: string | number | string[]) {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const timestamp = Number(raw);
-
-  if (!Number.isFinite(timestamp)) {
-    return String(raw);
-  }
-
-  return format(new Date(timestamp), "HH:00", { locale: ptBR });
-}
-
-function formatTrendTooltipLabel(start: Date, end: Date, granularity: SalesCantadasTrendGranularity) {
-  if (granularity === "hour") {
-    return format(start, "dd/MM/yyyy HH:00", { locale: ptBR });
-  }
-
-  const span = getTrendBucketSpan(granularity);
-  if (span.amount === 1) {
-    return format(start, "dd/MM/yyyy", { locale: ptBR });
-  }
-
-  return `${format(start, "dd/MM/yyyy", { locale: ptBR })} a ${format(end, "dd/MM/yyyy", {
-    locale: ptBR,
-  })}`;
-}
-
-function formatTrendTooltipTitle(point: TrendPoint | undefined) {
-  return String(point?.label ?? "Data");
-}
-
 function getTrendTooltipSeriesItems(data: TrendTooltipDataItem[] | undefined) {
   return (data ?? []).flatMap((item) => {
     if (Array.isArray((item as TrendTooltipDimensionInfo).data)) {
@@ -328,187 +285,6 @@ function getTrendTooltipReferencePoint(data: TrendTooltipDataItem[] | undefined)
   }
 
   return undefined;
-}
-
-function getTrendTooltipTrailingNonZeroTimes(points: TrendPoint[]) {
-  const orderedTimes = Array.from(
-    new Set(points.filter((point) => point.value > 0).map((point) => point.time)),
-  ).sort((a, b) => a - b);
-
-  return new Set(orderedTimes.slice(-TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT));
-}
-
-function getTrendTooltipDimensionPosition(
-  data: TrendTooltipDataItem[] | undefined,
-  trailingNonZeroTimes: Set<number>,
-) {
-  const referencePoint = getTrendTooltipReferencePoint(data);
-
-  if (referencePoint && trailingNonZeroTimes.has(referencePoint.time)) {
-    return {
-      right: 12,
-      top: 12,
-    };
-  }
-
-  return {
-    left: (event: MouseEvent) => event.offsetX,
-    top: 12,
-  };
-}
-
-function buildTrendTooltipContent(
-  data: TrendTooltipDataItem[] | undefined,
-  lineColor: string,
-  isHourlyTrend: boolean,
-) {
-  const referencePoint = getTrendTooltipReferencePoint(data);
-
-  if (!referencePoint) {
-    return [];
-  }
-
-  const content: TrendTooltipContentItem[] = [];
-
-  if (isHourlyTrend) {
-    content.push({
-      key: "Data de criacao",
-      value: String(referencePoint.label ?? "Data"),
-      visible: true,
-      hasShape: true,
-      shapeType: "circle",
-      shapeFill: lineColor,
-      shapeStroke: lineColor,
-      shapeLineWidth: 0,
-      shapeSize: 8,
-      shapeHollow: false,
-    });
-  }
-
-  content.push({
-    key: "Quantidade",
-    value: formatNumber(Number(referencePoint.value || 0)),
-    visible: true,
-    hasShape: true,
-    shapeType: "circle",
-    shapeFill: lineColor,
-    shapeStroke: lineColor,
-    shapeLineWidth: 0,
-    shapeSize: 8,
-    shapeHollow: false,
-  });
-
-  return content;
-}
-
-function incrementTrendBucket(date: Date, granularity: SalesCantadasTrendGranularity) {
-  return getTrendBucketEnd(date, granularity);
-}
-
-function buildTrendSeries(
-  items: SalesIntentionReportRow[],
-  trendGranularity: SalesCantadasTrendGranularity,
-  selectedStartDate?: string,
-  selectedEndDate?: string,
-) {
-  const parsedItemDates = items
-    .map((item) => ({
-      date: parseReportDateTime(
-        trendGranularity === "hour" ? item.Criado : item.Data_solicitacao,
-      ),
-      quantity: Number(item.Quantidade) || 0,
-    }))
-    .filter((entry): entry is { date: Date; quantity: number } => entry.date !== null);
-
-  const start = parseInputDate(selectedStartDate)
-    ?? parsedItemDates.reduce<Date | null>((currentMin, entry) => {
-      if (!currentMin || entry.date < currentMin) {
-        return entry.date;
-      }
-
-      return currentMin;
-    }, null);
-  const end = parseInputDate(selectedEndDate)
-    ?? parsedItemDates.reduce<Date | null>((currentMax, entry) => {
-      if (!currentMax || entry.date > currentMax) {
-        return entry.date;
-      }
-
-      return currentMax;
-    }, null);
-
-  if (!start || !end) {
-    return [] as TrendPoint[];
-  }
-
-  const firstRecord = parsedItemDates.reduce<Date | null>((currentMin, entry) => {
-    if (!currentMin || entry.date < currentMin) {
-      return entry.date;
-    }
-
-    return currentMin;
-  }, null);
-  const lastRecord = parsedItemDates.reduce<Date | null>((currentMax, entry) => {
-    if (!currentMax || entry.date > currentMax) {
-      return entry.date;
-    }
-
-    return currentMax;
-  }, null);
-
-  const normalizedStart =
-    trendGranularity === "hour" && firstRecord
-      ? addHours(getTrendBucketStart(firstRecord, trendGranularity), -1)
-      : getTrendBucketStart(start, trendGranularity);
-  const normalizedEnd =
-    trendGranularity === "hour" && lastRecord
-      ? addHours(getTrendBucketStart(lastRecord, trendGranularity), 1)
-      : getTrendBucketStart(end, trendGranularity);
-
-  if (normalizedStart > normalizedEnd) {
-    const swappedStart = normalizedEnd;
-    const swappedEnd = normalizedStart;
-    normalizedStart.setTime(swappedStart.getTime());
-    normalizedEnd.setTime(swappedEnd.getTime());
-  }
-
-  const span = getTrendBucketSpan(trendGranularity);
-  const valuesByBucket = new Map<number, number>();
-
-  for (const entry of parsedItemDates) {
-    const normalizedDate = getTrendBucketStart(entry.date, trendGranularity);
-    const elapsed = span.unit === "hour"
-      ? Math.max(0, differenceInHours(normalizedDate, normalizedStart))
-      : Math.max(0, differenceInCalendarDays(normalizedDate, normalizedStart));
-    const bucketIndex = Math.floor(elapsed / span.amount);
-    const bucketStart =
-      span.unit === "hour"
-        ? addHours(normalizedStart, bucketIndex * span.amount)
-        : addDays(normalizedStart, bucketIndex * span.amount);
-    const key = bucketStart.getTime();
-    valuesByBucket.set(key, (valuesByBucket.get(key) ?? 0) + entry.quantity);
-  }
-
-  const series: TrendPoint[] = [];
-  let cursor = normalizedStart;
-
-  while (cursor.getTime() <= normalizedEnd.getTime()) {
-    const time = cursor.getTime();
-    const bucketEnd =
-      span.unit === "hour"
-        ? new Date(Math.min(addHours(cursor, span.amount - 1).getTime(), normalizedEnd.getTime()))
-        : new Date(Math.min(addDays(cursor, span.amount - 1).getTime(), normalizedEnd.getTime()));
-    series.push({
-      time,
-      label: formatTrendTooltipLabel(cursor, bucketEnd, trendGranularity),
-      axisLabel: formatTrendAxisLabel(cursor, trendGranularity),
-      value: valuesByBucket.get(time) ?? 0,
-      series: "Intenções",
-    });
-    cursor = incrementTrendBucket(cursor, trendGranularity);
-  }
-
-  return series;
 }
 
 function getPrimaryClassification(items: SalesIntentionReportRow[]): PrimaryClassification {
@@ -658,6 +434,128 @@ function ChartCard({
   );
 }
 
+function TrendToggle({ options, value, onChange, label, wrap = false }: {
+  options: ReadonlyArray<{ value: string; label: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  wrap?: boolean;
+}) {
+  const drag = useHorizontalDragScroll<HTMLDivElement>();
+  return (
+    <div
+      ref={drag.ref}
+      onPointerDown={drag.onPointerDown}
+      onPointerMove={drag.onPointerMove}
+      onPointerUp={drag.onPointerUp}
+      onPointerCancel={drag.onPointerCancel}
+      className={cn("inline-flex min-w-0 max-w-full gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 select-none dark:border-white/10 dark:bg-white/5", wrap ? "flex-wrap" : "cursor-grab overflow-x-auto active:cursor-grabbing")}
+      role="group"
+      aria-label={label}
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition sm:text-[11px]", value === option.value ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950" : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100")}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BrandComparisonTrendCard({
+  spec, chartKey, hasData, grainLabel, grouping, onGroupingChange,
+  view, onViewChange, metric, onMetricChange, legendItems,
+  comparePreviousPeriod, onComparePreviousPeriodChange, comparisonRange, isComparisonLoading, comparisonError,
+}: {
+  spec: ILineChartSpec;
+  chartKey: string;
+  hasData: boolean;
+  grainLabel: string;
+  grouping: TrendGrouping;
+  onGroupingChange: (value: TrendGrouping) => void;
+  view: TrendView;
+  onViewChange: (value: TrendView) => void;
+  metric: TrendMetric;
+  onMetricChange: (value: TrendMetric) => void;
+  legendItems: Array<{ label: string; color: string; comparison?: boolean }>;
+  comparePreviousPeriod: boolean;
+  onComparePreviousPeriodChange: (value: boolean) => void;
+  comparisonRange: { startDate: string; endDate: string } | null;
+  isComparisonLoading: boolean;
+  comparisonError: string | null;
+}) {
+  return (
+    <article className={cn(themedCardClass, "min-w-0 px-4 py-4 sm:px-5 sm:py-5 xl:col-span-2")}>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(250px,270px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start">
+        <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+          <div className="flex items-center gap-2">
+            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>Vendas Cantadas no Período</h2>
+            <TooltipIcon text="Escolha o agrupamento do gráfico. No modo Automático, o intervalo acompanha o período selecionado. Alterne entre volume e acumulado ou compare com o período anterior." />
+          </div>
+          <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>{grainLabel}</span>
+          <div className="mt-3 space-y-1.5">
+            <p className={themedTinyLabelClass}>Agrupamento</p>
+            <TrendToggle options={trendGroupingOptions} value={grouping} onChange={(value) => onGroupingChange(value as TrendGrouping)} label="Agrupamento do gráfico" wrap />
+          </div>
+        </div>
+
+        <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+          <div className={cn(themedSoftCardClass, "min-w-[250px] rounded-2xl p-3 sm:min-w-[270px]")}>
+            <div className="flex items-center gap-1.5">
+              <p className={cn(themedTinyLabelClass, "tracking-[0.18em]")}>Comparativo</p>
+              <TooltipIcon text="Acompanhe o total em volume ou acumulado e compare com o período anterior de mesma duração." />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <TrendToggle options={trendViewOptions} value={view} onChange={(value) => onViewChange(value as TrendView)} label="Visão do comparativo" />
+              <TrendToggle options={trendMetricOptions} value={metric} onChange={(value) => onMetricChange(value as TrendMetric)} label="Métrica do comparativo" />
+            </div>
+            <div className="mt-3 space-y-1.5">
+              <button
+                type="button"
+                aria-pressed={comparePreviousPeriod}
+                onClick={() => onComparePreviousPeriodChange(!comparePreviousPeriod)}
+                className={cn("flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-sky-500", themedInputClass)}
+              >
+                <span>Comparar com período anterior</span>
+                <span aria-hidden="true" className={cn("relative h-5 w-9 shrink-0 rounded-full transition", comparePreviousPeriod ? "bg-sky-500 dark:bg-cyan-400" : "bg-slate-300 dark:bg-slate-700")}>
+                  <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform", comparePreviousPeriod ? "translate-x-[18px]" : "translate-x-0.5")} />
+                </span>
+              </button>
+              {comparePreviousPeriod && comparisonRange ? (
+                <p className={cn("text-[11px]", themedTextMutedClass)}>
+                  Período anterior: {format(parseLocalInputDate(comparisonRange.startDate) ?? new Date(), "dd/MM/yyyy")}{comparisonRange.startDate !== comparisonRange.endDate ? ` – ${format(parseLocalInputDate(comparisonRange.endDate) ?? new Date(), "dd/MM/yyyy")}` : ""}
+                </p>
+              ) : null}
+              {isComparisonLoading ? <p role="status" className={cn("text-[11px]", themedTextMutedClass)}>Carregando período comparativo…</p> : null}
+              {comparisonError ? <p role="alert" className="text-[11px] text-rose-600 dark:text-rose-300">Não foi possível carregar o comparativo.</p> : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+          <div className="mb-3 flex max-h-20 flex-wrap justify-center gap-x-4 gap-y-1.5 overflow-y-auto px-2">
+            {legendItems.map((item) => (
+              <span key={item.label} className="inline-flex min-w-0 items-center gap-1.5 text-[10px]" title={item.label}>
+                <span className={cn("w-4 shrink-0 border-t-2", item.comparison && "border-dashed")} style={{ borderColor: item.color }} />
+                <span className={cn("max-w-32 truncate", item.label === totalSeriesLabel ? themedTextTitleClass : themedTextMutedClass)}>{item.label}</span>
+              </span>
+            ))}
+          </div>
+          <div id="brand-comparison-trend-chart" className="relative h-[300px] min-w-0 sm:h-[330px]">
+            {hasData ? <VChart key={chartKey} spec={spec} /> : <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>Nenhum dado no período.</p>}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function AnalyticsSkeletonCard({
   className,
   contentClassName,
@@ -714,6 +612,12 @@ export function BrandDetailsAnalyticsSection({
   items,
   selectedStartDate,
   selectedEndDate,
+  comparePreviousPeriod = false,
+  onComparePreviousPeriodChange = () => {},
+  comparisonItems = null,
+  comparisonRange = null,
+  isComparisonLoading = false,
+  comparisonError = null,
   className,
 }: BrandDetailsAnalyticsSectionProps) {
   const { resolvedTheme, theme } = useTheme();
@@ -745,34 +649,145 @@ export function BrandDetailsAnalyticsSection({
       mediaQuery.removeEventListener("change", updateLayout);
     };
   }, []);
-  const trendGranularity = useMemo(
-    () => resolveSalesCantadasTrendGranularity(selectedStartDate, selectedEndDate),
-    [selectedEndDate, selectedStartDate],
-  );
-  const trendGranularityLabel = trendGranularityLabels[trendGranularity];
-  const trendGranularityChartLabel = `Agrupado por ${trendGranularityLabel}`;
-  const trendGranularityDescription = `A série é consolidada por ${trendGranularityLabel} para manter a leitura contínua do período.`;
+  const [trendGrouping, setTrendGrouping] = useState<TrendGrouping>("auto");
+  const [trendView, setTrendView] = useState<TrendView>("volume");
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>("total");
 
-  const trendSeries = useMemo(
-    () => buildTrendSeries(items, trendGranularity, selectedStartDate, selectedEndDate),
-    [items, selectedEndDate, selectedStartDate, trendGranularity],
-  );
-  const isHourlyTrend = trendGranularity === "hour";
-  const trendHourRange = useMemo(() => {
-    if (!isHourlyTrend || trendSeries.length === 0) {
-      return null;
+  const trendDateRange = useMemo(() => {
+    let first: Date | null = null;
+    let last: Date | null = null;
+    for (const item of items) {
+      const date = parseReportDateTime(item.Data_solicitacao);
+      if (!date) continue;
+      if (!first || date < first) first = date;
+      if (!last || date > last) last = date;
     }
-
-    const times = trendSeries.map((item) => item.time);
     return {
-      min: Math.min(...times),
-      max: Math.max(...times),
+      start: selectedStartDate || (first ? format(first, "yyyy-MM-dd") : ""),
+      end: selectedEndDate || (last ? format(last, "yyyy-MM-dd") : ""),
     };
-  }, [isHourlyTrend, trendSeries]);
-  const trendTooltipTrailingNonZeroTimes = useMemo(
-    () => getTrendTooltipTrailingNonZeroTimes(trendSeries),
-    [trendSeries],
-  );
+  }, [items, selectedEndDate, selectedStartDate]);
+  const trendGranularity = trendGrouping === "auto"
+    ? resolveSalesCantadasTrendGranularity(trendDateRange.start, trendDateRange.end)
+    : trendGrouping;
+  const trendGranularityChartLabel = `Agrupado por ${trendGranularityLabels[trendGranularity]}`;
+  const isHourlyTrend = trendGranularity === "hour";
+  const isSingleDayHourlyTrend = isHourlyTrend && trendDateRange.start === trendDateRange.end;
+
+  const currentTrendSeries = useMemo<TrendPoint[]>(() => {
+    const selected = [totalSeriesLabel];
+    const start = parseInputDate(trendDateRange.start);
+    const endDate = parseInputDate(trendDateRange.end);
+    if (!start || !endDate || start > endDate) return [] as TrendPoint[];
+    const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
+    const span = getTrendBucketSpan(trendGranularity);
+    const grouped = new Map<number, Map<string, number>>();
+    items.forEach((item) => {
+      const date = parseReportDateTime(isHourlyTrend ? item.Criado : item.Data_solicitacao);
+      if (!date || date < start || date > end) return;
+      const bucketStart = isHourlyTrend
+        ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours())
+        : addDays(start, Math.floor(differenceInCalendarDays(date, start) / span.amount) * span.amount);
+      const time = bucketStart.getTime();
+      const totals = grouped.get(time) ?? new Map<string, number>();
+      const value = trendMetric === "total" ? 1 : Number(item.Quantidade) || 0;
+      totals.set(totalSeriesLabel, (totals.get(totalSeriesLabel) || 0) + value);
+      grouped.set(time, totals);
+    });
+    if (!grouped.size) return [] as TrendPoint[];
+    if (isHourlyTrend && comparePreviousPeriod) {
+      const times = Array.from(grouped.keys()).sort((left, right) => left - right);
+      for (let cursor = new Date(times[0]); cursor.getTime() <= times[times.length - 1]; cursor = addHours(cursor, 1)) {
+        if (!grouped.has(cursor.getTime())) grouped.set(cursor.getTime(), new Map());
+      }
+    } else if (!isHourlyTrend) {
+      for (let cursor = start; cursor <= endDate; cursor = addDays(cursor, span.amount)) {
+        if (!grouped.has(cursor.getTime())) grouped.set(cursor.getTime(), new Map());
+      }
+    }
+    const accumulated = new Map(selected.map((label) => [label, 0]));
+    return Array.from(grouped.entries()).sort(([left], [right]) => left - right).flatMap(([time, totals]) => {
+      const bucketStart = new Date(time);
+      const bucketEnd = new Date(Math.min(addDays(bucketStart, span.amount - 1).getTime(), endDate.getTime()));
+      const axisLabel = isHourlyTrend
+        ? isSingleDayHourlyTrend ? format(bucketStart, "HH:00") : format(bucketStart, "dd/MM/yy HH:00")
+        : format(bucketStart, "dd/MM/yy");
+      const label = isHourlyTrend ? format(bucketStart, "dd/MM/yyyy HH:00")
+        : span.amount === 1 ? format(bucketStart, "dd/MM/yyyy")
+          : `${format(bucketStart, "dd/MM/yyyy")} a ${format(bucketEnd, "dd/MM/yyyy")}`;
+      return selected.map((series) => {
+        const value = series === totalSeriesLabel ? Array.from(totals.values()).reduce((sum, current) => sum + current, 0) : totals.get(series) || 0;
+        const next = trendView === "acumulado" ? (accumulated.get(series) || 0) + value : value;
+        accumulated.set(series, next);
+        return { time, label, axisLabel, value: next, series, hour: bucketStart.getHours() };
+      });
+    });
+  }, [comparePreviousPeriod, isHourlyTrend, isSingleDayHourlyTrend, items, trendDateRange, trendGranularity, trendMetric, trendView]);
+
+  const trendSeries = useMemo(() => {
+    if (!comparePreviousPeriod || !comparisonRange || !comparisonItems || !currentTrendSeries.length) return currentTrendSeries;
+    const comparisonStart = parseInputDate(comparisonRange.startDate);
+    const comparisonEndDate = parseInputDate(comparisonRange.endDate);
+    const currentStart = parseInputDate(trendDateRange.start);
+    if (!comparisonStart || !comparisonEndDate || !currentStart) return currentTrendSeries;
+    const comparisonEnd = new Date(comparisonEndDate.getFullYear(), comparisonEndDate.getMonth(), comparisonEndDate.getDate(), 23, 59, 59, 999);
+    const span = getTrendBucketSpan(trendGranularity);
+    const bucketIndex = (date: Date, rangeStart: Date) => isHourlyTrend
+      ? differenceInCalendarDays(date, rangeStart) * 24 + date.getHours()
+      : Math.floor(differenceInCalendarDays(date, rangeStart) / span.amount);
+    const totalsBySeries = new Map<string, Map<number, number>>();
+    comparisonItems.forEach((item) => {
+      const date = parseReportDateTime(isHourlyTrend ? item.Criado : item.Data_solicitacao);
+      if (!date || date < comparisonStart || date > comparisonEnd) return;
+      const index = bucketIndex(date, comparisonStart);
+      const value = trendMetric === "total" ? 1 : Number(item.Quantidade) || 0;
+      const totals = totalsBySeries.get(totalSeriesLabel) ?? new Map<number, number>();
+      totals.set(index, (totals.get(index) || 0) + value);
+      totalsBySeries.set(totalSeriesLabel, totals);
+    });
+    const selected = Array.from(new Set(currentTrendSeries.map((point) => point.series)));
+    const comparisonSeries = selected.flatMap((series) => {
+      const currentPoints = currentTrendSeries.filter((point) => point.series === series).sort((left, right) => left.time - right.time);
+      const aligned = alignComparisonBuckets(currentPoints, totalsBySeries.get(series) ?? new Map(), (point) => bucketIndex(new Date(point.time), currentStart));
+      let accumulated = 0;
+      return aligned.map(({ bucket, value }) => {
+        accumulated += value;
+        const index = bucketIndex(new Date(bucket.time), currentStart);
+        const previousBucketStart = isHourlyTrend
+          ? new Date(comparisonStart.getFullYear(), comparisonStart.getMonth(), comparisonStart.getDate() + Math.floor(index / 24), index % 24)
+          : addDays(comparisonStart, index * span.amount);
+        const previousBucketEnd = new Date(Math.min(addDays(previousBucketStart, span.amount - 1).getTime(), comparisonEndDate.getTime()));
+        const comparisonDateLabel = isHourlyTrend ? format(previousBucketStart, "dd/MM/yyyy HH:00")
+          : span.amount === 1 ? format(previousBucketStart, "dd/MM/yyyy")
+            : `${format(previousBucketStart, "dd/MM/yyyy")} a ${format(previousBucketEnd, "dd/MM/yyyy")}`;
+        return { ...bucket, value: trendView === "acumulado" ? accumulated : value, series: `${series} · Período anterior`, baseSeries: series, comparison: true, comparisonDateLabel };
+      });
+    });
+    return [...currentTrendSeries, ...comparisonSeries];
+  }, [comparisonItems, comparePreviousPeriod, comparisonRange, currentTrendSeries, isHourlyTrend, trendDateRange.start, trendGranularity, trendMetric, trendView]);
+
+  const trendSeriesLabels = useMemo(() => Array.from(new Set(trendSeries.map((point) => point.series))), [trendSeries]);
+  const trendSeriesColors = useMemo(() => {
+    const currentLabels = Array.from(new Set(currentTrendSeries.map((point) => point.series)));
+    const coolColor = isDarkMode ? "#22d3ee" : "#0284c7";
+    const warmColor = isDarkMode ? "#f59e0b" : "#d97706";
+    const colors = new Map(currentLabels.map((label) => [label, coolColor]));
+    if (comparePreviousPeriod && comparisonItems) currentLabels.forEach((label) => colors.set(`${label} · Período anterior`, warmColor));
+    return colors;
+  }, [comparisonItems, comparePreviousPeriod, currentTrendSeries, isDarkMode]);
+  const trendLegendItems = trendSeriesLabels.map((label) => {
+    const comparison = trendSeries.find((point) => point.series === label)?.comparison;
+    return {
+      label: comparePreviousPeriod && comparisonItems && !comparison ? `${label} · Período atual` : label,
+      color: trendSeriesColors.get(label) || lineColor,
+      comparison,
+    };
+  });
+  const trendHourRange = useMemo(() => {
+    if (!isSingleDayHourlyTrend || !trendSeries.length) return null;
+    const hours = trendSeries.map((point) => point.hour ?? 0);
+    return { min: Math.min(...hours), max: Math.max(...hours) };
+  }, [isSingleDayHourlyTrend, trendSeries]);
 
   const {
     totalQuantity,
@@ -812,176 +827,101 @@ export function BrandDetailsAnalyticsSection({
     () => ({
       type: "line",
       autoFit: true,
-      data: [
-        {
-          id: "brandTrend",
-          values: trendSeries,
-        },
-      ],
-      xField: isHourlyTrend ? "time" : "axisLabel",
+      data: [{ id: "brandTrend", values: trendSeries }],
+      xField: isSingleDayHourlyTrend ? "hour" : "axisLabel",
       yField: "value",
       seriesField: "series",
       smooth: true,
       padding: isCompactChartLayout ? [18, 14, 36, 28] : [20, 24, 42, 42],
-      color: [lineColor],
-      legends: {
-        visible: false,
-        orient: "bottom",
-        position: "middle",
-        layout: "horizontal",
-        background: { visible: false },
-        item: {
-          label: {
-            style: {
-              fill: chartMutedColor,
-              fontSize: 11,
-              fontWeight: 500,
-            },
-          },
-          shape: {
-            space: 6,
-            style: {
-              size: 8,
-            },
-          },
-        },
-      },
+      color: trendSeriesLabels.map((label) => trendSeriesColors.get(label) || lineColor),
       axes: [
-        isHourlyTrend && trendHourRange
-          ? {
-              orient: "bottom",
-              type: "linear",
-              min: trendHourRange.min,
-              max: trendHourRange.max,
-              nice: false,
-              tick: {
-                tickStep: ONE_HOUR_IN_MS,
-                noDecimals: true,
-                style: {
-                  stroke: chartGridColor,
-                },
-              },
-              label: {
-                formatMethod: (value: string | string[]) => formatTrendHourAxisLabel(value),
-                style: {
-                  fill: chartMutedColor,
-                  fontSize: isCompactChartLayout ? 10 : 11,
-                },
-              },
-            }
-          : {
-              orient: "bottom",
-              label: {
-                autoRotate: false,
-                autoHide: true,
-                autoHideMethod: "greedy",
-                style: {
-                  fill: chartMutedColor,
-                  fontSize: isCompactChartLayout ? 10 : 11,
-                },
-              },
-              tick: {
-                style: {
-                  stroke: chartGridColor,
-                },
-              },
-            },
-        {
-          orient: "left",
-          nice: true,
-          label: {
-            style: {
-              fill: chartMutedColor,
-              fontSize: isCompactChartLayout ? 10 : 11,
-            },
-            formatMethod: formatCompactAxisValue,
-          },
-          tick: {
-            tickCount: 6,
-            style: {
-              stroke: chartGridColor,
-            },
-          },
-          grid: {
-            style: {
-              stroke: chartGridColor,
-              lineDash: [4, 4],
-            },
-          },
+        trendHourRange ? {
+          orient: "bottom", type: "linear", min: trendHourRange.min, max: trendHourRange.max, nice: false,
+          tick: { tickStep: 1, noDecimals: true },
+          label: { formatMethod: (text: string | string[]) => {
+            const value = Number(Array.isArray(text) ? text[0] : text);
+            return Number.isFinite(value) ? `${String(value).padStart(2, "0")}:00` : String(text);
+          }, style: { fill: chartMutedColor, fontSize: isCompactChartLayout ? 10 : 11 } },
+        } : {
+          orient: "bottom",
+          label: { autoRotate: false, autoHide: true, autoHideMethod: "greedy", style: { fill: chartMutedColor, fontSize: isCompactChartLayout ? 10 : 11 } },
         },
+        { orient: "left", label: { formatMethod: formatCompactAxisValue, style: { fill: chartMutedColor, fontSize: isCompactChartLayout ? 10 : 11 } }, grid: { style: { stroke: chartGridColor, lineDash: [4, 4] } } },
       ],
       tooltip: {
-        trigger: ["hover", "click"],
-        activeType: "dimension",
-        confine: false,
-        offset: { x: 0, y: 0 },
+        trigger: ["hover", "click"], confine: false, parentElement: "brand-comparison-trend-chart", activeType: "dimension",
+        style: {
+          panel: {
+            padding: { top: 7, right: 9, bottom: 7, left: 9 },
+            backgroundColor: isDarkMode ? "#111827" : "#ffffff",
+            border: { color: isDarkMode ? "#374151" : "#e2e8f0", width: 1, radius: 8 },
+          },
+          shape: { size: 7, spacing: 5 },
+          titleLabel: { fontSize: 11, fontWeight: 600, fontColor: isDarkMode ? "#f8fafc" : "#0f172a", lineHeight: 16 },
+          keyLabel: { fontSize: 11, fontColor: isDarkMode ? "#cbd5e1" : "#475569", lineHeight: 15, spacing: 12 },
+          valueLabel: { fontSize: 11, fontWeight: 700, fontColor: isDarkMode ? "#f8fafc" : "#0f172a", lineHeight: 15 },
+          spaceRow: 3,
+        },
         dimension: {
-          title: {
-            visible: true,
-            value: (datum) => formatTrendTooltipTitle(datum as TrendPoint | undefined),
+          title: { visible: true, value: (datum) => (datum as TrendPoint | undefined)?.label || "Período" },
+          updateContent: (_prev, data) => {
+            const referencePoint = getTrendTooltipReferencePoint(data as TrendTooltipDataItem[] | undefined);
+            if (!referencePoint) return [];
+            const points = trendSeries.filter((point) => point.time === referencePoint.time);
+            const seriesPrefix = (series: string) => series === "Total" ? "" : `${series} · `;
+            const rows = points.map((point) => ({
+              key: comparePreviousPeriod && comparisonItems
+                ? `${seriesPrefix(point.baseSeries || point.series)}${point.comparison ? `Anterior (${point.comparisonDateLabel})` : "Atual"}`
+                : point.series,
+              value: Number(point.value || 0).toLocaleString("pt-BR"),
+              valueStyle: { fontColor: trendSeriesColors.get(point.series) || lineColor, fontWeight: 700 },
+              visible: true as const,
+              hasShape: true as const,
+              shapeType: "line" as const,
+              shapeFill: trendSeriesColors.get(point.series) || lineColor,
+              shapeStroke: "transparent",
+              shapeLineWidth: 0,
+              shapeSize: 10,
+            }));
+            if (comparePreviousPeriod && comparisonItems) {
+              const current = points.filter((point) => !point.comparison);
+              current.forEach((point) => {
+                const previous = points.find((candidate) => candidate.comparison && candidate.baseSeries === point.series);
+                if (!previous) return;
+                const variation = calculateComparisonVariation(point.value, previous.value);
+                const direction = variation.difference > 0 ? "↑" : variation.difference < 0 ? "↓" : "→";
+                const directionColor = variation.difference > 0
+                  ? isDarkMode ? "#4ade80" : "#15803d"
+                  : variation.difference < 0
+                    ? isDarkMode ? "#fb7185" : "#be123c"
+                    : isDarkMode ? "#94a3b8" : "#64748b";
+                rows.push({
+                  key: `${seriesPrefix(point.series)}Diferença`,
+                  value: `${direction} ${variation.difference > 0 ? "+" : ""}${variation.difference.toLocaleString("pt-BR")}`,
+                  valueStyle: { fontColor: directionColor, fontWeight: 700 },
+                  visible: true as const, hasShape: true as const, shapeType: "line" as const,
+                  shapeFill: directionColor,
+                  shapeStroke: "transparent", shapeLineWidth: 0, shapeSize: 10,
+                });
+                rows.push({
+                  key: `${seriesPrefix(point.series)}Variação`,
+                  value: variation.percentage === null ? `${direction} N/A` : `${direction} ${variation.percentage > 0 ? "+" : ""}${variation.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`,
+                  valueStyle: { fontColor: directionColor, fontWeight: 700 },
+                  visible: true as const, hasShape: true as const, shapeType: "line" as const,
+                  shapeFill: directionColor,
+                  shapeStroke: "transparent", shapeLineWidth: 0, shapeSize: 10,
+                });
+              });
+            }
+            return rows;
           },
-          position: (data) =>
-            getTrendTooltipDimensionPosition(
-              data as TrendTooltipDataItem[] | undefined,
-              trendTooltipTrailingNonZeroTimes,
-            ),
-          updateContent: (_prev, data) =>
-            buildTrendTooltipContent(
-              data as TrendTooltipDataItem[] | undefined,
-              lineColor,
-              isHourlyTrend,
-            ),
         },
       },
-      point: {
-        visible: true,
-        style: {
-          size: 4.5,
-          fill: "#ffffff",
-          stroke: "#64748b",
-          lineWidth: 1.4,
-        },
-      },
-      line: {
-        style: {
-          lineWidth: 2.3,
-          lineCap: "round",
-          lineJoin: "round",
-          curveType: "monotone",
-          strokeOpacity: 0.98,
-        },
-      },
-      area: {
-        visible: false,
-      },
-      crosshair: {
-        followTooltip: {
-          dimension: true,
-        },
-        xField: {
-          visible: true,
-          line: {
-            visible: true,
-            style: {
-              stroke: chartGridColor,
-              strokeOpacity: 0.45,
-              lineWidth: 1,
-              lineDash: [4, 4],
-            },
-          },
-        },
-      },
+      point: { visible: true, style: { size: 4.5, fill: "#ffffff", stroke: (datum) => trendSeriesColors.get(datum.series) || lineColor, lineWidth: 1.4 } },
+      line: { style: { lineWidth: (datum) => datum.comparison ? 1.6 : 1.9, lineDash: (datum) => datum.comparison ? [5, 4] : [], curveType: "monotone" } },
+      area: { visible: true, style: { fillOpacity: (datum: TrendPoint) => datum.comparison ? 0 : 0.12 } },
     }),
-    [
-      chartGridColor,
-      chartMutedColor,
-      isCompactChartLayout,
-      lineColor,
-      isHourlyTrend,
-      trendHourRange,
-      trendSeries,
-      trendTooltipTrailingNonZeroTimes,
-    ],
+    [chartGridColor, chartMutedColor, comparisonItems, comparePreviousPeriod, isCompactChartLayout, isDarkMode, isSingleDayHourlyTrend, lineColor, trendHourRange, trendSeries, trendSeriesColors, trendSeriesLabels],
   );
 
   const barChartPadding = useMemo(
@@ -1496,18 +1436,23 @@ export function BrandDetailsAnalyticsSection({
 
       {hasData ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          <ChartCard
-            title="Vendas Cantadas no Período"
-            tooltip="Evolução da soma de Quantidade no período selecionado, consolidada pela granularidade atual."
-            description={trendGranularityDescription}
-            badge={trendGranularityChartLabel}
-            hasData={trendSeries.length > 0}
-            chartKey={`brand-trend-${trendGranularity}-${trendSeries
-              .map((item) => `${item.time}:${item.value}`)
-              .join("|")}`}
+          <BrandComparisonTrendCard
             spec={trendChartSpec}
-            className={cn(horizontalBarChartCardClassName, "xl:col-span-2")}
-            contentClassName="h-[300px] sm:h-[340px]"
+            chartKey={`brand-trend-${trendGranularity}-${trendView}-${trendMetric}-${comparePreviousPeriod ? "previous" : "none"}-${JSON.stringify(trendSeries)}`}
+            hasData={trendSeries.length > 0}
+            grainLabel={trendGranularityChartLabel}
+            grouping={trendGrouping}
+            onGroupingChange={setTrendGrouping}
+            view={trendView}
+            onViewChange={setTrendView}
+            metric={trendMetric}
+            onMetricChange={setTrendMetric}
+            legendItems={trendLegendItems}
+            comparePreviousPeriod={comparePreviousPeriod}
+            onComparePreviousPeriodChange={onComparePreviousPeriodChange}
+            comparisonRange={comparisonRange}
+            isComparisonLoading={isComparisonLoading}
+            comparisonError={comparisonError}
           />
 
           <ChartCard
