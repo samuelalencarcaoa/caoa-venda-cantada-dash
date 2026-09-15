@@ -1,6 +1,6 @@
 "use client";
 
-import { addYears, format, subYears } from "date-fns";
+import { addDays, addYears, differenceInCalendarDays, format, subYears } from "date-fns";
 import {
   ArrowDown,
   ArrowRight,
@@ -50,7 +50,11 @@ import {
 } from "@/lib/salesIntentionApi";
 import {
   buildEquivalentPreviousPeriodRange,
+  getSalesCantadasTrendBucketSpan,
   resolveSalesCantadasAverageMetric,
+  resolveSalesCantadasTrendGranularity,
+  salesCantadasTrendGranularityLabels,
+  type SalesCantadasTrendGranularity,
 } from "@/lib/period-metrics";
 import {
   themedCardClass,
@@ -100,6 +104,17 @@ const trendMetricOptions = [
   { value: "total", label: "Total" },
   { value: "quant", label: "Quant." },
 ] as const;
+type TrendGrouping = "auto" | SalesCantadasTrendGranularity;
+const trendGroupingOptions = [
+  { value: "auto", label: "Automático" },
+  { value: "hour", label: "Hora" },
+  { value: "day", label: "Dia" },
+  { value: "week", label: "Semana" },
+  { value: "month", label: "Mês" },
+  { value: "bimonth", label: "Bimestre" },
+  { value: "quarter", label: "Trimestre" },
+  { value: "year", label: "Ano" },
+] as const satisfies ReadonlyArray<{ value: TrendGrouping; label: string }>;
 
 const tipoVendaLabels: Record<string, string> = {
   NOVOS: "Novos",
@@ -172,6 +187,7 @@ type TrendMetric = (typeof trendMetricOptions)[number]["value"];
 
 type TrendPoint = {
   label: string;
+  tooltipLabel: string;
   hour: number;
   vendor: string;
   quantity: number;
@@ -251,10 +267,12 @@ function ChartToggle({
   options,
   value,
   onChange,
+  ariaLabel,
 }: {
   options: ReadonlyArray<{ value: string; label: string }>;
   value: string;
   onChange: (value: string) => void;
+  ariaLabel?: string;
 }) {
   const chartToggleDrag = useHorizontalDragScroll<HTMLDivElement>();
 
@@ -267,6 +285,7 @@ function ChartToggle({
       onPointerCancel={chartToggleDrag.onPointerCancel}
       className="inline-flex max-w-full cursor-grab gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 select-none active:cursor-grabbing dark:border-white/10 dark:bg-white/5"
       role="group"
+      aria-label={ariaLabel}
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -363,16 +382,12 @@ function getTrendMetricItemValue(item: SalesIntentionReportRow, metric: TrendMet
   return Number(item.Quantidade) || 0;
 }
 
-function formatTrendTooltipDate(time: number, isSingleDayPeriod: boolean) {
-  return format(new Date(time), isSingleDayPeriod ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");
-}
-
-function formatTrendTooltipTitle(point: TrendPoint | undefined, isSingleDayPeriod: boolean) {
+function formatTrendTooltipTitle(point: TrendPoint | undefined) {
   if (!point) {
     return "";
   }
 
-  return formatTrendTooltipDate(point.time, isSingleDayPeriod);
+  return point.tooltipLabel;
 }
 
 function getTrendTooltipSeriesItems(data: TrendTooltipDataItem[] | undefined) {
@@ -1391,6 +1406,9 @@ function TrendFullscreenModal({
   chartSpec,
   series,
   trendView,
+  trendGrouping,
+  onTrendGroupingChange,
+  trendGrainLabel,
   onClose,
 }: {
   open: boolean;
@@ -1406,6 +1424,9 @@ function TrendFullscreenModal({
   chartSpec: ILineChartSpec;
   series: TrendSeriesSummary[];
   trendView: TrendView;
+  trendGrouping: TrendGrouping;
+  onTrendGroupingChange: (value: TrendGrouping) => void;
+  trendGrainLabel: string;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -1541,6 +1562,16 @@ function TrendFullscreenModal({
               </div>
             </div>
 
+            <div className="min-w-0 space-y-1.5 px-2">
+              <p className={themedTinyLabelClass}>Agrupamento · {trendGrainLabel}</p>
+              <ChartToggle
+                options={trendGroupingOptions}
+                value={trendGrouping}
+                onChange={(value) => onTrendGroupingChange(value as TrendGrouping)}
+                ariaLabel="Agrupamento do comparativo em tela cheia"
+              />
+            </div>
+
             <div
               id={tooltipParentElementId}
               className="relative w-full overflow-hidden rounded-[24px] border border-slate-200/70 bg-slate-50/70 h-[320px] phone:h-[360px] tablet:h-[420px] desktop:flex-1 desktop:h-auto desktop:min-h-0 desktop:overflow-hidden dark:border-white/10 dark:bg-white/5"
@@ -1591,9 +1622,9 @@ function PodiumCard({
         "bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 dark:from-slate-500 dark:via-slate-400 dark:to-slate-500",
       heightClass: "min-h-[132px] sm:min-h-[96px]",
       iconClass: "h-4 w-4 sm:h-7 sm:w-7 text-slate-400 dark:text-slate-300",
-      rankClass: "text-[1.2rem] font-medium tracking-[-0.1em] text-slate-500 dark:text-slate-300 sm:text-[1.8rem]",
-      vendorClass: "text-[0.68rem] font-medium leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
-      quantityClass: "text-[1.1rem] font-medium tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
+      rankClass: "text-[1.2rem] font-bold tracking-[-0.1em] text-slate-500 dark:text-slate-300 sm:text-[1.8rem]",
+      vendorClass: "text-[0.68rem] font-bold leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
+      quantityClass: "text-[1.1rem] font-extrabold tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
       metaClass: "text-[7px] font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 sm:text-[8px] sm:tracking-[0.18em]",
       progressClass: "bg-gradient-to-r from-slate-400 to-slate-300 dark:from-slate-400 dark:to-slate-500",
       footClass: "bg-slate-200/80 dark:bg-white/10",
@@ -1608,9 +1639,9 @@ function PodiumCard({
         "bg-gradient-to-r from-amber-300 via-amber-200 to-amber-100 dark:from-amber-200 dark:via-amber-300 dark:to-amber-200",
       heightClass: "min-h-[152px] sm:min-h-[118px] sm:-translate-y-1",
       iconClass: "h-5 w-5 sm:h-9 sm:w-9 text-amber-400 dark:text-amber-200",
-      rankClass: "text-[1.45rem] font-medium tracking-[-0.14em] text-amber-500 dark:text-amber-200 sm:text-[2.8rem]",
-      vendorClass: "text-[0.72rem] font-medium leading-4 text-slate-950 dark:text-slate-50 sm:text-[1.02rem]",
-      quantityClass: "text-[1.45rem] font-medium tracking-[-0.1em] text-slate-950 dark:text-slate-50 sm:text-[3.1rem]",
+      rankClass: "text-[1.45rem] font-extrabold tracking-[-0.14em] text-amber-500 dark:text-amber-200 sm:text-[2.8rem]",
+      vendorClass: "text-[0.72rem] font-bold leading-4 text-slate-950 dark:text-slate-50 sm:text-[1.02rem]",
+      quantityClass: "text-[1.45rem] font-extrabold tracking-[-0.1em] text-slate-950 dark:text-slate-50 sm:text-[3.1rem]",
       metaClass: "text-[7px] font-medium uppercase tracking-[0.16em] text-amber-600 dark:text-amber-200 sm:text-[8px] sm:tracking-[0.22em]",
       progressClass: "bg-gradient-to-r from-amber-300 via-amber-200 to-amber-100 dark:from-amber-200 dark:via-amber-300 dark:to-amber-200",
       footClass: "bg-amber-100/75 dark:bg-amber-300/25",
@@ -1627,9 +1658,9 @@ function PodiumCard({
         "bg-gradient-to-r from-[#8c5c3a] via-[#a7724e] to-[#c18a5c] dark:from-[#6f492f] dark:via-[#8c5c3a] dark:to-[#a7724e]",
       heightClass: "min-h-[128px] sm:min-h-[90px]",
       iconClass: "h-4 w-4 sm:h-7 sm:w-7 text-[#8c5c3a] dark:text-[#d0a079]",
-      rankClass: "text-[1.2rem] font-medium tracking-[-0.1em] text-[#7a5335] dark:text-[#d0a079] sm:text-[1.8rem]",
-      vendorClass: "text-[0.68rem] font-medium leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
-      quantityClass: "text-[1.1rem] font-medium tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
+      rankClass: "text-[1.2rem] font-bold tracking-[-0.1em] text-[#7a5335] dark:text-[#d0a079] sm:text-[1.8rem]",
+      vendorClass: "text-[0.68rem] font-bold leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
+      quantityClass: "text-[1.1rem] font-extrabold tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
       metaClass: "text-[7px] font-medium uppercase tracking-[0.14em] text-[#7a5335] dark:text-[#d0a079] sm:text-[8px] sm:tracking-[0.18em]",
       progressClass: "bg-gradient-to-r from-[#8c5c3a] via-[#a7724e] to-[#c18a5c] dark:from-[#6f492f] dark:via-[#8c5c3a] dark:to-[#a7724e]",
       footClass: "bg-[#c79a72]/55 dark:bg-[#8c5c3a]/18",
@@ -1706,63 +1737,65 @@ function PodiumCard({
                   </div>
                 ) : null}
 
-                <div
-                  className={cn(
-                    "relative flex justify-between gap-1.5 sm:gap-2",
-                    slot.rank === 1 ? "items-center" : "items-start",
-                  )}
-                >
+                <div className="relative flex items-center justify-center">
                   <span className={cn("leading-none", slot.rankClass)}>
                     {slot.label}
                   </span>
                   {slot.rank === 1 ? (
                     <Trophy
-                      className={cn("drop-shadow-sm", slot.iconClass)}
+                      className={cn(
+                        "absolute right-0 top-1/2 -translate-y-1/2 drop-shadow-sm",
+                        slot.iconClass,
+                      )}
                       strokeWidth={1.5}
                     />
                   ) : (
                     <Medal
-                      className={cn("drop-shadow-sm", slot.iconClass)}
+                      className={cn(
+                        "absolute right-0 top-1/2 -translate-y-1/2 drop-shadow-sm",
+                        slot.iconClass,
+                      )}
                       strokeWidth={1.5}
                     />
                   )}
                 </div>
 
-                <div className="relative mt-1.5 space-y-1">
+                <div className="relative mt-1.5">
                   <p
                     className={cn(
-                      "max-w-full break-words leading-5 sm:leading-4",
+                      "max-w-full break-words text-center leading-5 sm:leading-4",
                       slot.vendorClass,
                     )}
                   >
                     {displayVendor}
                   </p>
-                  <div className="flex items-end justify-between gap-2 sm:gap-2">
-                    <div className="min-w-0">
-                      <p className={slot.quantityClass}>
-                        {item ? item.quantity.toLocaleString("pt-BR") : "-"}
-                      </p>
-                      <p className={cn("flex items-center gap-1.5", slot.metaClass)}>
-                        <span>
-                          {item ? `${item.proposals.toLocaleString("pt-BR")} prop.` : "Sem posição"}
-                        </span>
-                        <span className="hidden sm:inline-flex">
-                          <TooltipIcon text="Quantidade de propostas no recorte atual." />
-                        </span>
-                      </p>
-                    </div>
-                    <div className="min-w-0 text-right">
-                      <p className={cn("flex items-center justify-end gap-1.5", slot.metaClass)}>
-                        <span>
-                          {item
-                            ? `${share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% vol.`
-                            : "Sem volume"}
-                        </span>
-                        <span className="hidden sm:inline-flex">
-                          <TooltipIcon text="Participação no volume total do recorte atual." />
-                        </span>
-                      </p>
-                    </div>
+                  <p className={cn("mt-1 text-center leading-none", slot.quantityClass)}>
+                    {item ? item.quantity.toLocaleString("pt-BR") : "-"}
+                  </p>
+                  <div className="mt-1 flex items-end justify-between gap-2 sm:gap-2">
+                    <p className={cn("flex min-w-0 items-center gap-1.5", slot.metaClass)}>
+                      <span>
+                        {item ? `${item.proposals.toLocaleString("pt-BR")} prop.` : "Sem posição"}
+                      </span>
+                      <span className="hidden sm:inline-flex">
+                        <TooltipIcon text="Quantidade de propostas no recorte atual." />
+                      </span>
+                    </p>
+                    <p
+                      className={cn(
+                        "flex min-w-0 items-center justify-end gap-1.5 text-right",
+                        slot.metaClass,
+                      )}
+                    >
+                      <span>
+                        {item
+                          ? `${share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% vol.`
+                          : "Sem volume"}
+                      </span>
+                      <span className="hidden sm:inline-flex">
+                        <TooltipIcon text="Participação no volume total do recorte atual." />
+                      </span>
+                    </p>
                   </div>
 
                   <div className={cn("mt-2 h-1.5 overflow-hidden rounded-full", slot.footClass)}>
@@ -1816,6 +1849,7 @@ export default function VendedorRelatorioPage() {
   const [selectedComparisonVendors, setSelectedComparisonVendors] = useState<string[]>([]);
   const [trendView, setTrendView] = useState<TrendView>("volume");
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("quant");
+  const [trendGrouping, setTrendGrouping] = useState<TrendGrouping>("auto");
   const [isTrendFullscreenOpen, setIsTrendFullscreenOpen] = useState(false);
   const [hiddenTrendSeries, setHiddenTrendSeries] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>(() => getTodayInputValue());
@@ -2276,162 +2310,72 @@ export default function VendedorRelatorioPage() {
     return grouped;
   }, [previousPeriodItems, trendMetric]);
 
-  const trendChartKey = `${isSingleDayPeriod ? "hourly" : "daily"}-${trendView}-${trendMetric}-${trendSeriesLabels.join("|")}-${hiddenTrendSeriesSignature || "all"}`;
+  const trendGranularity = trendGrouping === "auto"
+    ? resolveSalesCantadasTrendGranularity(appliedStartDate, appliedEndDate)
+    : trendGrouping;
+  const isHourlyTrend = trendGranularity === "hour";
+  const isSingleDayHourlyTrend = isHourlyTrend && isSingleDayPeriod;
+  const trendGrainLabel = `Agrupado por ${salesCantadasTrendGranularityLabels[trendGranularity]}`;
+  const trendChartKey = `${trendGranularity}-${trendView}-${trendMetric}-${trendSeriesLabels.join("|")}-${hiddenTrendSeriesSignature || "all"}`;
 
   const trendChartData = useMemo<TrendPoint[]>(() => {
-    if (trendSeriesLabels.length === 0) {
-      return [];
-    }
+    if (trendSeriesLabels.length === 0) return [];
+    const start = buildLocalDateFromInput(appliedStartDate);
+    const end = buildLocalDateFromInput(appliedEndDate, true);
+    if (!start || !end || start > end) return [];
 
     const selectedSeries = new Set(trendSeriesLabels);
-    if (isSingleDayPeriod) {
-      const selectedDate = buildLocalDateFromInput(appliedStartDate);
-      if (!selectedDate) {
-        return [];
-      }
-
-      const grouped = new Map<
-        number,
-        { time: number; label: string; totals: Record<string, number> }
-      >();
-      let firstHour = 24;
-      let lastHour = -1;
-
-      filteredItems.forEach((item) => {
-        const vendor = item.Proprietario || "Sem vendedor";
-        if (!selectedSeries.has(vendor)) {
-          return;
-        }
-
-        const createdAt = parseReportDate(item.Criado);
-        if (!createdAt || formatInputDate(createdAt) !== appliedStartDate) {
-          return;
-        }
-
-        const hour = createdAt.getHours();
-        const metricValue = getTrendMetricItemValue(item, trendMetric);
-        const currentGroup = grouped.get(hour) ?? {
-          time: new Date(
-            selectedDate.getFullYear(),
-            selectedDate.getMonth(),
-            selectedDate.getDate(),
-            hour,
-          ).getTime(),
-          label: formatHourLabel(hour),
-          totals: {},
-        };
-
-        currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + metricValue;
-        grouped.set(hour, currentGroup);
-
-        if (hour < firstHour) {
-          firstHour = hour;
-        }
-
-        if (hour > lastHour) {
-          lastHour = hour;
-        }
-      });
-
-      if (grouped.size === 0) {
-        return [];
-      }
-
-      const windowStart = Math.max(0, firstHour - 1);
-      const windowEnd = Math.min(23, lastHour + 1);
-      const cumulativeByVendor = new Map<string, number>(
-        trendSeriesLabels.map((vendor) => [vendor, 0]),
-      );
-
-      return Array.from({ length: windowEnd - windowStart + 1 }, (_, index) => windowStart + index)
-        .flatMap((hour) => {
-          const row =
-            grouped.get(hour) ?? {
-              time: new Date(
-                selectedDate.getFullYear(),
-                selectedDate.getMonth(),
-                selectedDate.getDate(),
-                hour,
-              ).getTime(),
-              label: formatHourLabel(hour),
-              totals: {},
-            };
-
-          return trendSeriesLabels.map((vendor) => {
-            const metricValue = row.totals[vendor] || 0;
-            const nextQuantity =
-              trendView === "acumulado"
-                ? (cumulativeByVendor.get(vendor) || 0) + metricValue
-                : metricValue;
-
-            if (trendView === "acumulado") {
-              cumulativeByVendor.set(vendor, nextQuantity);
-            }
-
-            return {
-              label: row.label,
-              hour,
-              vendor,
-              quantity: nextQuantity,
-              time: row.time,
-            };
-          });
-        });
-    }
-
-    const grouped = new Map<string, { time: number; label: string; totals: Record<string, number> }>();
+    const span = getSalesCantadasTrendBucketSpan(trendGranularity);
+    const grouped = new Map<number, Map<string, number>>();
 
     filteredItems.forEach((item) => {
       const vendor = item.Proprietario || "Sem vendedor";
-      if (!selectedSeries.has(vendor)) {
-        return;
-      }
-
-      const current = parseReportDate(item.Data_solicitacao);
-      if (!current) {
-        return;
-      }
-
-      const key = format(current, "yyyy-MM-dd");
-      const metricValue = getTrendMetricItemValue(item, trendMetric);
-      const currentGroup = grouped.get(key) ?? {
-        time: new Date(current.getFullYear(), current.getMonth(), current.getDate()).getTime(),
-        label: format(current, "dd/MM/yy"),
-        totals: {},
-      };
-
-      currentGroup.totals[vendor] = (currentGroup.totals[vendor] || 0) + metricValue;
-      grouped.set(key, currentGroup);
+      if (!selectedSeries.has(vendor)) return;
+      const date = parseReportDate(isHourlyTrend ? item.Criado : item.Data_solicitacao);
+      if (!date || date < start || date > end) return;
+      const bucketStart = isHourlyTrend
+        ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours())
+        : addDays(start, Math.floor(differenceInCalendarDays(date, start) / span.amount) * span.amount);
+      const time = bucketStart.getTime();
+      const totals = grouped.get(time) ?? new Map<string, number>();
+      totals.set(vendor, (totals.get(vendor) || 0) + getTrendMetricItemValue(item, trendMetric));
+      grouped.set(time, totals);
     });
 
-    const cumulativeByVendor = new Map<string, number>(
-      trendSeriesLabels.map((vendor) => [vendor, 0]),
-    );
+    if (grouped.size === 0) return [];
+    if (isSingleDayHourlyTrend) {
+      const hours = Array.from(grouped.keys()).map((time) => new Date(time).getHours());
+      const first = Math.max(0, Math.min(...hours) - 1);
+      const last = Math.min(23, Math.max(...hours) + 1);
+      for (let hour = first; hour <= last; hour++) {
+        const time = new Date(start.getFullYear(), start.getMonth(), start.getDate(), hour).getTime();
+        if (!grouped.has(time)) grouped.set(time, new Map());
+      }
+    } else if (!isHourlyTrend) {
+      for (let cursor = start; cursor <= end; cursor = addDays(cursor, span.amount)) {
+        if (!grouped.has(cursor.getTime())) grouped.set(cursor.getTime(), new Map());
+      }
+    }
 
-    return Array.from(grouped.values())
-      .sort((a, b) => a.time - b.time)
-      .flatMap((row) =>
-        trendSeriesLabels.map((vendor) => {
-          const metricValue = row.totals[vendor] || 0;
-          const nextQuantity =
-            trendView === "acumulado"
-              ? (cumulativeByVendor.get(vendor) || 0) + metricValue
-              : metricValue;
-
-          if (trendView === "acumulado") {
-            cumulativeByVendor.set(vendor, nextQuantity);
-          }
-
-          return {
-            label: row.label,
-            hour: new Date(row.time).getHours(),
-            vendor,
-            quantity: nextQuantity,
-            time: row.time,
-          };
-        }),
-    );
-  }, [appliedStartDate, filteredItems, isSingleDayPeriod, trendMetric, trendSeriesLabels, trendView]);
+    const accumulated = new Map(trendSeriesLabels.map((vendor) => [vendor, 0]));
+    return Array.from(grouped.entries()).sort(([left], [right]) => left - right).flatMap(([time, totals]) => {
+      const bucketStart = new Date(time);
+      const bucketEnd = new Date(Math.min(addDays(bucketStart, span.amount - 1).getTime(), end.getTime()));
+      const label = isHourlyTrend
+        ? isSingleDayHourlyTrend ? formatHourLabel(bucketStart.getHours()) : format(bucketStart, "dd/MM/yy HH:00")
+        : format(bucketStart, "dd/MM/yy");
+      const tooltipLabel = isHourlyTrend
+        ? format(bucketStart, "dd/MM/yyyy HH:00")
+        : span.amount === 1 ? format(bucketStart, "dd/MM/yyyy")
+          : `${format(bucketStart, "dd/MM/yyyy")} a ${format(bucketEnd, "dd/MM/yyyy")}`;
+      return trendSeriesLabels.map((vendor) => {
+        const value = totals.get(vendor) || 0;
+        const quantity = trendView === "acumulado" ? (accumulated.get(vendor) || 0) + value : value;
+        accumulated.set(vendor, quantity);
+        return { label, tooltipLabel, hour: bucketStart.getHours(), vendor, quantity, time };
+      });
+    });
+  }, [appliedEndDate, appliedStartDate, filteredItems, isHourlyTrend, isSingleDayHourlyTrend, trendGranularity, trendMetric, trendSeriesLabels, trendView]);
 
   const trendSeriesSummaries = useMemo<TrendSeriesSummary[]>(() => {
     const grouped = new Map<string, TrendPoint[]>();
@@ -2493,7 +2437,7 @@ export default function VendedorRelatorioPage() {
   );
 
   const trendHourRange = useMemo(() => {
-    if (!isSingleDayPeriod || visibleTrendChartData.length === 0) {
+    if (!isSingleDayHourlyTrend || visibleTrendChartData.length === 0) {
       return null;
     }
 
@@ -2502,7 +2446,7 @@ export default function VendedorRelatorioPage() {
       min: Math.min(...hours),
       max: Math.max(...hours),
     };
-  }, [isSingleDayPeriod, visibleTrendChartData]);
+  }, [isSingleDayHourlyTrend, visibleTrendChartData]);
 
   const trendChartSpec = useMemo<ILineChartSpec>(
     () => ({
@@ -2513,7 +2457,7 @@ export default function VendedorRelatorioPage() {
           values: visibleTrendChartData,
         },
       ],
-      xField: isSingleDayPeriod ? "hour" : "label",
+      xField: isSingleDayHourlyTrend ? "hour" : "label",
       yField: "quantity",
       seriesField: "vendor",
       smooth: true,
@@ -2548,7 +2492,7 @@ export default function VendedorRelatorioPage() {
         },
       },
       axes: [
-        isSingleDayPeriod && trendHourRange
+        isSingleDayHourlyTrend && trendHourRange
           ? {
               orient: "bottom",
               type: "linear",
@@ -2593,7 +2537,7 @@ export default function VendedorRelatorioPage() {
         dimension: {
           title: {
             visible: true,
-            value: (datum) => formatTrendTooltipTitle(datum as TrendPoint | undefined, isSingleDayPeriod),
+            value: (datum) => formatTrendTooltipTitle(datum as TrendPoint | undefined),
           },
           position: (data) =>
             getTrendTooltipDimensionPosition(
@@ -2604,7 +2548,7 @@ export default function VendedorRelatorioPage() {
             buildTrendTooltipContent(
               data as TrendTooltipDataItem[],
               visibleTrendSeriesSummaries,
-              isSingleDayPeriod,
+              isSingleDayHourlyTrend,
             ),
         },
       },
@@ -2631,7 +2575,7 @@ export default function VendedorRelatorioPage() {
     }),
     [
       inlineTrendTooltipParentElementId,
-      isSingleDayPeriod,
+      isSingleDayHourlyTrend,
       trendHourRange,
       trendSeriesColors,
       trendSeriesSummaries,
@@ -3252,6 +3196,16 @@ export default function VendedorRelatorioPage() {
           ) : null}
 
           <div className="flex flex-col gap-4 xl:grid xl:grid-cols-2 xl:items-stretch">
+            <div className="min-w-0 space-y-2">
+              <div className="min-w-0 space-y-1.5 px-1">
+                <p className={themedTinyLabelClass}>Agrupamento · {trendGrainLabel}</p>
+                <ChartToggle
+                  options={trendGroupingOptions}
+                  value={trendGrouping}
+                  onChange={(value) => setTrendGrouping(value as TrendGrouping)}
+                  ariaLabel="Agrupamento do comparativo"
+                />
+              </div>
             <ChartCard
               title="Comparativo"
               tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
@@ -3298,6 +3252,7 @@ export default function VendedorRelatorioPage() {
                 />
               </div>
             </ChartCard>
+            </div>
 
             <RankingCard
               items={vendorRanking}
@@ -3314,7 +3269,7 @@ export default function VendedorRelatorioPage() {
         <TrendFullscreenModal
           open={isTrendFullscreenOpen}
           title="Comparativo"
-          subtitle={`Visualização expandida em ${isSingleDayPeriod ? "horas" : trendView === "acumulado" ? "acumulado" : "volume"} com os filtros atuais.`}
+          subtitle={`Visualização expandida em ${trendGrainLabel.toLowerCase()} com os filtros atuais.`}
           periodText={displayActivePeriodText}
           filterChips={appliedFilterChips.slice(0, -1)}
           tooltipParentElementId={fullscreenTrendTooltipParentElementId}
@@ -3322,6 +3277,9 @@ export default function VendedorRelatorioPage() {
           chartSpec={fullscreenTrendChartSpec}
           series={trendSeriesSummaries}
           trendView={trendView}
+          trendGrouping={trendGrouping}
+          onTrendGroupingChange={setTrendGrouping}
+          trendGrainLabel={trendGrainLabel}
           trendMetric={trendMetric}
           hiddenSeries={hiddenTrendSeries}
           onToggleSeriesVisibility={toggleTrendSeriesVisibility}

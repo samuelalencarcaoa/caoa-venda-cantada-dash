@@ -173,10 +173,6 @@ function areStringSelectionsEqual(left: string[], right: string[]) {
   return left.every((value) => normalizedRight.has(normalizeValue(value)));
 }
 
-function buildVehicleCatalogKey(tipoVenda: string, marca: string, versao: string) {
-  return [tipoVenda, marca, versao].map(normalizeValue).join("|");
-}
-
 function groupSalesVolume(
   items: SalesIntentionReportRow[],
   getLabel: (item: SalesIntentionReportRow) => string,
@@ -189,6 +185,36 @@ function groupSalesVolume(
   });
 
   return Array.from(totals, ([label, value]) => ({ label, value })).sort(
+    (left, right) =>
+      right.value - left.value || left.label.localeCompare(right.label, "pt-BR"),
+  );
+}
+
+function normalizeVersionKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function groupSalesVolumeByVersion(items: SalesIntentionReportRow[]) {
+  const totals = new Map<string, RankingChartItem>();
+
+  items.forEach((item) => {
+    const label = item.Versao?.trim() || "Sem versão";
+    const key = normalizeVersionKey(label);
+    const current = totals.get(key);
+
+    if (current) {
+      current.value += Number(item.Quantidade) || 0;
+    } else {
+      totals.set(key, { label, value: Number(item.Quantidade) || 0 });
+    }
+  });
+
+  return Array.from(totals.values()).sort(
     (left, right) =>
       right.value - left.value || left.label.localeCompare(right.label, "pt-BR"),
   );
@@ -919,11 +945,10 @@ export default function MarcaVeiculoRelatorioPage() {
   }, [vehicleCatalogSources.modelo]);
 
   const versaoOptions = useMemo(() => {
-    if (vehicleCatalogSources.versaoModelo.length > 0) {
-      return vehicleCatalogSources.versaoModelo;
-    }
-
-    return sortUniqueOptions(enhancedSalesIntention.map((item) => item.Versao));
+    return sortUniqueOptions([
+      ...vehicleCatalogSources.versaoModelo,
+      ...enhancedSalesIntention.map((item) => item.Versao?.trim() || "Sem versão"),
+    ]);
   }, [enhancedSalesIntention, vehicleCatalogSources.versaoModelo]);
 
   const classificacaoOptions = useMemo(() => {
@@ -1084,7 +1109,13 @@ export default function MarcaVeiculoRelatorioPage() {
           appliedMarcaVeiculo,
           itemMarcaVeiculo,
         );
-        const matchesVersao = matchesSelectedValues(appliedVersao, itemVersao);
+        const matchesVersao =
+          appliedVersao.length === 0 ||
+          appliedVersao.some(
+            (value) =>
+              normalizeVersionKey(value) ===
+              normalizeVersionKey(itemVersao.trim() || "Sem versão"),
+          );
         const matchesClassificacao = matchesSelectedValues(
           appliedClassificacao,
           itemClassificacao,
@@ -1185,19 +1216,6 @@ export default function MarcaVeiculoRelatorioPage() {
     [comparisonOptions],
   );
 
-  const modelByVehicleCombination = useMemo(() => {
-    const models = new Map<string, string>();
-
-    vehicleCatalogRows.forEach((row) => {
-      const key = buildVehicleCatalogKey(row.tipoVenda, row.marca, row.versaoModelo);
-      if (!models.has(key)) {
-        models.set(key, row.modelo.trim() || "Modelo não identificado");
-      }
-    });
-
-    return models;
-  }, [vehicleCatalogRows]);
-
   const storeBreakdownData = useMemo(
     () =>
       groupSalesVolume(
@@ -1207,18 +1225,9 @@ export default function MarcaVeiculoRelatorioPage() {
     [filteredItems],
   );
 
-  const modelBreakdownData = useMemo(
-    () =>
-      groupSalesVolume(filteredItems, (item) => {
-        const key = buildVehicleCatalogKey(
-          item.Tipo_Venda || "",
-          item.Marca_Veiculo || "",
-          item.Versao || "",
-        );
-
-        return modelByVehicleCombination.get(key) || "Modelo não identificado";
-      }),
-    [filteredItems, modelByVehicleCombination],
+  const versionBreakdownData = useMemo(
+    () => groupSalesVolumeByVersion(filteredItems),
+    [filteredItems],
   );
 
   const breakdownContextLabel = useMemo(() => {
@@ -1836,7 +1845,7 @@ export default function MarcaVeiculoRelatorioPage() {
               appliedValue={appliedModelo}
               options={modeloOptions}
               onChange={setSelectedModelo}
-              tooltip="Filtro aplicado por modelo."
+              tooltip="Filtra pelo modelo cadastrado no catálogo. Ao selecionar um modelo, vendas com versões sem correspondência no catálogo ficam fora do resultado."
               disabled={isOptionsLoading}
             />
             <FilterSelectCard
@@ -1845,7 +1854,7 @@ export default function MarcaVeiculoRelatorioPage() {
               appliedValue={appliedVersao}
               options={versaoOptions}
               onChange={setSelectedVersao}
-              tooltip="Filtro aplicado por versão."
+              tooltip="Filtra pela versão informada na venda, incluindo versões ausentes do catálogo."
               disabled={isOptionsLoading}
             />
             <FilterSelectCard
@@ -2025,10 +2034,10 @@ export default function MarcaVeiculoRelatorioPage() {
             />
 
             <MonitoringBreakdownCard
-              title="Venda Cantada x Modelo"
-              data={modelBreakdownData}
+              title="Venda Cantada x Versão"
+              data={versionBreakdownData}
               contextLabel={breakdownContextLabel}
-              tooltip="Lista todos os modelos com vendas cantadas no recorte atual, sem limitar aos dez primeiros resultados."
+              tooltip="Soma as vendas pela versão informada em cada registro, unificando diferenças de espaços, acentos e capitalização. Registros sem versão aparecem como Sem versão."
             />
           </div>
 

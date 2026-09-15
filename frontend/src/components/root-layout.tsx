@@ -17,6 +17,7 @@ const unauthenticatedRoutes = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideSideNav = unauthenticatedRoutes.some((route) => pathname?.startsWith(route) ?? false);
+  const isBrandDetailsPage = pathname?.startsWith("/dashboard/bandeiras/") ?? false;
   const [isSideNavCollapsed, setIsSideNavCollapsed] = useState(false);
 
   useEffect(() => {
@@ -56,12 +57,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           hideSideNav ? "min-h-[100dvh]" : "overflow-x-hidden overflow-y-auto",
         )}
       >
-        {children}
+        <div className="min-w-0 flex-1">{children}</div>
 
-        <div className="mt-auto shrink-0 pt-[30px]">
-          <footer className="border-t border-slate-200 bg-white/95 px-4 py-6 backdrop-blur dark:border-white/10 dark:bg-slate-950/95 sm:px-6">
-            <div className="mx-auto flex w-full max-w-8xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-3">
+        <div className={cn("shrink-0", isBrandDetailsPage ? "pt-4" : "pt-[30px]")}>
+          <footer
+            className={cn(
+              "h-fit border-t border-slate-200 bg-white/95 px-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/95 sm:px-6",
+              isBrandDetailsPage ? "py-4" : "py-6",
+            )}
+          >
+            <div
+              className={cn(
+                "mx-auto flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between",
+                isBrandDetailsPage ? "max-w-[1700px]" : "max-w-8xl",
+              )}
+            >
+              <div className={cn("space-y-3", isBrandDetailsPage && "space-y-2")}>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Desenvolvido pelo Departamento de Tecnologia e Inovação da CAOA
                 </p>
@@ -71,7 +82,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
 
-            <nav className="mx-auto mt-6 flex w-full max-w-8xl flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <nav
+              className={cn(
+                "mx-auto flex w-full flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-400",
+                isBrandDetailsPage ? "mt-4 max-w-[1700px]" : "mt-6 max-w-8xl",
+              )}
+            >
               <a
                 href="https://caoa.com.br/politica-de-privacidade"
                 target="_blank"

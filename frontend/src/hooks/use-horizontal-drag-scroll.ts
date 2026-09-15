@@ -69,7 +69,9 @@ export function useHorizontalDragScroll<T extends HTMLElement>() {
     }
 
     const delta = event.clientX - dragState.startX;
-    container.scrollLeft = dragState.startScrollLeft - delta;
+    // Reduzir a agressividade do scroll aplicando um fator de amortecimento
+    const dampedDelta = delta * 0.65;
+    container.scrollLeft = dragState.startScrollLeft - dampedDelta;
   };
 
   const onPointerUp = (event: ReactPointerEvent<T>) => {
