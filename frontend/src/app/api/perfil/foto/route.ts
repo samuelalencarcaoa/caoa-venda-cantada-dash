@@ -1,5 +1,5 @@
 import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 

@@ -210,7 +210,7 @@ export default async function PerfilPage() {
         <section className={cn(themedCardClass, "overflow-hidden")}>
           <div className="h-1 bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400" />
 
-          <div className="flex flex-col gap-6 p-5 sm:p-7">
+          <div className="flex flex-col gap-5 p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 {user.image ? (
@@ -224,7 +224,7 @@ export default async function PerfilPage() {
                   />
                 ) : (
                   <div
-                    className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white ring-4 ring-slate-200/70 dark:ring-white/10"
+                    className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-normal text-white ring-4 ring-slate-200/70 dark:ring-white/10"
                     style={{ backgroundColor: avatarColor }}
                   >
                     {initials}
@@ -235,13 +235,13 @@ export default async function PerfilPage() {
                   <p className={themedTinyLabelClass}>Conta autenticada</p>
                   <h1
                     className={cn(
-                      "mt-2 truncate text-3xl font-semibold tracking-[-0.03em]",
+                      "mt-1 break-words text-xl font-normal tracking-[-0.02em] sm:text-2xl",
                       themedTextTitleClass,
                     )}
                   >
                     {displayName}
                   </h1>
-                  <p className={cn("mt-1 truncate text-sm", themedTextBodyClass)}>{email}</p>
+                  <p className={cn("mt-1 break-all text-sm", themedTextBodyClass)}>{email}</p>
                 </div>
               </div>
 
@@ -261,7 +261,7 @@ export default async function PerfilPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className={themedTinyLabelClass}>Diretório</p>
-                  <h2 className={cn("mt-1 text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+                  <h2 className={cn("mt-1 text-base font-normal tracking-[-0.02em]", themedTextTitleClass)}>
                     Informações disponíveis
                   </h2>
                 </div>
@@ -272,12 +272,12 @@ export default async function PerfilPage() {
               </div>
 
               {profileSections.length > 0 ? (
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid gap-3 lg:grid-cols-2">
                   {profileSections.map((section) => {
                     const SectionIcon = section.icon;
                     return (
-                      <section key={section.title} className="min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/5">
-                        <h3 className={cn("flex items-center gap-2 border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-white/10", themedTextTitleClass)}>
+                      <section key={section.title} className="min-w-0 overflow-hidden rounded-xl bg-slate-50/80 dark:bg-white/5">
+                        <h3 className={cn("flex items-center gap-2 border-b border-slate-200 px-3 py-2.5 text-sm font-normal dark:border-white/10", themedTextTitleClass)}>
                           <SectionIcon className="h-4 w-4 text-sky-700 dark:text-cyan-300" />
                           {section.title}
                         </h3>
@@ -285,11 +285,11 @@ export default async function PerfilPage() {
                           {section.fields.map((field) => {
                             const Icon = field.icon;
                             return (
-                              <div key={field.label} className="flex min-w-0 items-start gap-3 px-4 py-3">
+                              <div key={field.label} className="flex min-w-0 items-start gap-2.5 px-3 py-2.5">
                                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-sky-700 dark:text-cyan-300" />
                                 <div className="min-w-0">
                                   <dt className={themedTinyLabelClass}>{field.label}</dt>
-                                  <dd className={cn("mt-1 break-words text-sm font-semibold", themedTextTitleClass)}>{field.value}</dd>
+                                  <dd className={cn("mt-1 break-words text-sm font-normal", themedTextTitleClass)}>{field.value}</dd>
                                 </div>
                               </div>
                             );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -22,17 +22,36 @@ export function MobileDetailedTableModal({
   exportFilePrefix,
   onClose,
 }: MobileDetailedTableModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (!open) {
       return;
     }
 
     const originalOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
+      } else if (event.key === "Tab" && dialogRef.current) {
+        const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ));
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
 
@@ -41,6 +60,7 @@ export function MobileDetailedTableModal({
     return () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
     };
   }, [open, onClose]);
 
@@ -55,11 +75,15 @@ export function MobileDetailedTableModal({
       role="presentation"
     >
       <div
+        ref={dialogRef}
         className="relative flex h-[100dvh] w-full flex-col overflow-hidden"
         onClick={(event) => event.stopPropagation()}
-        role="presentation"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tabela detalhada de intenções de venda"
       >
         <Button
+          ref={closeButtonRef}
           type="button"
           variant="outline"
           size="icon"

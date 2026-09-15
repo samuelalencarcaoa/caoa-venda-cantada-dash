@@ -42,6 +42,7 @@ import {
 } from "@/components/sales-intention-filter-select-card";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
+import { useMobileFilterSheet } from "@/hooks/use-mobile-filter-sheet";
 import {
   fetchSalesIntentionClassificacoes,
   fetchSalesIntentionCatalogs,
@@ -72,6 +73,7 @@ import {
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
+import { chartLineWidth, chartPointStrokeWidth } from "@/lib/chart-style";
 import { formatCompactAxisValue } from "@/lib/chart-formatters";
 import type {
   SalesIntentionCatalogResponse,
@@ -145,7 +147,7 @@ const rankingDisplayOptions = [10, 20, 50, 100] as const;
 type RankingDisplayCount = (typeof rankingDisplayOptions)[number];
 
 const vendorStatusChipClass =
-  "rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium";
+  "rounded-full bg-white/10 px-3 py-1 text-[11px] font-normal";
 
 const vendorFilterChipClass = cn(
   themedChipClass,
@@ -296,7 +298,7 @@ function ChartToggle({
             type="button"
             aria-pressed={active}
             className={cn(
-              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition sm:text-[11px]",
+              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-normal transition sm:text-[11px]",
               active
                 ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950"
                 : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100",
@@ -547,7 +549,7 @@ function ComparisonBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium tabular-nums",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-normal tabular-nums",
         toneClass,
       )}
     >
@@ -723,7 +725,7 @@ function TrendComparisonRail({
                   style={{ backgroundColor: item.color }}
                 />
                 <div className="min-w-0">
-                  <p className={cn("truncate text-sm font-medium", themedTextTitleClass)}>
+                  <p className={cn("truncate text-sm font-normal", themedTextTitleClass)}>
                     {item.displayVendor}
                   </p>
                 </div>
@@ -841,7 +843,7 @@ function StatCard({
         <TooltipIcon text={tooltip} />
       </div>
       {caption ? (
-        <p className={cn("mt-1 text-[10px] font-medium tracking-[0.18em]", themedTextMutedClass)}>
+        <p className={cn("mt-1 text-[10px] font-normal tracking-[0.18em]", themedTextMutedClass)}>
           {caption}
         </p>
       ) : null}
@@ -874,7 +876,7 @@ function ChartCard({
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               {title}
             </h2>
             <TooltipIcon text={tooltip} />
@@ -936,7 +938,7 @@ function RankingCard({
       <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+            <h2 className={cn("text-base font-normal tracking-[-0.02em]", themedTextTitleClass)}>
               Ranking de Vendedores
             </h2>
             <TooltipIcon text="Todos os vendedores ordenados por quantidade vendida no recorte atual." />
@@ -944,7 +946,7 @@ function RankingCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <label className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
             <span>Mostrar</span>
             <select
               value={String(visibleCount)}
@@ -978,22 +980,22 @@ function RankingCard({
           <table className="min-w-[560px] w-full divide-y divide-border text-left text-xs">
             <thead className="sticky top-0 z-10 bg-muted/95 text-muted-foreground backdrop-blur">
               <tr>
-                <th className="border-b border-border bg-background/95 px-3 py-2 font-medium">
+                <th className="border-b border-border bg-background/95 px-3 py-2 font-normal">
                   Vendedor
                 </th>
-                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
+                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-normal">
                   <span className="inline-flex items-center justify-end gap-1.5">
                     <span>Total</span>
                     <TooltipIcon text="Total por cliente" />
                   </span>
                 </th>
-                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
+                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-normal">
                   <span className="inline-flex items-center justify-end gap-1.5">
                     <span>Quant.</span>
                     <TooltipIcon text="Total por volume de veículos" />
                   </span>
                 </th>
-                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-medium">
+                <th className="border-b border-border bg-background/95 px-3 py-2 text-right font-normal">
                   Média/Proposta
                 </th>
               </tr>
@@ -1019,7 +1021,7 @@ function RankingCard({
                         {row.vendor}
                       </td>
                       <td className="px-3 py-2 text-right">{row.proposals}</td>
-                      <td className="px-3 py-2 text-right font-medium">
+                      <td className="px-3 py-2 text-right font-normal">
                         {row.quantity.toLocaleString("pt-BR")}
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -1057,7 +1059,7 @@ function RankingCard({
             variant="outline"
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             disabled={currentPage <= 1}
-            className={cn("h-8 w-8 rounded-full p-0 text-[11px] font-medium", themedOutlineButtonClass)}
+            className={cn("h-8 w-8 rounded-full p-0 text-[11px] font-normal", themedOutlineButtonClass)}
             aria-label="Página anterior"
             title="Página anterior"
           >
@@ -1065,7 +1067,7 @@ function RankingCard({
           </Button>
           <span
             className={cn(
-              "min-w-20 rounded-full border px-3 py-1 text-center text-[11px] font-medium tabular-nums",
+              "min-w-20 rounded-full border px-3 py-1 text-center text-[11px] font-normal tabular-nums",
               themedChipClass,
             )}
           >
@@ -1076,7 +1078,7 @@ function RankingCard({
             variant="outline"
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
             disabled={currentPage >= totalPages}
-            className={cn("h-8 w-8 rounded-full p-0 text-[11px] font-medium", themedOutlineButtonClass)}
+            className={cn("h-8 w-8 rounded-full p-0 text-[11px] font-normal", themedOutlineButtonClass)}
             aria-label="Próxima página"
             title="Próxima página"
           >
@@ -1331,7 +1333,7 @@ function TrendFullscreenSeriesRail({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={cn("truncate text-sm font-medium", themedTextTitleClass)}>
+                        <p className={cn("truncate text-sm font-normal", themedTextTitleClass)}>
                           {item.displayVendor}
                         </p>
                         {index === 0 ? (
@@ -1490,7 +1492,7 @@ function TrendFullscreenModal({
         <div className="flex items-start justify-between gap-4 px-5 py-4">
           <div className="min-w-0">
             <p className={cn(themedTinyLabelClass, "tracking-[0.22em]")}>Tela cheia</p>
-            <h3 id="trend-fullscreen-title" className={cn("mt-1 text-xl font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+            <h3 id="trend-fullscreen-title" className={cn("mt-1 text-xl font-normal tracking-[-0.02em]", themedTextTitleClass)}>
               {title}
             </h3>
             <p id="trend-fullscreen-description" className={cn("mt-1 text-sm", themedTextMutedClass)}>
@@ -1622,10 +1624,10 @@ function PodiumCard({
         "bg-gradient-to-r from-slate-300 via-slate-200 to-slate-100 dark:from-slate-500 dark:via-slate-400 dark:to-slate-500",
       heightClass: "min-h-[132px] sm:min-h-[96px]",
       iconClass: "h-4 w-4 sm:h-7 sm:w-7 text-slate-400 dark:text-slate-300",
-      rankClass: "text-[1.2rem] font-bold tracking-[-0.1em] text-slate-500 dark:text-slate-300 sm:text-[1.8rem]",
-      vendorClass: "text-[0.68rem] font-bold leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
-      quantityClass: "text-[1.1rem] font-extrabold tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
-      metaClass: "text-[7px] font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 sm:text-[8px] sm:tracking-[0.18em]",
+      rankClass: "text-[1.2rem] font-normal tracking-[-0.1em] text-slate-500 dark:text-slate-300 sm:text-[1.8rem]",
+      vendorClass: "text-[0.68rem] font-normal leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
+      quantityClass: "text-[1.1rem] font-normal tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
+      metaClass: "text-[7px] font-normal uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 sm:text-[8px] sm:tracking-[0.18em]",
       progressClass: "bg-gradient-to-r from-slate-400 to-slate-300 dark:from-slate-400 dark:to-slate-500",
       footClass: "bg-slate-200/80 dark:bg-white/10",
     },
@@ -1639,10 +1641,10 @@ function PodiumCard({
         "bg-gradient-to-r from-amber-300 via-amber-200 to-amber-100 dark:from-amber-200 dark:via-amber-300 dark:to-amber-200",
       heightClass: "min-h-[152px] sm:min-h-[118px] sm:-translate-y-1",
       iconClass: "h-5 w-5 sm:h-9 sm:w-9 text-amber-400 dark:text-amber-200",
-      rankClass: "text-[1.45rem] font-extrabold tracking-[-0.14em] text-amber-500 dark:text-amber-200 sm:text-[2.8rem]",
-      vendorClass: "text-[0.72rem] font-bold leading-4 text-slate-950 dark:text-slate-50 sm:text-[1.02rem]",
-      quantityClass: "text-[1.45rem] font-extrabold tracking-[-0.1em] text-slate-950 dark:text-slate-50 sm:text-[3.1rem]",
-      metaClass: "text-[7px] font-medium uppercase tracking-[0.16em] text-amber-600 dark:text-amber-200 sm:text-[8px] sm:tracking-[0.22em]",
+      rankClass: "text-[1.45rem] font-normal tracking-[-0.14em] text-amber-500 dark:text-amber-200 sm:text-[2.8rem]",
+      vendorClass: "text-[0.72rem] font-normal leading-4 text-slate-950 dark:text-slate-50 sm:text-[1.02rem]",
+      quantityClass: "text-[1.45rem] font-normal tracking-[-0.1em] text-slate-950 dark:text-slate-50 sm:text-[3.1rem]",
+      metaClass: "text-[7px] font-normal uppercase tracking-[0.16em] text-amber-600 dark:text-amber-200 sm:text-[8px] sm:tracking-[0.22em]",
       progressClass: "bg-gradient-to-r from-amber-300 via-amber-200 to-amber-100 dark:from-amber-200 dark:via-amber-300 dark:to-amber-200",
       footClass: "bg-amber-100/75 dark:bg-amber-300/25",
       badgeClass:
@@ -1658,10 +1660,10 @@ function PodiumCard({
         "bg-gradient-to-r from-[#8c5c3a] via-[#a7724e] to-[#c18a5c] dark:from-[#6f492f] dark:via-[#8c5c3a] dark:to-[#a7724e]",
       heightClass: "min-h-[128px] sm:min-h-[90px]",
       iconClass: "h-4 w-4 sm:h-7 sm:w-7 text-[#8c5c3a] dark:text-[#d0a079]",
-      rankClass: "text-[1.2rem] font-bold tracking-[-0.1em] text-[#7a5335] dark:text-[#d0a079] sm:text-[1.8rem]",
-      vendorClass: "text-[0.68rem] font-bold leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
-      quantityClass: "text-[1.1rem] font-extrabold tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
-      metaClass: "text-[7px] font-medium uppercase tracking-[0.14em] text-[#7a5335] dark:text-[#d0a079] sm:text-[8px] sm:tracking-[0.18em]",
+      rankClass: "text-[1.2rem] font-normal tracking-[-0.1em] text-[#7a5335] dark:text-[#d0a079] sm:text-[1.8rem]",
+      vendorClass: "text-[0.68rem] font-normal leading-4 text-slate-900 dark:text-slate-100 sm:text-[0.9rem]",
+      quantityClass: "text-[1.1rem] font-normal tracking-[-0.06em] text-slate-900 dark:text-slate-100 sm:text-[2rem]",
+      metaClass: "text-[7px] font-normal uppercase tracking-[0.14em] text-[#7a5335] dark:text-[#d0a079] sm:text-[8px] sm:tracking-[0.18em]",
       progressClass: "bg-gradient-to-r from-[#8c5c3a] via-[#a7724e] to-[#c18a5c] dark:from-[#6f492f] dark:via-[#8c5c3a] dark:to-[#a7724e]",
       footClass: "bg-[#c79a72]/55 dark:bg-[#8c5c3a]/18",
       badgeClass: "",
@@ -1678,7 +1680,7 @@ function PodiumCard({
       <div className="relative mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               Pódio
             </h2>
             <TooltipIcon text="Top 3 vendedores por volume absoluto após aplicar os filtros atuais." />
@@ -1728,7 +1730,7 @@ function PodiumCard({
                 {slot.rank === 1 ? (
                   <div
                     className={cn(
-                      "absolute left-1/2 top-1 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-medium uppercase tracking-[0.16em] sm:px-2.5 sm:py-0.5 sm:text-[9px] sm:tracking-[0.22em]",
+                      "absolute left-1/2 top-1 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-normal uppercase tracking-[0.16em] sm:px-2.5 sm:py-0.5 sm:text-[9px] sm:tracking-[0.22em]",
                       slot.badgeClass,
                     )}
                   >
@@ -1867,6 +1869,11 @@ export default function VendedorRelatorioPage() {
   const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
+  const mobileFiltersRef = useMobileFilterSheet(isMobileFiltersOpen, () => setIsMobileFiltersOpen(false));
+  const activeFilterCount = [
+    appliedTipoVenda, appliedBandeira, appliedRegional, appliedLojaVenda,
+    appliedMarcaVeiculo, appliedModelo, appliedVersao, appliedClassificacao,
+  ].filter((values) => values.length > 0).length;
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const appliedFilterChipsDrag = useHorizontalDragScroll<HTMLDivElement>();
 
@@ -2480,7 +2487,7 @@ export default function VendedorRelatorioPage() {
             style: {
               fill: "#64748b",
               fontSize: 14.5,
-              fontWeight: 500,
+              fontWeight: 400,
             },
           },
           shape: {
@@ -2530,9 +2537,13 @@ export default function VendedorRelatorioPage() {
       ],
       tooltip: {
         trigger: ["hover", "click"],
-        confine: false,
+        confine: true,
         parentElement: inlineTrendTooltipParentElementId,
         activeType: "dimension",
+        style: {
+          titleLabel: { fontWeight: 400 },
+          valueLabel: { fontWeight: 400 },
+        },
         offset: { x: 0, y: 0 },
         dimension: {
           title: {
@@ -2558,13 +2569,13 @@ export default function VendedorRelatorioPage() {
           size: 4.5,
           fill: "#ffffff",
           stroke: (datum) => trendSeriesColors.get(datum.vendor) ?? trendPalette[0],
-          lineWidth: 1.4,
+          lineWidth: chartPointStrokeWidth,
         },
       },
       line: {
         style: {
           stroke: (datum) => trendSeriesColors.get(datum.vendor) ?? trendPalette[0],
-          lineWidth: 2.3,
+          lineWidth: chartLineWidth,
           lineCap: "round",
           lineJoin: "round",
           curveType: "monotone",
@@ -2609,7 +2620,7 @@ export default function VendedorRelatorioPage() {
       tooltip: {
         ...(trendChartSpec.tooltip ?? {}),
         activeType: "dimension",
-        confine: false,
+        confine: true,
         parentElement: fullscreenTrendTooltipParentElementId,
         offset: { x: 0, y: 0 },
       },
@@ -2640,7 +2651,7 @@ export default function VendedorRelatorioPage() {
         ...trendChartSpec.line,
         style: {
           ...trendChartSpec.line?.style,
-          lineWidth: 3,
+          lineWidth: chartLineWidth,
         },
       },
     }),
@@ -2770,10 +2781,10 @@ export default function VendedorRelatorioPage() {
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
           <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-            <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
+            <p className="text-[10px] font-normal uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
               Relatório
             </p>
-            <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
               Análise de Vendedores
             </h1>
           </section>
@@ -2855,21 +2866,22 @@ export default function VendedorRelatorioPage() {
     setAppliedClassificacao(selectedClassificacao);
     setAppliedStartDate(startDate);
     setAppliedEndDate(endDate);
+    setIsMobileFiltersOpen(false);
   };
 
   return (
     <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
-      <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-        <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-3">
+        <section className={cn(themedHeroClass, "px-4 py-3 sm:px-5 sm:py-4")}>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
+                <h1 className="text-xl font-normal tracking-[-0.02em] sm:text-2xl">
                   Análise de Vendedores
                 </h1>
                 <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca, modelo, versão e período." />
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80 dark:text-cyan-200/80">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal uppercase tracking-[0.12em] text-sky-100/80 dark:text-cyan-200/80">
                 <span className={vendorStatusChipClass}>
                   Atualizado: {lastUpdatedText}
                 </span>
@@ -2877,7 +2889,7 @@ export default function VendedorRelatorioPage() {
                   {isRefreshing ? "Atualizando..." : "Pronto"}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-sky-50/90 dark:text-cyan-50/90">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal text-sky-50/90 dark:text-cyan-50/90">
                 <span className={vendorStatusChipClass}>
                   {displayActivePeriodText}
                 </span>
@@ -2897,7 +2909,7 @@ export default function VendedorRelatorioPage() {
                 aria-expanded={isDesktopFiltersOpen}
                 aria-controls="vendedor-filters-panel"
                 className={cn(
-                  "hidden h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-medium tablet:inline-flex",
+                  "hidden h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-normal tablet:inline-flex",
                   themedOutlineButtonClass,
                 )}
               >
@@ -2906,7 +2918,7 @@ export default function VendedorRelatorioPage() {
                 ) : (
                   <SlidersHorizontal className="h-4 w-4" />
                 )}
-                <span>{isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtro"}</span>
+                <span>{isDesktopFiltersOpen ? "Fechar filtros" : `Filtros${activeFilterCount ? ` ${activeFilterCount}` : ""}`}</span>
               </Button>
 
               <Button
@@ -2914,7 +2926,7 @@ export default function VendedorRelatorioPage() {
                 variant="outline"
                 onClick={() => void refresh({ silent: true })}
                 className={cn(
-                  "h-10 shrink-0 rounded-full px-4 text-xs font-medium",
+                  "h-10 shrink-0 rounded-full px-4 text-xs font-normal",
                   themedOutlineButtonClass,
                 )}
               >
@@ -2925,7 +2937,7 @@ export default function VendedorRelatorioPage() {
           </div>
         </section>
 
-        <div className="sticky top-3 z-30 tablet:hidden">
+        <div className="tablet:hidden">
           <Button
             type="button"
             variant="outline"
@@ -2933,32 +2945,40 @@ export default function VendedorRelatorioPage() {
             aria-expanded={isMobileFiltersOpen}
             aria-controls="vendedor-filters-panel"
             className={cn(
-              "h-12 w-full rounded-full px-4 text-sm font-medium shadow-sm",
+              "h-10 w-full px-4 text-sm font-normal",
               themedOutlineButtonClass,
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            {isMobileFiltersOpen ? "Ocultar filtros" : "Abrir filtro"}
+            {isMobileFiltersOpen ? "Fechar filtros" : `Filtros${activeFilterCount ? ` ${activeFilterCount}` : ""}`}
           </Button>
         </div>
 
+        {isMobileFiltersOpen ? (
+          <button type="button" aria-label="Fechar filtros" onClick={() => setIsMobileFiltersOpen(false)} className="fixed inset-0 z-40 bg-slate-950/60 tablet:hidden" />
+        ) : null}
+
         <section
           id="vendedor-filters-panel"
+          ref={mobileFiltersRef}
+          aria-label="Filtros do relatório de vendedores"
+          role={isMobileFiltersOpen ? "dialog" : undefined}
+          aria-modal={isMobileFiltersOpen ? true : undefined}
           className={cn(
             themedPanelClass,
-            "overflow-hidden p-4 transition-[max-height,opacity,transform] duration-300 ease-out",
+            "p-3 sm:p-4",
             isMobileFiltersOpen
-              ? "max-h-[5000px] opacity-100 translate-y-0"
-              : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
+              ? "fixed inset-x-0 bottom-0 z-50 max-h-[min(88dvh,860px)] overflow-y-auto rounded-b-none shadow-xl tablet:static tablet:rounded-2xl tablet:shadow-none"
+              : "hidden",
             isDesktopFiltersOpen
-              ? "tablet:max-h-[5000px] tablet:pointer-events-auto tablet:opacity-100 tablet:translate-y-0"
-              : "tablet:pointer-events-none tablet:max-h-0 tablet:-translate-y-2 tablet:opacity-0",
+              ? "tablet:block"
+              : "tablet:hidden",
           )}
         >
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+                <h2 className={cn("text-base font-normal tracking-[-0.02em]", themedTextTitleClass)}>
                   Filtros
                 </h2>
                 <TooltipIcon text="Use tipo de venda, bandeira, regional, loja, marca, modelo, versão, classificação e período para refinar o recorte." />
@@ -2973,7 +2993,7 @@ export default function VendedorRelatorioPage() {
                 variant="outline"
                 onClick={clearFilters}
                 className={cn(
-                  "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
+                  "h-8 shrink-0 rounded-full px-3 text-xs font-normal",
                   themedOutlineButtonClass,
                 )}
               >
@@ -2983,11 +3003,14 @@ export default function VendedorRelatorioPage() {
                 type="button"
                 onClick={applyFilters}
                 disabled={!hasPendingFilterChanges}
-                className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Aplicar filtros
               </Button>
             </div>
+            <Button type="button" variant="ghost" onClick={() => setIsMobileFiltersOpen(false)} aria-label="Fechar filtros" className="h-9 w-9 shrink-0 tablet:hidden">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -3105,12 +3128,12 @@ export default function VendedorRelatorioPage() {
                 </label>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 tablet:hidden">
+            <div className="sticky bottom-0 mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 bg-white py-3 dark:border-white/10 dark:bg-slate-900 tablet:hidden">
               <Button
                 type="button"
                 variant="outline"
                 onClick={clearFilters}
-                className={cn("h-10 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+                className={cn("h-10 rounded-full px-3 text-xs font-normal", themedOutlineButtonClass)}
               >
                 Limpar filtros
               </Button>
@@ -3118,7 +3141,7 @@ export default function VendedorRelatorioPage() {
                 type="button"
                 onClick={applyFilters}
                 disabled={!hasPendingFilterChanges}
-                className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Aplicar filtros
               </Button>
@@ -3160,7 +3183,7 @@ export default function VendedorRelatorioPage() {
             <div className="flex items-center gap-1.5">
               <h2
                 id="charts-section-title"
-                className={cn("text-lg font-medium tracking-[-0.02em]", themedTextTitleClass)}
+                className={cn("text-lg font-normal tracking-[-0.02em]", themedTextTitleClass)}
               >
                 Visão por vendedor
               </h2>
@@ -3190,7 +3213,7 @@ export default function VendedorRelatorioPage() {
 
           {chartError ? (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-50">
-              <p className="font-medium">Falha ao renderizar o gráfico</p>
+              <p className="font-normal">Falha ao renderizar o gráfico</p>
               <p className="mt-1">{chartError}</p>
             </div>
           ) : null}
@@ -3291,7 +3314,7 @@ export default function VendedorRelatorioPage() {
           variant="default"
           size="lg"
           onClick={() => setIsDetailedTableModalOpen(true)}
-          className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)] tablet:hidden"
+          className="mt-1 h-12 w-full rounded-full text-sm font-normal shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)] tablet:hidden"
         >
           <NotebookText className="h-4 w-4" />
           Abrir tabela detalhada

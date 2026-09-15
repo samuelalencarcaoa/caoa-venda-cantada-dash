@@ -3,9 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { UserRound } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
 
 import {
   PROFILE_PREFERENCES_UPDATED_EVENT,
@@ -56,9 +55,10 @@ function getAvatarColor(seed: string) {
 
 type UserProps = {
   onNavigate?: () => void;
+  onLogout?: () => void;
 };
 
-export default function User({ onNavigate }: UserProps) {
+export default function User({ onNavigate, onLogout }: UserProps) {
   const { data: session } = useSession();
   const [username, setUsername] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<{ displayName?: string; imageUrl?: string }>({});
@@ -104,7 +104,7 @@ export default function User({ onNavigate }: UserProps) {
 
   return (
     <div className="border-b border-border px-2 py-3">
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-slate-950 dark:shadow-black/20">
+      <div className="space-y-2 rounded-xl bg-white p-3 dark:bg-slate-950">
         <div className="flex items-center gap-3">
           {imageSrc ? (
             <Image
@@ -117,7 +117,7 @@ export default function User({ onNavigate }: UserProps) {
             />
           ) : (
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white ring-2 ring-white dark:ring-slate-900"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-normal text-white ring-2 ring-white dark:ring-slate-900"
               style={{ backgroundColor: avatarColor }}
               aria-label={resolvedName ? `${initials} avatar` : "User avatar"}
             >
@@ -125,7 +125,7 @@ export default function User({ onNavigate }: UserProps) {
             </div>
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <p className="truncate text-sm font-normal text-slate-900 dark:text-slate-100">
               {displayName}
             </p>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">
@@ -133,12 +133,18 @@ export default function User({ onNavigate }: UserProps) {
             </p>
           </div>
         </div>
-        <Button asChild className="w-full">
-          <Link href="/perfil" onClick={onNavigate}>
-            <UserRound className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          <Link href="/perfil" onClick={onNavigate} className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-sky-200 px-2 text-xs font-normal text-sky-700 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-cyan-400/20 dark:text-cyan-300 dark:hover:bg-cyan-400/10">
+            <UserRound className="h-3.5 w-3.5 shrink-0" />
             Ver perfil
           </Link>
-        </Button>
+          {onLogout ? (
+            <button type="button" onClick={onLogout} className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-normal text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10">
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
+              Sair
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ const unauthenticatedRoutes = [
   "/register",
   "/forgot-password",
   "/reset-password",
+  "/access-denied",
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-[100dvh] min-w-0">
       <GlobalRequestLoading />
-      <div className="fixed right-3 top-3 z-50 sm:right-4 sm:top-4 tablet:right-6 tablet:top-5">
+      <div className="fixed bottom-4 right-4 z-50 tablet:bottom-5 tablet:right-6">
         <ThemeToggle />
       </div>
       {!hideSideNav && (
@@ -53,30 +54,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       )}
       <div
         className={cn(
-          "flex min-w-0 flex-grow flex-col",
-          hideSideNav ? "min-h-[100dvh]" : "overflow-x-hidden overflow-y-auto",
+          "flex min-w-0 flex-grow flex-col transition-[padding] duration-150",
+          hideSideNav ? "min-h-[100dvh]" : "overflow-y-auto",
+          !hideSideNav && !isSideNavCollapsed && "tablet:pl-56",
         )}
       >
         <div className="min-w-0 flex-1">{children}</div>
 
-        <div className={cn("shrink-0", isBrandDetailsPage ? "pt-4" : "pt-[30px]")}>
+        <div className="shrink-0 pt-4">
           <footer
             className={cn(
               "h-fit border-t border-slate-200 bg-white/95 px-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/95 sm:px-6",
-              isBrandDetailsPage ? "py-4" : "py-6",
+              "py-4",
             )}
           >
             <div
               className={cn(
-                "mx-auto flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between",
+                "mx-auto flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between",
                 isBrandDetailsPage ? "max-w-[1700px]" : "max-w-8xl",
               )}
             >
-              <div className={cn("space-y-3", isBrandDetailsPage && "space-y-2")}>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <div className="space-y-1">
+                <p className="text-sm font-normal text-slate-900 dark:text-slate-100">
                   Desenvolvido pelo Departamento de Tecnologia e Inovação da CAOA
                 </p>
-                <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+                <p className="max-w-2xl text-xs leading-5 text-slate-600 dark:text-slate-400">
                   Ambiente institucional com acesso às políticas e orientações oficiais da CAOA.
                 </p>
               </div>
@@ -84,8 +86,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             <nav
               className={cn(
-                "mx-auto flex w-full flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-400",
-                isBrandDetailsPage ? "mt-4 max-w-[1700px]" : "mt-6 max-w-8xl",
+                "mx-auto flex w-full flex-wrap gap-x-5 gap-y-2 text-xs font-normal text-slate-500 dark:text-slate-400",
+                isBrandDetailsPage ? "mt-3 max-w-[1700px]" : "mt-3 max-w-8xl",
               )}
             >
               <a

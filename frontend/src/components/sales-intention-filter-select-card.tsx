@@ -14,7 +14,6 @@ import {
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
 import {
   themedInputClass,
-  themedSoftCardClass,
   themedTextMutedClass,
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
@@ -36,7 +35,7 @@ export function FilterStatusChip({
     <span
       title={title}
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors",
+        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-normal uppercase tracking-[0.12em] transition-colors",
         variant === "applied" &&
           "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200",
         variant === "pending" &&
@@ -58,7 +57,7 @@ export function TooltipIcon({ text }: { text: string }) {
         <button
           type="button"
           aria-label={`Ajuda: ${text}`}
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-500/10 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30 touch-manipulation dark:text-cyan-300 dark:hover:bg-cyan-300/10 dark:hover:text-cyan-200"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-500/10 hover:text-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 touch-manipulation dark:text-cyan-300 dark:hover:bg-cyan-300/10 dark:hover:text-cyan-200"
         >
           <CircleHelp className="h-3.5 w-3.5" />
         </button>
@@ -102,14 +101,6 @@ export function FilterDateInput({
       onClick={(event) => {
         openDatePicker(event.currentTarget);
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Tab" || event.key === "Escape") {
-          return;
-        }
-
-        event.preventDefault();
-      }}
-      onPaste={(event) => event.preventDefault()}
       onChange={(event) => onChange(event.target.value)}
       className={cn("cursor-pointer", className)}
     />
@@ -162,13 +153,13 @@ export function FilterSelectCard({
   };
 
   return (
-    <div className={cn(themedSoftCardClass, "min-w-0 rounded-2xl p-2.5")}>
+    <div className="min-w-0 rounded-xl bg-slate-50/80 p-2.5 dark:bg-white/5">
       <div className="flex items-center gap-1.5">
         <p className={cn(themedTinyLabelClass, "truncate tracking-[0.18em]")}>{label}</p>
         <TooltipIcon text={tooltip} />
       </div>
 
-      <div
+      {value.length > 0 || hasAppliedSelections ? <div
         ref={selectedChipsDrag.ref}
         onPointerDown={selectedChipsDrag.onPointerDown}
         onPointerMove={selectedChipsDrag.onPointerMove}
@@ -206,7 +197,7 @@ export function FilterSelectCard({
             ) : null}
           </>
         )}
-      </div>
+      </div> : null}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={disabled}>

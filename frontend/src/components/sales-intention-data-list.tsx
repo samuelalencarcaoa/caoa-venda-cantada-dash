@@ -358,16 +358,16 @@ export function SalesIntentionDataList({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 w-full min-w-0 flex-col backdrop-blur p-4 sm:p-5",
+        "flex h-full min-h-0 w-full min-w-0 flex-col p-3 sm:p-4",
         themedPanelClass,
         className,
       )}
     >
-      <div className="shrink-0 border-b border-slate-200/80 bg-slate-50/80 px-0 py-3 dark:border-white/10 dark:bg-white/5">
-        <div className="space-y-4">
+      <div className="shrink-0 border-b border-slate-200/80 bg-slate-50/80 px-0 py-2.5 dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5">
-              <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+              <h2 className={cn("text-base font-normal tracking-[-0.02em]", themedTextTitleClass)}>
                 Lista de dados
               </h2>
               <p className={cn("text-xs", themedTextBodyClass)}>
@@ -390,14 +390,14 @@ export function SalesIntentionDataList({
 
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="w-full">
-              <label className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
+              <label className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 focus-within:ring-2 focus-within:ring-sky-400/30 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
                 <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar em todas as colunas"
-                  className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                  className="min-w-0 flex-1 bg-transparent text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                   aria-label="Buscar na tabela detalhada"
                 />
                 <TooltipIcon text="Busca global em ID, proprietário, tipo de venda, bandeira, loja, marca, versão, classificação, quantidade, data, placa, regional e criado. Use mais de uma palavra para exigir todos os termos." />
@@ -415,11 +415,11 @@ export function SalesIntentionDataList({
               </label>
             </div>
 
-            <div className="flex items-center gap-2 lg:justify-self-end">
+            <div className="flex flex-wrap items-center gap-2 lg:justify-self-end">
               <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm whitespace-nowrap dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300">
-                <span className="font-medium">Itens por página</span>
+                <span className="font-normal">Itens por página</span>
                 <select
-                  className="bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-100"
+                  className="bg-transparent text-xs font-normal text-slate-700 outline-none dark:text-slate-100"
                   value={itemsPerPage}
                   onChange={(event) => setItemsPerPage(Number(event.target.value))}
                 >
@@ -430,7 +430,7 @@ export function SalesIntentionDataList({
                   ))}
                 </select>
               </label>
-              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-500 shadow-sm whitespace-nowrap dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
+              <div className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-normal text-slate-500 shadow-sm whitespace-nowrap dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-400">
                 Página {currentPage} de {totalPages}
               </div>
             </div>
@@ -439,14 +439,13 @@ export function SalesIntentionDataList({
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="w-full overflow-x-auto">
         <table className="min-w-[1080px] w-full table-fixed border-collapse text-xs leading-tight">
-          <thead className="bg-slate-50/80 dark:bg-white/5">
+          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900">
             <tr>
               {REPORT_COLUMNS.map((key) => (
                 <th
                   key={key}
-                  className="border-b border-slate-200 px-1 py-2 align-top text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400"
+                  className="border-b border-slate-200 px-1 py-2 align-top text-left font-normal text-slate-500 dark:border-white/10 dark:text-slate-400"
                   aria-sort={
                     sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"
                   }
@@ -466,13 +465,13 @@ export function SalesIntentionDataList({
                     title={`Ordenar por ${key}`}
                   >
                     <span className="min-w-0 whitespace-nowrap">{REPORT_COLUMN_LABELS[key]}</span>
-                    <span className="shrink-0 text-[0.6rem] font-medium">
+                    <span className="shrink-0 text-[0.6rem] font-normal">
                       {sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
                     </span>
                   </button>
                 </th>
               ))}
-              <th className="border-b border-slate-200 px-1 py-2 align-top text-left font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
+              <th className="border-b border-slate-200 px-1 py-2 align-top text-left font-normal text-slate-500 dark:border-white/10 dark:text-slate-400">
                 Ações
               </th>
             </tr>
@@ -577,7 +576,6 @@ export function SalesIntentionDataList({
             })}
           </tbody>
         </table>
-        </div>
       </div>
 
       <div className="shrink-0 flex flex-col gap-3 border-t border-slate-200/80 px-0 py-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
@@ -589,7 +587,7 @@ export function SalesIntentionDataList({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage <= 1}
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
           >
@@ -597,7 +595,7 @@ export function SalesIntentionDataList({
           </button>
           <button
             type="button"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white"
             disabled={currentPage >= totalPages}
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
           >

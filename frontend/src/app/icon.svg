@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CAOA Venda Cantada">
   <rect width="512" height="512" rx="96" fill="#000"/>
-  <text x="256" y="208" text-anchor="middle" fill="#f8fafc" font-family="Arial, sans-serif" font-size="142" font-style="italic" font-weight="800" letter-spacing="-8">CAOA</text>
+  <text x="256" y="208" text-anchor="middle" fill="#f8fafc" font-family="Arial, sans-serif" font-size="142" font-style="italic" font-weight="400" letter-spacing="-8">CAOA</text>
   <rect x="198" y="188" width="24" height="24" rx="5" fill="#13f37b" transform="skewX(-18)" />
   <rect x="290" y="188" width="24" height="24" rx="5" fill="#13f37b" transform="skewX(-18)" />
-  <text x="256" y="306" text-anchor="middle" fill="#13f37b" font-family="Arial, sans-serif" font-size="56" font-style="italic" font-weight="700" letter-spacing="4">VC</text>
+  <text x="256" y="306" text-anchor="middle" fill="#13f37b" font-family="Arial, sans-serif" font-size="56" font-style="italic" font-weight="400" letter-spacing="4">VC</text>
   <path d="M136 362C196 388 316 388 376 362" fill="none" stroke="#13f37b" stroke-width="6" stroke-linecap="round" />
-  <text x="372" y="398" fill="#13f37b" font-family="Arial, sans-serif" font-size="52" font-weight="700">♪</text>
+  <text x="372" y="398" fill="#13f37b" font-family="Arial, sans-serif" font-size="52" font-weight="400">♪</text>
 </svg>

@@ -24,6 +24,7 @@ import {
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
+import { chartComparisonLineDash, chartLineWidth, chartPointStrokeWidth } from "@/lib/chart-style";
 import { formatCompactAxisValue } from "@/lib/chart-formatters";
 import {
   getSalesCantadasTrendBucketSpan as getTrendBucketSpan,
@@ -335,7 +336,7 @@ function MetricCard({
         <TooltipIcon text={tooltip} />
       </div>
       {caption ? (
-        <p className={cn("mt-1 text-[10px] font-medium tracking-[0.18em]", themedTextMutedClass)}>
+        <p className={cn("mt-1 text-[10px] font-normal tracking-[0.18em]", themedTextMutedClass)}>
           {caption}
         </p>
       ) : null}
@@ -384,7 +385,7 @@ function ChartCard({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 space-y-1 sm:min-h-[64px]">
           <div className="flex items-center gap-1.5">
-            <h3 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            <h3 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               {title}
             </h3>
             <TooltipIcon text={tooltip} />
@@ -459,7 +460,7 @@ function TrendToggle({ options, value, onChange, label, wrap = false }: {
           type="button"
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
-          className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition sm:text-[11px]", value === option.value ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950" : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100")}
+          className={cn("shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-normal transition sm:text-[11px]", value === option.value ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950" : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100")}
         >
           {option.label}
         </button>
@@ -495,7 +496,7 @@ function BrandComparisonTrendCard({
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(250px,270px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start">
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>Vendas Cantadas no Período</h2>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>Vendas Cantadas no Período</h2>
             <TooltipIcon text="Escolha o agrupamento do gráfico. No modo Automático, o intervalo acompanha o período selecionado. Alterne entre volume e acumulado ou compare com o período anterior." />
           </div>
           <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>{grainLabel}</span>
@@ -520,10 +521,10 @@ function BrandComparisonTrendCard({
                 type="button"
                 aria-pressed={comparePreviousPeriod}
                 onClick={() => onComparePreviousPeriodChange(!comparePreviousPeriod)}
-                className={cn("flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-xs font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-sky-500", themedInputClass)}
+                className={cn("flex w-full flex-col items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-xs font-normal outline-none transition focus-visible:ring-2 focus-visible:ring-sky-500", themedInputClass)}
               >
-                <span>Comparar com período anterior</span>
-                <span aria-hidden="true" className={cn("relative h-5 w-9 shrink-0 rounded-full transition", comparePreviousPeriod ? "bg-sky-500 dark:bg-cyan-400" : "bg-slate-300 dark:bg-slate-700")}>
+                <span className="whitespace-nowrap">Comparar com período anterior</span>
+                <span aria-hidden="true" className={cn("relative h-5 w-9 shrink-0 self-end rounded-full transition", comparePreviousPeriod ? "bg-sky-500 dark:bg-cyan-400" : "bg-slate-300 dark:bg-slate-700")}>
                   <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform", comparePreviousPeriod ? "translate-x-[18px]" : "translate-x-0.5")} />
                 </span>
               </button>
@@ -849,7 +850,7 @@ export function BrandDetailsAnalyticsSection({
         { orient: "left", label: { formatMethod: formatCompactAxisValue, style: { fill: chartMutedColor, fontSize: isCompactChartLayout ? 10 : 11 } }, grid: { style: { stroke: chartGridColor, lineDash: [4, 4] } } },
       ],
       tooltip: {
-        trigger: ["hover", "click"], confine: false, parentElement: "brand-comparison-trend-chart", activeType: "dimension",
+        trigger: ["hover", "click"], confine: true, parentElement: "brand-comparison-trend-chart", activeType: "dimension",
         style: {
           panel: {
             padding: { top: 7, right: 9, bottom: 7, left: 9 },
@@ -857,9 +858,9 @@ export function BrandDetailsAnalyticsSection({
             border: { color: isDarkMode ? "#374151" : "#e2e8f0", width: 1, radius: 8 },
           },
           shape: { size: 7, spacing: 5 },
-          titleLabel: { fontSize: 11, fontWeight: 600, fontColor: isDarkMode ? "#f8fafc" : "#0f172a", lineHeight: 16 },
+          titleLabel: { fontSize: 11, fontWeight: 400, fontColor: isDarkMode ? "#f8fafc" : "#0f172a", lineHeight: 16 },
           keyLabel: { fontSize: 11, fontColor: isDarkMode ? "#cbd5e1" : "#475569", lineHeight: 15, spacing: 12 },
-          valueLabel: { fontSize: 11, fontWeight: 700, fontColor: isDarkMode ? "#f8fafc" : "#0f172a", lineHeight: 15 },
+          valueLabel: { fontSize: 11, fontWeight: 400, fontColor: isDarkMode ? "#f8fafc" : "#0f172a", lineHeight: 15 },
           spaceRow: 3,
         },
         dimension: {
@@ -874,7 +875,7 @@ export function BrandDetailsAnalyticsSection({
                 ? `${seriesPrefix(point.baseSeries || point.series)}${point.comparison ? `Anterior (${point.comparisonDateLabel})` : "Atual"}`
                 : point.series,
               value: Number(point.value || 0).toLocaleString("pt-BR"),
-              valueStyle: { fontColor: trendSeriesColors.get(point.series) || lineColor, fontWeight: 700 },
+              valueStyle: { fontColor: trendSeriesColors.get(point.series) || lineColor, fontWeight: 400 },
               visible: true as const,
               hasShape: true as const,
               shapeType: "line" as const,
@@ -898,7 +899,7 @@ export function BrandDetailsAnalyticsSection({
                 rows.push({
                   key: `${seriesPrefix(point.series)}Diferença`,
                   value: `${direction} ${variation.difference > 0 ? "+" : ""}${variation.difference.toLocaleString("pt-BR")}`,
-                  valueStyle: { fontColor: directionColor, fontWeight: 700 },
+                  valueStyle: { fontColor: directionColor, fontWeight: 400 },
                   visible: true as const, hasShape: true as const, shapeType: "line" as const,
                   shapeFill: directionColor,
                   shapeStroke: "transparent", shapeLineWidth: 0, shapeSize: 10,
@@ -906,7 +907,7 @@ export function BrandDetailsAnalyticsSection({
                 rows.push({
                   key: `${seriesPrefix(point.series)}Variação`,
                   value: variation.percentage === null ? `${direction} N/A` : `${direction} ${variation.percentage > 0 ? "+" : ""}${variation.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`,
-                  valueStyle: { fontColor: directionColor, fontWeight: 700 },
+                  valueStyle: { fontColor: directionColor, fontWeight: 400 },
                   visible: true as const, hasShape: true as const, shapeType: "line" as const,
                   shapeFill: directionColor,
                   shapeStroke: "transparent", shapeLineWidth: 0, shapeSize: 10,
@@ -917,8 +918,8 @@ export function BrandDetailsAnalyticsSection({
           },
         },
       },
-      point: { visible: true, style: { size: 4.5, fill: "#ffffff", stroke: (datum) => trendSeriesColors.get(datum.series) || lineColor, lineWidth: 1.4 } },
-      line: { style: { lineWidth: (datum) => datum.comparison ? 1.6 : 1.9, lineDash: (datum) => datum.comparison ? [5, 4] : [], curveType: "monotone" } },
+      point: { visible: true, style: { size: 4.5, fill: "#ffffff", stroke: (datum) => trendSeriesColors.get(datum.series) || lineColor, lineWidth: chartPointStrokeWidth } },
+      line: { style: { lineWidth: chartLineWidth, lineDash: (datum) => datum.comparison ? chartComparisonLineDash : [], curveType: "monotone" } },
       area: { visible: true, style: { fillOpacity: (datum: TrendPoint) => datum.comparison ? 0 : 0.12 } },
     }),
     [chartGridColor, chartMutedColor, comparisonItems, comparePreviousPeriod, isCompactChartLayout, isDarkMode, isSingleDayHourlyTrend, lineColor, trendHourRange, trendSeries, trendSeriesColors, trendSeriesLabels],
@@ -977,7 +978,7 @@ export function BrandDetailsAnalyticsSection({
         style: {
           fill: chartTextColor,
           fontSize: 11,
-          fontWeight: 600,
+          fontWeight: 400,
         },
       },
       axes: [
@@ -1092,7 +1093,7 @@ export function BrandDetailsAnalyticsSection({
         style: {
           fill: chartTextColor,
           fontSize: 11,
-          fontWeight: 600,
+          fontWeight: 400,
         },
       },
       axes: [
@@ -1207,7 +1208,7 @@ export function BrandDetailsAnalyticsSection({
         style: {
           fill: chartTextColor,
           fontSize: 11,
-          fontWeight: 600,
+          fontWeight: 400,
         },
       },
       axes: [
@@ -1322,7 +1323,7 @@ export function BrandDetailsAnalyticsSection({
         style: {
           fill: chartTextColor,
           fontSize: 11,
-          fontWeight: 600,
+          fontWeight: 400,
         },
       },
       axes: [
@@ -1430,7 +1431,7 @@ export function BrandDetailsAnalyticsSection({
             minimumFractionDigits: 1,
           })}% do total`}
           tooltip="Classificação com maior volume no recorte atual."
-          valueClassName="text-2xl font-medium leading-tight tracking-[-0.04em] sm:text-3xl"
+          valueClassName="text-2xl font-normal leading-tight tracking-[-0.04em] sm:text-3xl"
         />
       </div>
 
@@ -1509,7 +1510,7 @@ export function BrandDetailsAnalyticsSection({
         </div>
       ) : (
         <div className={cn(themedSoftCardClass, "rounded-[28px] px-5 py-8 text-center")}>
-          <p className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+          <p className={cn("text-base font-normal tracking-[-0.02em]", themedTextTitleClass)}>
             Nenhuma intenção encontrada
           </p>
           <p className={cn("mt-2 text-sm leading-6", themedTextBodyClass)}>

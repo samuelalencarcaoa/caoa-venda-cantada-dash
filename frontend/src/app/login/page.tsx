@@ -122,11 +122,11 @@ export default function LoginPage() {
       )}
     >
       <div className="mx-auto w-full max-w-2xl">
-        <section className={cn(themedPanelClass, "relative overflow-hidden p-5 sm:p-8")}>
+        <section className={cn(themedPanelClass, "relative overflow-hidden p-5 sm:p-6")}>
           <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,_#0ea5e9_0%,_#22d3ee_48%,_#38bdf8_100%)]" />
 
-          <div className="relative space-y-7">
-            <div className="space-y-4 text-center">
+          <div className="relative space-y-5">
+            <div className="space-y-3 text-center">
               <span
                 className={cn(
                   themedChipClass,
@@ -141,7 +141,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <h1 className={cn("text-2xl font-semibold tracking-[-0.03em] sm:text-3xl", themedTextTitleClass)}>
+                <h1 className={cn("text-xl font-normal tracking-[-0.02em] sm:text-2xl", themedTextTitleClass)}>
                   Conecte-se ao painel
                 </h1>
                 <p className={cn("mx-auto max-w-lg text-sm leading-6", themedTextBodyClass)}>
@@ -150,7 +150,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-sky-100 bg-sky-50/70 p-4 dark:border-white/10 dark:bg-white/5">
+            <div className="rounded-xl bg-sky-50/70 p-4 dark:bg-white/5">
               <div className="flex items-center gap-4 text-left">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-950">
                   <MicrosoftLogoMark className="h-8 w-8" />
@@ -158,7 +158,7 @@ export default function LoginPage() {
 
                 <div className="min-w-0 space-y-1">
                   <p className={cn(themedTinyLabelClass, "text-sky-600 dark:text-cyan-200")}>Conexão principal</p>
-                  <p className={cn("text-lg font-semibold tracking-[-0.02em]", themedTextTitleClass)}>
+                  <p className={cn("text-lg font-normal tracking-[-0.02em]", themedTextTitleClass)}>
                     Entrar no sistema
                   </p>
                   <p className={cn("text-sm leading-6", themedTextBodyClass)}>
@@ -171,7 +171,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleMicrosoftSignIn}
                 disabled={isLoading}
-                className="mt-4 h-12 w-full rounded-full text-base font-semibold shadow-[0_16px_30px_-20px_rgba(14,165,233,0.8)]"
+                className="mt-4 h-11 w-full text-sm font-normal"
               >
                 {isLoading ? "Conectando..." : "Entrar com Microsoft"}
               </Button>
@@ -186,7 +186,7 @@ export default function LoginPage() {
                 onSubmit={handleFallbackSignIn}
               >
                 <div className="space-y-1">
-                  <p className={cn("text-sm font-semibold", themedTextTitleClass)}>
+                  <p className={cn("text-sm font-normal", themedTextTitleClass)}>
                     Acesso temporário
                   </p>
                   <p className={cn("text-sm leading-6", themedTextBodyClass)}>

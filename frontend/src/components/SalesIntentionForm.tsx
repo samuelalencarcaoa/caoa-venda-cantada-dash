@@ -285,7 +285,7 @@ function FieldLabelWithTooltip({
 
 const fieldLabelRowClasses = 'inline-flex flex-wrap items-center gap-x-1.5 gap-y-1';
 const fieldLabelTextClasses =
-  'min-w-0 text-base font-extrabold leading-tight tracking-[-0.02em] text-slate-950 dark:text-slate-50 sm:text-[1.0rem]';
+  'min-w-0 text-base font-normal leading-tight tracking-[-0.02em] text-slate-950 dark:text-slate-50 sm:text-[1.0rem]';
 function FieldLabel({
   label
 }: {
@@ -466,18 +466,18 @@ function SearchableField({
 }
 
 const fieldClasses =
-  'min-h-12 w-full min-w-0 rounded-2xl border border-slate-300/80 bg-white px-3 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 outline-none ring-1 ring-transparent transition duration-150 focus:border-sky-500 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-80 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/10 dark:disabled:bg-slate-900/80 sm:min-h-14 sm:rounded-3xl sm:px-4 sm:py-3 sm:text-base';
+  'min-h-11 w-full min-w-0 rounded-xl border border-slate-300/80 bg-white px-3 py-2 text-sm text-slate-950 placeholder:text-slate-400 outline-none ring-1 ring-transparent transition duration-150 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-80 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/20 dark:disabled:bg-slate-900/80 sm:px-4';
 
-const labelClasses = 'flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300';
+const labelClasses = 'flex flex-col gap-1.5 text-sm font-normal text-slate-700 dark:text-slate-300';
 const errorTextClasses = 'text-xs text-rose-600 dark:text-rose-300';
 const pageCardClasses =
-  'mx-auto w-full max-w-6xl overflow-visible rounded-[28px] border border-slate-200/60 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/50 sm:rounded-[32px] dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)] dark:ring-white/5';
+  'mx-auto w-full max-w-6xl overflow-visible rounded-3xl border border-slate-200/60 bg-white/95 shadow-sm dark:border-white/10 dark:bg-slate-950/80 dark:shadow-none';
 const headerCardClasses =
-  'rounded-t-[inherit] border-b border-slate-200/70 bg-gradient-to-br from-sky-700 via-sky-600 to-cyan-500 p-4 text-white sm:p-6 dark:border-white/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700';
+  'rounded-t-[inherit] border-b border-slate-200/70 bg-gradient-to-br from-sky-700 via-sky-600 to-cyan-500 p-4 text-white sm:p-5 dark:border-white/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700';
 const notificationBackdropClasses =
   'fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:items-center sm:p-6';
 const notificationCardBaseClasses =
-  'w-full max-w-lg overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-900 shadow-2xl dark:border-white/10 dark:bg-slate-900 dark:text-slate-100';
+  'w-full max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white text-slate-900 shadow-lg dark:border-white/10 dark:bg-slate-900 dark:text-slate-100';
 const notificationFooterClasses =
   'flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:justify-end dark:border-white/10 dark:bg-white/5';
 
@@ -929,16 +929,16 @@ export default function SalesIntentionForm() {
   return (
     <section className={pageCardClasses}>
       <div className={headerCardClasses}>
-        <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/90">
+        <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-normal uppercase tracking-[0.24em] text-white/90">
           Formulário
         </span>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Venda Cantada</h1>
+        <h1 className="mt-3 text-3xl font-normal tracking-tight sm:text-4xl">Venda Cantada</h1>
 
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-5 md:grid-cols-2 xl:grid-cols-12"
+        className="grid grid-cols-1 gap-3 p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-12"
       >
         <div className="grid gap-3 sm:gap-4 md:col-span-2 xl:col-span-8">
           <label className={labelClasses}>
@@ -1243,7 +1243,7 @@ export default function SalesIntentionForm() {
         <button
           type="submit"
           disabled={isLoading || isOwnerLocked}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-sky-700 px-5 py-4 text-base font-semibold text-white transition hover:bg-sky-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400 sm:rounded-3xl xl:col-span-12 xl:w-auto xl:min-w-80 xl:justify-self-end xl:px-12"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-normal text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400 xl:col-span-12 xl:w-auto xl:justify-self-end"
         >
           {isLoading ? 'Enviando...' : 'Enviar intenção'}
         </button>
@@ -1257,10 +1257,10 @@ export default function SalesIntentionForm() {
                 <NotificationIcon className={`h-6 w-6 ${notificationTone.iconClass}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] opacity-70">
+                <p className="text-sm font-normal uppercase tracking-[0.2em] opacity-70">
                   {notificationEyebrow}
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight">{notification.title}</h2>
+                <h2 className="mt-2 text-2xl font-normal tracking-tight">{notification.title}</h2>
                 <p className="mt-2 text-sm leading-6 opacity-90">{notification.description}</p>
               </div>
               <button
@@ -1276,7 +1276,7 @@ export default function SalesIntentionForm() {
               <button
                 type="button"
                 onClick={closeNotification}
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-normal text-white transition hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 sm:w-auto"
               >
                 Fechar
               </button>

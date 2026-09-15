@@ -60,7 +60,7 @@ export default function TopNav({ title: _title, className }: TopNavProps) {
 
   return (
     <Container className={className}>
-      <div className="flex min-h-16 items-center justify-between gap-3 border-b border-border py-3">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border py-2">
         <div className="flex min-w-0 items-center gap-3">
           <nav
             aria-label="Breadcrumb"
@@ -84,7 +84,7 @@ export default function TopNav({ title: _title, className }: TopNavProps) {
                     ) : (
                       <span
                         aria-current={isLast ? "page" : undefined}
-                        className={isLast ? "truncate font-medium text-foreground" : "truncate"}
+                        className={isLast ? "truncate font-normal text-foreground" : "truncate"}
                       >
                         {item.label}
                       </span>

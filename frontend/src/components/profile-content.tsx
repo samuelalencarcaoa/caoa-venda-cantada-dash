@@ -181,7 +181,7 @@ export default function ProfileContent() {
                 />
               ) : (
                 <div
-                  className="flex h-16 w-16 items-center justify-center rounded-3xl text-xl font-semibold text-white ring-4 ring-white/25"
+                  className="flex h-16 w-16 items-center justify-center rounded-3xl text-xl font-normal text-white ring-4 ring-white/25"
                   style={{ backgroundColor: avatarColor }}
                 >
                   {initials}
@@ -189,8 +189,8 @@ export default function ProfileContent() {
               )}
 
               <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/80">Perfil do usuário</p>
-                <h1 className="mt-2 truncate text-3xl font-semibold tracking-tight">{effectiveDisplayName}</h1>
+                <p className="text-sm font-normal uppercase tracking-[0.22em] text-white/80">Perfil do usuário</p>
+                <h1 className="mt-2 truncate text-3xl font-normal tracking-tight">{effectiveDisplayName}</h1>
                 <p className="mt-1 truncate text-sm text-white/80">{user.email || "Email não informado"}</p>
               </div>
             </div>
@@ -209,10 +209,10 @@ export default function ProfileContent() {
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                      <p className="text-xs font-normal uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                         {row.label}
                       </p>
-                      <p className="mt-1 break-words text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="mt-1 break-words text-sm font-normal text-slate-900 dark:text-slate-100">
                         {formatValue(row.value)}
                       </p>
                     </div>
@@ -224,7 +224,7 @@ export default function ProfileContent() {
             <div className="rounded-3xl border border-slate-200 bg-slate-950 p-4 text-slate-100 dark:border-white/10 dark:bg-slate-900">
               <div className="mb-3 flex items-center gap-2 text-sky-300 dark:text-cyan-300">
                 <BadgeInfo className="h-4 w-4" />
-                <p className="text-sm font-semibold uppercase tracking-[0.2em]">Dados completos</p>
+                <p className="text-sm font-normal uppercase tracking-[0.2em]">Dados completos</p>
               </div>
               <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-black/30 p-4 text-xs leading-6 text-slate-100">
                 {JSON.stringify(rawProfile, null, 2)}
@@ -239,8 +239,8 @@ export default function ProfileContent() {
           <div className="w-full max-w-xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950/90">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-white/10">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-cyan-300">Editar perfil</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">Ajuste seus dados</h2>
+                <p className="text-xs font-normal uppercase tracking-[0.22em] text-sky-700 dark:text-cyan-300">Editar perfil</p>
+                <h2 className="mt-2 text-2xl font-normal tracking-tight text-slate-950 dark:text-slate-100">Ajuste seus dados</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
                   As mudanças ficam salvas neste navegador e já aparecem na sidebar.
                 </p>
@@ -256,7 +256,7 @@ export default function ProfileContent() {
             </div>
 
             <div className="space-y-4 p-5">
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="flex flex-col gap-2 text-sm font-normal text-slate-700 dark:text-slate-300">
                 Nome de exibição
                 <input
                   type="text"
@@ -267,7 +267,7 @@ export default function ProfileContent() {
                 />
               </label>
 
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="flex flex-col gap-2 text-sm font-normal text-slate-700 dark:text-slate-300">
                 URL da foto
                 <input
                   type="url"
@@ -280,14 +280,14 @@ export default function ProfileContent() {
 
               <div className="flex items-center gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
                 <div
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold text-white"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-normal text-white"
                   style={{ backgroundColor: getAvatarColor(draft.displayName || effectiveDisplayName) }}
                 >
                   {getInitials(draft.displayName || effectiveDisplayName)}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Pré-visualização</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="text-xs font-normal uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Pré-visualização</p>
+                  <p className="mt-1 truncate text-sm font-normal text-slate-900 dark:text-slate-100">
                     {draft.displayName || effectiveDisplayName}
                   </p>
                   <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-400">

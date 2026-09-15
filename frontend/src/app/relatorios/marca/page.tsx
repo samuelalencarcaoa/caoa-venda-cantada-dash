@@ -5,6 +5,7 @@ import { VChart } from "@visactor/react-vchart";
 import type { ILineChartSpec } from "@visactor/vchart";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { useHorizontalDragScroll } from "@/hooks/use-horizontal-drag-scroll";
+import { useMobileFilterSheet } from "@/hooks/use-mobile-filter-sheet";
 import { Button } from "@/components/ui/button";
 import {
   FilterDateInput,
@@ -46,6 +47,7 @@ import {
   themedTinyLabelClass,
 } from "@/lib/theme-classes";
 import { cn } from "@/lib/utils";
+import { chartLineWidth, chartPointStrokeWidth } from "@/lib/chart-style";
 import { formatCompactAxisValue } from "@/lib/chart-formatters";
 import {
   getSalesCantadasTrendBucketSpan,
@@ -441,7 +443,7 @@ function ChartToggle({ options, value, onChange, ariaLabel, wrap = false }: {
             type="button"
             aria-pressed={active}
             className={cn(
-              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition sm:text-[11px]",
+              "shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-normal transition sm:text-[11px]",
               active
                 ? "bg-sky-500 text-white shadow-sm dark:bg-cyan-400 dark:text-slate-950"
                 : "text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100",
@@ -496,7 +498,7 @@ function MonitoringTrendChartCard({
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(250px,270px)] xl:grid-rows-[auto_minmax(0,1fr)] xl:items-start">
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               Ritmo das vendas cantadas
             </h2>
             <TooltipIcon text="Escolha o agrupamento do gráfico nos botões abaixo. No modo Automático, o intervalo é definido conforme o período selecionado. Alterne entre o volume de cada intervalo e a visão acumulada." />
@@ -567,7 +569,7 @@ function MonitoringBreakdownCard({
     <article className={cn(themedCardClass, "min-h-[420px] min-w-0 px-4 py-4 sm:px-5 sm:py-5")}>
       <div className="mb-4 min-w-0">
         <div className="flex items-center gap-2">
-          <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+          <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
             {title}
           </h2>
           <TooltipIcon text={tooltip} />
@@ -585,10 +587,10 @@ function MonitoringBreakdownCard({
               title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}
             >
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className={cn("truncate font-medium", themedTextStrongClass)}>
+                <span className={cn("truncate font-normal", themedTextStrongClass)}>
                   {item.label}
                 </span>
-                <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-medium", themedBadgeClass)}>
+                <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-normal", themedBadgeClass)}>
                   {item.value.toLocaleString("pt-BR")}
                 </span>
               </div>
@@ -631,7 +633,7 @@ function MonitoringRankingChartCard({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               Ranking operacional
             </h2>
             <TooltipIcon text="Identifica rapidamente onde o volume está concentrado. Escolha a dimensão que deseja acompanhar." />
@@ -658,8 +660,8 @@ function MonitoringRankingChartCard({
           data.map((item) => (
             <div key={item.label} title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className={cn("truncate font-medium", themedTextStrongClass)}>{item.label}</span>
-                <span className={cn("rounded-full px-2 py-0.5 font-medium", themedBadgeClass)}>
+                <span className={cn("truncate font-normal", themedTextStrongClass)}>{item.label}</span>
+                <span className={cn("rounded-full px-2 py-0.5 font-normal", themedBadgeClass)}>
                   {item.value.toLocaleString("pt-BR")}
                 </span>
               </div>
@@ -706,7 +708,7 @@ function MonitoringCompositionChartCard({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-medium tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               Composição comercial
             </h2>
             <TooltipIcon text="Mostra como o volume total está distribuído por tipo de venda ou classificação comercial." />
@@ -736,7 +738,7 @@ function MonitoringCompositionChartCard({
                   <span className={cn("text-xl font-light tracking-[-0.05em] sm:text-3xl", themedTextTitleClass)}>
                     {total.toLocaleString("pt-BR")}
                   </span>
-                  <span className={cn("text-[8px] font-medium uppercase tracking-[0.2em] sm:text-[9px]", themedTextMutedClass)}>
+                  <span className={cn("text-[8px] font-normal uppercase tracking-[0.2em] sm:text-[9px]", themedTextMutedClass)}>
                     Volume
                   </span>
                 </div>
@@ -754,11 +756,11 @@ function MonitoringCompositionChartCard({
                     title={`${item.label}: ${item.value.toLocaleString("pt-BR")} (${item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)`}
                   >
                     <div className="flex items-center justify-between gap-3 text-xs">
-                      <span className={cn("flex min-w-0 items-center gap-2 font-medium", themedTextStrongClass)}>
+                      <span className={cn("flex min-w-0 items-center gap-2 font-normal", themedTextStrongClass)}>
                         <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", color.dot)} />
                         <span className="truncate">{item.label}</span>
                       </span>
-                      <span className={cn("shrink-0 font-medium tabular-nums", themedTextTitleClass)}>
+                      <span className={cn("shrink-0 font-normal tabular-nums", themedTextTitleClass)}>
                         {item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
                       </span>
                     </div>
@@ -828,6 +830,11 @@ export default function MarcaVeiculoRelatorioPage() {
   const [isClassificacaoLoading, setIsClassificacaoLoading] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
+  const mobileFiltersRef = useMobileFilterSheet(isMobileFiltersOpen, () => setIsMobileFiltersOpen(false));
+  const activeFilterCount = [
+    appliedTipoVenda, appliedBandeira, appliedLojaVenda, appliedRegional,
+    appliedMarcaVeiculo, appliedModelo, appliedVersao, appliedClassificacao,
+  ].filter((values) => values.length > 0).length;
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
   const [trendView, setTrendView] = useState<TrendView>(DEFAULT_TREND_VIEW);
   const [trendMetric, setTrendMetric] = useState<TrendMetric>(DEFAULT_TREND_METRIC);
@@ -1019,6 +1026,7 @@ export default function MarcaVeiculoRelatorioPage() {
     setAppliedStartDate(startDate);
     setAppliedEndDate(endDate);
     setRefreshTick((tick) => tick + 1);
+    setIsMobileFiltersOpen(false);
   };
 
   const hasPendingFilterChanges = useMemo(
@@ -1399,9 +1407,13 @@ export default function MarcaVeiculoRelatorioPage() {
       ],
       tooltip: {
         trigger: ["hover", "click"],
-        confine: false,
+        confine: true,
         parentElement: "monitoring-trend-chart",
         activeType: "dimension",
+        style: {
+          titleLabel: { fontWeight: 400 },
+          valueLabel: { fontWeight: 400 },
+        },
         dimension: {
           title: {
             visible: true,
@@ -1438,8 +1450,8 @@ export default function MarcaVeiculoRelatorioPage() {
           },
         },
       },
-      point: { visible: true, style: { size: 6, fill: "#ffffff", stroke: "#0ea5e9", lineWidth: 2 } },
-      line: { style: { lineWidth: 3, curveType: "monotone" } },
+      point: { visible: true, style: { size: 6, fill: "#ffffff", stroke: "#0ea5e9", lineWidth: chartPointStrokeWidth } },
+      line: { style: { lineWidth: chartLineWidth, curveType: "monotone" } },
       area: { visible: true, style: { fillOpacity: 0.12 } },
     }),
     [
@@ -1636,19 +1648,19 @@ export default function MarcaVeiculoRelatorioPage() {
       <main className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
           <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-            <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
+            <p className="text-[10px] font-normal uppercase tracking-[0.34em] text-sky-100/80 dark:text-cyan-200/80">
               Relatório
             </p>
-            <h1 className="mt-2 text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
               Visão global por Marca de Veículo
             </h1>
           </section>
 
           <section className={cn(themedPanelClass, "border-rose-200 p-6 dark:border-rose-400/20")}>
-            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-rose-600 dark:text-rose-300">
+            <p className="text-[10px] font-normal uppercase tracking-[0.28em] text-rose-600 dark:text-rose-300">
               Falha ao carregar os dados
             </p>
-            <h2 className={cn("mt-2 text-2xl font-medium", themedTextTitleClass)}>
+            <h2 className={cn("mt-2 text-2xl font-normal", themedTextTitleClass)}>
               Não conseguimos mostrar a visão de marca agora
             </h2>
             <p className={cn("mt-3 text-sm leading-6", themedTextBodyClass)}>{error}</p>
@@ -1663,21 +1675,21 @@ export default function MarcaVeiculoRelatorioPage() {
     );
   }
   return (
-    <main className={cn("min-h-[100dvh] overflow-x-hidden p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
-      <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4">
-        <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <main className={cn("min-h-[100dvh] min-w-0 p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
+      <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-3">
+        <section className={cn(themedHeroClass, "px-4 py-3 sm:px-5 sm:py-4")}>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-2">
-              <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-sky-100/80">
+              <p className="text-[10px] font-normal uppercase tracking-[0.12em] text-sky-100/80">
                 Relatório
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-medium tracking-[-0.03em] sm:text-3xl">
+                <h1 className="text-xl font-normal tracking-[-0.02em] sm:text-2xl">
                   Visão global por Marca de Veículo
                 </h1>
                 <TooltipIcon text="Os indicadores e a listagem abaixo respondem aos filtros de bandeira, loja de venda, regional, tipo de venda, classificação, marca e período." />
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-sky-100/80">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal uppercase tracking-[0.12em] text-sky-100/80">
                 <span className="rounded-full bg-white/10 px-3 py-1">
                   Última atualização: {lastUpdatedText}
                 </span>
@@ -1685,7 +1697,7 @@ export default function MarcaVeiculoRelatorioPage() {
                   {isLoading ? "Atualizando..." : "Dados prontos"}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-sky-50/90">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal text-sky-50/90">
                 <span className="rounded-full bg-white/10 px-3 py-1">
                   {activePeriodText}
                 </span>
@@ -1705,7 +1717,7 @@ export default function MarcaVeiculoRelatorioPage() {
                 aria-expanded={isDesktopFiltersOpen}
                 aria-controls="marca-filters-panel"
                 className={cn(
-                  "hidden h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-medium tablet:inline-flex",
+                  "hidden h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-normal tablet:inline-flex",
                   themedOutlineButtonClass,
                 )}
               >
@@ -1714,7 +1726,7 @@ export default function MarcaVeiculoRelatorioPage() {
                 ) : (
                   <SlidersHorizontal className="h-4 w-4" />
                 )}
-                <span>{isDesktopFiltersOpen ? "Ocultar filtro" : "Abrir filtro"}</span>
+                <span>{isDesktopFiltersOpen ? "Fechar filtros" : `Filtros${activeFilterCount ? ` ${activeFilterCount}` : ""}`}</span>
               </Button>
 
               <Button
@@ -1722,7 +1734,7 @@ export default function MarcaVeiculoRelatorioPage() {
                 variant="outline"
                 onClick={() => void refresh({ silent: true })}
                 className={cn(
-                  "h-10 shrink-0 rounded-full px-4 text-xs font-medium",
+                  "h-10 shrink-0 rounded-full px-4 text-xs font-normal",
                   themedOutlineButtonClass,
                 )}
               >
@@ -1733,7 +1745,7 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <div className="sticky top-3 z-30 tablet:hidden">
+        <div className="tablet:hidden">
           <Button
             type="button"
             variant="outline"
@@ -1741,31 +1753,39 @@ export default function MarcaVeiculoRelatorioPage() {
             aria-expanded={isMobileFiltersOpen}
             aria-controls="marca-filters-panel"
             className={cn(
-              "h-12 w-full rounded-full px-4 text-sm font-medium shadow-sm",
+              "h-10 w-full px-4 text-sm font-normal",
               themedOutlineButtonClass,
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            {isMobileFiltersOpen ? "Ocultar filtro" : "Abrir filtro"}
+            {isMobileFiltersOpen ? "Fechar filtros" : `Filtros${activeFilterCount ? ` ${activeFilterCount}` : ""}`}
           </Button>
         </div>
 
+        {isMobileFiltersOpen ? (
+          <button type="button" aria-label="Fechar filtros" onClick={() => setIsMobileFiltersOpen(false)} className="fixed inset-0 z-40 bg-slate-950/60 tablet:hidden" />
+        ) : null}
+
         <section
           id="marca-filters-panel"
+          ref={mobileFiltersRef}
+          aria-label="Filtros do relatório de marcas"
+          role={isMobileFiltersOpen ? "dialog" : undefined}
+          aria-modal={isMobileFiltersOpen ? true : undefined}
           className={cn(
             themedPanelClass,
-            "overflow-hidden p-4 transition-[max-height,opacity,transform] duration-300 ease-out",
+            "p-3 sm:p-4",
             isMobileFiltersOpen
-              ? "max-h-[5000px] opacity-100 translate-y-0"
-              : "pointer-events-none max-h-0 -translate-y-2 opacity-0",
+              ? "fixed inset-x-0 bottom-0 z-50 max-h-[min(88dvh,860px)] overflow-y-auto rounded-b-none shadow-xl tablet:static tablet:rounded-2xl tablet:shadow-none"
+              : "hidden",
             isDesktopFiltersOpen
-              ? "tablet:max-h-[5000px] tablet:pointer-events-auto tablet:opacity-100 tablet:translate-y-0"
-              : "tablet:pointer-events-none tablet:max-h-0 tablet:-translate-y-2 tablet:opacity-0",
+              ? "tablet:block"
+              : "tablet:hidden",
           )}
         >
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h2 className={cn("text-base font-medium tracking-[-0.02em]", themedTextTitleClass)}>
+              <h2 className={cn("text-base font-normal tracking-[-0.02em]", themedTextTitleClass)}>
                 Filtros
               </h2>
               <p className={cn("text-xs", themedTextMutedClass)}>
@@ -1777,7 +1797,7 @@ export default function MarcaVeiculoRelatorioPage() {
                 type="button"
                 variant="outline"
                 onClick={clearFilters}
-                className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+                className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-normal", themedOutlineButtonClass)}
               >
                 Limpar filtros
               </Button>
@@ -1785,11 +1805,14 @@ export default function MarcaVeiculoRelatorioPage() {
                 type="button"
                 onClick={applyFilters}
                 disabled={!hasPendingFilterChanges}
-                className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Aplicar filtros
               </Button>
             </div>
+            <Button type="button" variant="ghost" onClick={() => setIsMobileFiltersOpen(false)} aria-label="Fechar filtros" className="h-9 w-9 shrink-0 tablet:hidden">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -1915,12 +1938,12 @@ export default function MarcaVeiculoRelatorioPage() {
                 </label>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 tablet:hidden">
+            <div className="sticky bottom-0 mt-3 grid grid-cols-2 gap-2 border-t border-slate-200 bg-white py-3 dark:border-white/10 dark:bg-slate-900 tablet:hidden">
               <Button
                 type="button"
                 variant="outline"
                 onClick={clearFilters}
-                className={cn("h-10 rounded-full px-3 text-xs font-medium", themedOutlineButtonClass)}
+                className={cn("h-10 rounded-full px-3 text-xs font-normal", themedOutlineButtonClass)}
               >
                 Limpar filtros
               </Button>
@@ -1928,7 +1951,7 @@ export default function MarcaVeiculoRelatorioPage() {
                 type="button"
                 onClick={applyFilters}
                 disabled={!hasPendingFilterChanges}
-                className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Aplicar filtros
               </Button>
@@ -1994,7 +2017,7 @@ export default function MarcaVeiculoRelatorioPage() {
             <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Análise executiva</p>
             <h2
               id="charts-section-title"
-              className={cn("mt-1 text-lg font-medium tracking-[-0.02em]", themedTextTitleClass)}
+              className={cn("mt-1 text-lg font-normal tracking-[-0.02em]", themedTextTitleClass)}
             >
               Monitoramento das vendas cantadas
             </h2>
@@ -2062,7 +2085,7 @@ export default function MarcaVeiculoRelatorioPage() {
           variant="default"
           size="lg"
           onClick={() => setIsDetailedTableModalOpen(true)}
-          className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)] tablet:hidden"
+          className="mt-1 h-12 w-full rounded-full text-sm font-normal shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)] tablet:hidden"
         >
           <NotebookText className="h-4 w-4" />
           Abrir tabela detalhada

@@ -26,7 +26,7 @@ export function ThemeToggle() {
           variant="outline"
           size="icon"
           className={cn(
-            "relative rounded-full border shadow-lg transition-colors",
+            "relative rounded-xl border shadow-sm transition-colors",
             isDarkTheme
               ? "!border-slate-200 !bg-white !text-slate-900 hover:!bg-slate-50 dark:!border-slate-200 dark:!bg-white dark:!text-slate-900 dark:hover:!bg-slate-50"
               : "!border-slate-900/80 !bg-slate-950 !text-white hover:!bg-slate-900 dark:!border-slate-900/80 dark:!bg-slate-950 dark:!text-white dark:hover:!bg-slate-900",

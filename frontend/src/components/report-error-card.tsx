@@ -31,7 +31,7 @@ export function ReportErrorCard({
       <p className={cn(themedTinyLabelClass, "text-rose-600 dark:text-rose-300")}>
         {label}
       </p>
-      <h2 className={`mt-2 text-2xl font-semibold ${themedTextTitleClass}`}>{title}</h2>
+      <h2 className={`mt-2 text-2xl font-normal ${themedTextTitleClass}`}>{title}</h2>
       <p className={`mt-3 text-sm leading-6 ${themedTextBodyClass}`}>{message}</p>
       {onRetry ? (
         <div className="mt-6">

@@ -34,7 +34,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import BrandLogo from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
@@ -139,8 +138,8 @@ function PeriodPill({
       onClick={onClick}
       style={style}
       className={cn(
-        "inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30",
-        uppercase && "uppercase tracking-[0.24em]",
+        "inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-normal transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30",
+        uppercase && "uppercase tracking-[0.08em]",
         active
           ? "border-cyan-400 bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-400/20 dark:border-slate-900 dark:bg-slate-900 dark:text-white dark:shadow-slate-900/10"
           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white",
@@ -179,7 +178,7 @@ function DateField({
   }
 
   return (
-    <label className={cn("flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm", themedTextBodyClass, "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/70", className)}>
+    <label className={cn("flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-normal shadow-sm", themedTextBodyClass, "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950/70", className)}>
       <span className="shrink-0">{label}</span>
       <input
         type="date"
@@ -204,7 +203,7 @@ function DateField({
         onPaste={(event) => event.preventDefault()}
         onChange={(event) => onChange(event.target.value)}
         className={cn(
-          "min-w-0 cursor-pointer bg-transparent text-sm font-semibold outline-none [color-scheme:light] dark:[color-scheme:dark]",
+          "min-w-0 cursor-pointer bg-transparent text-sm font-normal outline-none [color-scheme:light] dark:[color-scheme:dark]",
           themedTextStrongClass,
         )}
       />
@@ -521,7 +520,7 @@ function BrandCardLinkHint({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] shadow-sm transition duration-200",
+        "inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-normal uppercase tracking-[0.22em] shadow-sm transition duration-200",
         active
           ? "border-cyan-400/30 bg-cyan-50 text-cyan-700 ring-1 ring-cyan-300/20 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-300"
           : "border-sky-200/80 bg-sky-50/90 text-sky-700 group-hover:border-cyan-300/70 group-hover:bg-cyan-50 group-hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300",
@@ -577,7 +576,7 @@ function PeriodNoDataModal({
             <CircleHelp className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p id="period-no-data-title" className={cn("text-base font-semibold", themedTextTitleClass)}>
+            <p id="period-no-data-title" className={cn("text-base font-normal", themedTextTitleClass)}>
               {notice.title}
             </p>
             <p
@@ -642,10 +641,10 @@ function BrandTotalCard({
           <BrandLogoPanel brand={brand} />
 
           <div className="flex flex-1 flex-col justify-end gap-0.5">
-            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
+            <p className={cn("text-[10px] font-normal uppercase tracking-[0.24em]", themedTextMutedClass)}>
               Total de Vendas Cantadas
             </p>
-            <p className={cn("text-5xl font-light leading-none tracking-[-0.05em] xl:text-[3.8rem]", themedTextTitleClass)}>
+            <p className={cn("text-[2.1rem] font-extralight leading-none tracking-[-0.03em] xl:text-[2.65rem]", themedTextTitleClass)}>
               {value.toLocaleString("pt-BR")}
             </p>
           </div>
@@ -675,7 +674,7 @@ function RankingCard({
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className={cn("text-sm font-semibold tracking-[-0.01em]", themedTextTitleClass)}>
+            <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               {title}
             </h2>
             {tooltip ? <TooltipIcon text={tooltip} /> : null}
@@ -697,12 +696,12 @@ function RankingCard({
             <div key={item.label}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
                 <span
-                  className={cn("truncate font-medium", themedTextStrongClass)}
+                  className={cn("truncate font-normal", themedTextStrongClass)}
                   title={item.label}
                 >
                   {item.label}
                 </span>
-                <span className={cn("rounded-full px-2 py-0.5 font-semibold", themedBadgeClass)}>
+                <span className={cn("rounded-full px-2 py-0.5 font-normal", themedBadgeClass)}>
                   {item.value.toLocaleString("pt-BR")}
                 </span>
               </div>
@@ -743,17 +742,17 @@ function MobileMetricCard({
         <div className="flex items-start justify-between gap-3">
           <div className="text-emerald-400">{icon}</div>
           {helper ? (
-            <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]", themedChipClass)}>
+            <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-normal uppercase tracking-[0.22em]", themedChipClass)}>
               {helper}
             </span>
           ) : null}
         </div>
 
         <div className="space-y-1">
-          <p className={cn("text-3xl font-medium leading-none tracking-[-0.05em]", themedTextTitleClass, valueClassName)}>
+          <p className={cn("text-3xl font-normal leading-none tracking-[-0.05em]", themedTextTitleClass, valueClassName)}>
             {value}
           </p>
-          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.22em]", themedTextMutedClass)}>
+          <p className={cn("text-[10px] font-normal uppercase tracking-[0.22em]", themedTextMutedClass)}>
             {label}
           </p>
         </div>
@@ -781,17 +780,17 @@ function TabletMetricCard({
         <div className="flex items-start justify-between gap-2">
           <div className="text-emerald-400">{icon}</div>
           {helper ? (
-            <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em]", themedChipClass)}>
+            <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-normal uppercase tracking-[0.2em]", themedChipClass)}>
               {helper}
             </span>
           ) : null}
         </div>
 
         <div className="space-y-0.5">
-          <p className={cn("text-2xl font-medium leading-none tracking-[-0.05em] sm:text-[2rem]", themedTextTitleClass, valueClassName)}>
+          <p className={cn("text-2xl font-normal leading-none tracking-[-0.05em] sm:text-[2rem]", themedTextTitleClass, valueClassName)}>
             {value}
           </p>
-          <p className={cn("text-[9px] font-semibold uppercase tracking-[0.2em] sm:text-[10px]", themedTextMutedClass)}>
+          <p className={cn("text-[9px] font-normal uppercase tracking-[0.2em] sm:text-[10px]", themedTextMutedClass)}>
             {label}
           </p>
         </div>
@@ -852,10 +851,10 @@ function MobileBrandCard({
         <BrandLogoPanel brand={brand} compact />
 
         <div className="flex flex-1 flex-col justify-end gap-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+          <p className="text-[10px] font-normal uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
             Total de vendas cantadas
           </p>
-          <p className="text-4xl font-light leading-none tracking-[-0.06em] text-slate-900 dark:text-slate-100">
+          <p className="text-[1.6rem] font-extralight leading-none tracking-[-0.03em] text-slate-900 dark:text-slate-100">
             {value.toLocaleString("pt-BR")}
           </p>
           <Button
@@ -864,7 +863,7 @@ function MobileBrandCard({
             size="sm"
             onClick={(event) => event.stopPropagation()}
             className={cn(
-              "mt-1 h-8 justify-start self-start whitespace-nowrap rounded-full border-cyan-200/80 px-3 text-[9px] font-bold tracking-[0.24em] text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/15",
+              "mt-1 h-8 justify-start self-start whitespace-nowrap rounded-full border-cyan-200/80 px-3 text-[9px] font-normal tracking-[0.24em] text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/15",
               active && "border-cyan-400/60 bg-cyan-50 text-cyan-700 dark:bg-cyan-400/15",
             )}
           >
@@ -904,11 +903,11 @@ function TabletBrandSection({
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-400" />
-              <p className={cn("truncate text-[13px] font-semibold uppercase tracking-[0.18em]", themedTextTitleClass)}>
+              <p className={cn("truncate text-[13px] font-normal uppercase tracking-[0.18em]", themedTextTitleClass)}>
                 {summary.brand}
               </p>
             </div>
-            <p className={cn("text-[11px] font-semibold uppercase tracking-[0.24em]", themedTextMutedClass)}>
+            <p className={cn("text-[11px] font-normal uppercase tracking-[0.24em]", themedTextMutedClass)}>
               {summary.position ? `Posição geral ${formatOrdinal(summary.position)}` : "Posição geral --"}
             </p>
           </div>
@@ -917,7 +916,7 @@ function TabletBrandSection({
             asChild
             variant="outline"
             size="sm"
-            className="h-9 shrink-0 rounded-full border-cyan-200/80 px-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/15"
+            className="h-9 shrink-0 rounded-full border-cyan-200/80 px-3 text-[10px] font-normal uppercase tracking-[0.24em] text-cyan-700 shadow-sm hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300 dark:hover:border-cyan-400/30 dark:hover:bg-cyan-400/15"
           >
             <Link href={summary.detailHref} aria-label={`Ver detalhes de ${summary.brand}`}>
               VER DETALHES
@@ -1009,18 +1008,18 @@ function TabletBrandCarouselCard({
 
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className={cn("truncate text-[12px] font-semibold uppercase tracking-[0.24em]", themedTextTitleClass)}>
+            <p className={cn("truncate text-[12px] font-normal uppercase tracking-[0.24em]", themedTextTitleClass)}>
               {summary.brand}
             </p>
-            <p className={cn("mt-1 text-[11px] font-medium", themedTextMutedClass)}>
+            <p className={cn("mt-1 text-[11px] font-normal", themedTextMutedClass)}>
               {summary.total.toLocaleString("pt-BR")} vendas
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.22em]", themedTextMutedClass)}>
+            <p className={cn("text-[10px] font-normal uppercase tracking-[0.22em]", themedTextMutedClass)}>
               Posição
             </p>
-            <p className={cn("mt-1 text-sm font-semibold", themedTextTitleClass)}>
+            <p className={cn("mt-1 text-sm font-normal", themedTextTitleClass)}>
               {summary.position ? formatOrdinal(summary.position) : "--"}
             </p>
           </div>
@@ -1616,54 +1615,42 @@ export default function DashboardV2Page() {
 
   function MobileDashboardView() {
     return (
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col gap-4 px-4 pb-8 pt-4">
-        <header className={cn(themedHeroClass, "space-y-4 rounded-[28px] px-4 py-4")}>
-          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
-            <div aria-hidden="true" className="h-11 w-11" />
-            <BrandLogo
-              variant="header"
-              className="mx-auto h-10 w-[150px] sm:h-12 sm:w-[180px]"
-            />
-            <Link
-              href="/perfil"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
-              aria-label="Abrir perfil"
-            >
-              <UserRound className="h-5 w-5" />
-            </Link>
-          </div>
-
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col gap-3 px-4 pb-6 pt-3">
+        <header className={cn(themedHeroClass, "space-y-3 px-4 py-3")}>
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.04em]">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="text-[1.35rem] font-normal leading-tight tracking-[-0.03em]">
                   Painel de Vendas Cantadas
                 </h1>
+                <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
               </div>
-              <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
+              <Link href="/perfil" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white/15" aria-label="Abrir perfil">
+                <UserRound className="h-5 w-5" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 gap-2 phone:grid-cols-2">
-              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] font-normal leading-5 text-sky-50/85">
                 <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
                 <span className="min-w-0">Última atualização: {lastUpdatedText}</span>
               </div>
-              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] font-normal leading-5 text-sky-50/85">
                 <Database className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
                 <span className="min-w-0">{isRefreshing ? "Atualizando..." : "Dados prontos"}</span>
               </div>
-              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] font-normal leading-5 text-sky-50/85">
                 <NotebookText className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
                 <span className="min-w-0">Último registro: {lastRecordText}</span>
               </div>
-              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] leading-5 text-sky-50/90">
+              <div className="flex items-start gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2.5 text-[11px] font-normal leading-5 text-sky-50/85">
                 <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
                 <span className="min-w-0">{activePeriodText}</span>
               </div>
             </div>
 
             {fallbackNotice ? (
-              <div className="rounded-full border border-amber-400/20 bg-amber-400/12 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+              <div className="rounded-full border border-amber-400/20 bg-amber-400/12 px-3 py-2 text-[11px] font-normal text-amber-100">
                 {fallbackNotice}
               </div>
             ) : null}
@@ -1686,14 +1673,10 @@ export default function DashboardV2Page() {
                   active={period === option.key}
                   onClick={() => handlePeriodChange(option.key)}
                   className={cn(
-                    "min-w-0 w-full whitespace-nowrap px-2.5 py-2 leading-none sm:px-3 sm:text-[11px]",
+                    "min-w-0 w-full whitespace-nowrap px-2 py-2 text-[11px] leading-none sm:px-3",
                   )}
-                  style={{
-                    fontSize: "clamp(8px, 0.9vw, 11px)",
-                    letterSpacing: "0.16em",
-                  }}
                 >
-                  {option.label}
+                  {option.key === "intervalo" ? "Int. datas" : option.label}
                 </PeriodPill>
               ))}
             </div>
@@ -1736,8 +1719,8 @@ export default function DashboardV2Page() {
                     <TooltipIcon text="Volte alguns dias de forma rápida sem abrir o calendário." />
                   </div>
                 </div>
-                <div className="grid w-full grid-cols-5 gap-2">
-                  {dayQuickFilters.map((item) => (
+                <div className="grid w-full grid-cols-3 gap-2">
+                  {dayQuickFilters.slice(0, 3).map((item) => (
                     <PeriodPill
                       key={item.offset}
                       active={selectedDayOffset === item.offset}
@@ -1785,7 +1768,7 @@ export default function DashboardV2Page() {
                     type="button"
                     onClick={applyIntervalSelection}
                     disabled={!hasPendingIntervalChanges}
-                    className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     OK
                   </Button>
@@ -1799,7 +1782,7 @@ export default function DashboardV2Page() {
           <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-50">
             <div className="flex flex-col gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold">{periodNoDataNotice.title}</p>
+                <p className="text-sm font-normal">{periodNoDataNotice.title}</p>
                 <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-100">
                   {periodNoDataNotice.message}
                 </p>
@@ -1886,7 +1869,7 @@ export default function DashboardV2Page() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                <p className={cn("truncate text-[13px] font-semibold uppercase tracking-[0.18em]", themedTextTitleClass)}>
+                <p className={cn("truncate text-[13px] font-normal uppercase tracking-[0.18em]", themedTextTitleClass)}>
                   {selectedMobileBrand}
                 </p>
               </div>
@@ -1923,7 +1906,7 @@ export default function DashboardV2Page() {
         <section className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="min-w-0">
-              <p className={cn("text-[11px] font-semibold uppercase tracking-[0.32em]", themedTextTitleClass)}>
+              <p className={cn("text-[11px] font-normal uppercase tracking-[0.32em]", themedTextTitleClass)}>
                 Destaques - {selectedMobileBrand}
               </p>
             </div>
@@ -1960,7 +1943,7 @@ export default function DashboardV2Page() {
           variant="default"
           size="lg"
           onClick={() => setIsDetailedTableModalOpen(true)}
-          className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
+          className="mt-1 h-12 w-full rounded-full text-sm font-normal shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
         >
           <NotebookText className="h-4 w-4" />
           Abrir tabela detalhada
@@ -1971,31 +1954,19 @@ export default function DashboardV2Page() {
 
   function TabletDashboardView() {
     return (
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1160px] flex-col gap-4 px-4 pb-8 pt-4">
-        <header className={cn(themedHeroClass, "space-y-4 rounded-[28px] px-4 py-4 sm:px-5 sm:py-5")}>
-          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
-            <div aria-hidden="true" className="h-11 w-11" />
-            <BrandLogo
-              variant="header"
-              className="mx-auto h-10 w-[150px] sm:h-12 sm:w-[180px]"
-            />
-            <Link
-              href="/perfil"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
-              aria-label="Abrir perfil"
-            >
-              <UserRound className="h-5 w-5" />
-            </Link>
-          </div>
-
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1160px] flex-col gap-3 px-4 pb-6 pt-3">
+        <header className={cn(themedHeroClass, "space-y-3 px-4 py-3 sm:px-5 sm:py-4")}>
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.04em] sm:text-[1.75rem]">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="text-[1.35rem] font-normal leading-tight tracking-[-0.03em] sm:text-[1.75rem]">
                   Painel de Vendas Cantadas
                 </h1>
+                <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
               </div>
-              <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
+              <Link href="/perfil" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white/15" aria-label="Abrir perfil">
+                <UserRound className="h-5 w-5" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -2018,7 +1989,7 @@ export default function DashboardV2Page() {
             </div>
 
             {fallbackNotice ? (
-              <div className="rounded-full border border-amber-400/20 bg-amber-400/12 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-100">
+              <div className="rounded-full border border-amber-400/20 bg-amber-400/12 px-3 py-2 text-[11px] font-normal text-amber-100">
                 {fallbackNotice}
               </div>
             ) : null}
@@ -2040,13 +2011,7 @@ export default function DashboardV2Page() {
                   key={option.key}
                   active={period === option.key}
                   onClick={() => handlePeriodChange(option.key)}
-                  className={cn(
-                    "min-w-0 w-full whitespace-nowrap px-2.5 py-2 leading-none sm:px-3 sm:text-[11px]",
-                  )}
-                  style={{
-                    fontSize: "clamp(8px, 0.9vw, 11px)",
-                    letterSpacing: "0.16em",
-                  }}
+                  className="min-w-0 w-full whitespace-nowrap px-2 py-2 text-[11px] leading-none sm:px-3"
                 >
                   {option.label}
                 </PeriodPill>
@@ -2134,7 +2099,7 @@ export default function DashboardV2Page() {
                     type="button"
                     onClick={applyIntervalSelection}
                     disabled={!hasPendingIntervalChanges}
-                    className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     OK
                   </Button>
@@ -2148,7 +2113,7 @@ export default function DashboardV2Page() {
           <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-semibold">{periodNoDataNotice.title}</p>
+                <p className="text-sm font-normal">{periodNoDataNotice.title}</p>
                 <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-100">
                   {periodNoDataNotice.message}
                 </p>
@@ -2172,7 +2137,7 @@ export default function DashboardV2Page() {
         <section className="sticky top-3 z-20 rounded-[24px] border border-white/15 bg-white/90 px-3 py-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/85">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className={cn("text-[11px] font-semibold uppercase tracking-[0.34em]", themedTextTitleClass)}>
+              <p className={cn("text-[11px] font-normal uppercase tracking-[0.34em]", themedTextTitleClass)}>
                 {selectedMobileBrand}
               </p>
             </div>
@@ -2197,7 +2162,7 @@ export default function DashboardV2Page() {
               >
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <p className={cn("rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]", themedChipClass)}>
+              <p className={cn("rounded-full px-3 py-1 text-[10px] font-normal uppercase tracking-[0.24em]", themedChipClass)}>
                 {tabletBrandInsights.length} bandeiras
               </p>
             </div>
@@ -2232,14 +2197,14 @@ export default function DashboardV2Page() {
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className={cn("text-[11px] font-semibold uppercase tracking-[0.34em]", themedTextTitleClass)}>
+              <p className={cn("text-[11px] font-normal uppercase tracking-[0.34em]", themedTextTitleClass)}>
                 Conteúdo da bandeira
               </p>
               <p className={cn("mt-1 text-[11px] leading-5", themedTextMutedClass)}>
                 O carrossel abaixo mostra apenas a bandeira selecionada no topo.
               </p>
             </div>
-            <p className={cn("rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]", themedChipClass)}>
+            <p className={cn("rounded-full px-3 py-1 text-[10px] font-normal uppercase tracking-[0.24em]", themedChipClass)}>
               {selectedMobileBrand}
             </p>
           </div>
@@ -2274,7 +2239,7 @@ export default function DashboardV2Page() {
           variant="default"
           size="lg"
           onClick={() => setIsDetailedTableModalOpen(true)}
-          className="h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
+          className="h-12 w-full rounded-full text-sm font-normal shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
         >
           <NotebookText className="h-4 w-4" />
           Abrir tabela detalhada
@@ -2284,7 +2249,7 @@ export default function DashboardV2Page() {
   }
 
   return (
-    <main className={cn("min-h-[100dvh] overflow-x-hidden", themedPageBackgroundClass, themedPageTextClass)}>
+    <main className={cn("min-h-[100dvh]", themedPageBackgroundClass, themedPageTextClass)}>
       <div className="block min-[768px]:hidden">
         <MobileDashboardView />
       </div>
@@ -2292,28 +2257,21 @@ export default function DashboardV2Page() {
         <TabletDashboardView />
       </div>
       <div className="hidden min-[1281px]:block">
-        <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-4 p-3 sm:p-5">
-          <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-          <div className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_minmax(340px,430px)] xl:items-start">
-            <div className="flex items-start">
-              <BrandLogo
-                variant="header"
-                className="h-[70px] w-[250px] sm:h-[80px] sm:w-[290px] xl:h-[92px] xl:w-[330px]"
-              />
-            </div>
-
+        <div className="mx-auto flex w-full max-w-[1700px] flex-col gap-3 p-3 sm:p-5">
+          <section className={cn(themedHeroClass, "px-4 py-3 sm:px-5 sm:py-4")}>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(340px,430px)] xl:items-start">
             <div className="min-w-0 space-y-2">
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-sky-100/80">
+                <p className="text-[10px] font-normal uppercase tracking-[0.34em] text-sky-100/80">
                   Dashboard
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                  <h1 className="text-xl font-normal tracking-[-0.02em] sm:text-2xl">
                     Painel de Vendas Cantadas
                   </h1>
                   <TooltipIcon text="Os cartões, rankings e listas abaixo respondem ao período selecionado." />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-100/80">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal text-sky-100/85">
                   <span className="rounded-full bg-white/10 px-3 py-1">
                     Última atualização: {lastUpdatedText}
                   </span>
@@ -2324,7 +2282,7 @@ export default function DashboardV2Page() {
                     Último registro: {lastRecordText}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-sky-50/90">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-normal text-sky-50/85">
                   <span className="rounded-full bg-white/10 px-3 py-1">
                     {activePeriodText}
                   </span>
@@ -2446,7 +2404,7 @@ export default function DashboardV2Page() {
                         type="button"
                         onClick={applyIntervalSelection}
                         disabled={!hasPendingIntervalChanges}
-                        className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="h-9 rounded-full bg-cyan-400 px-4 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         OK
                       </Button>
@@ -2462,7 +2420,7 @@ export default function DashboardV2Page() {
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="text-sm font-semibold">{periodNoDataNotice.title}</p>
+                <p className="text-sm font-normal">{periodNoDataNotice.title}</p>
                 <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-100">
                   {periodNoDataNotice.message}
                 </p>
@@ -2554,10 +2512,10 @@ export default function DashboardV2Page() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-white/10 dark:bg-slate-950/80">
-            <div className={cn("text-sm font-medium", themedTextBodyClass)}>
+            <div className={cn("text-sm font-normal", themedTextBodyClass)}>
               {totalProposals.toLocaleString("pt-BR")} propostas registradas
             </div>
-            <div className={cn("px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em]", themedChipClass)}>
+            <div className={cn("px-3 py-1 text-xs font-normal uppercase tracking-[0.22em]", themedChipClass)}>
               {filteredSales.length} registros filtrados
             </div>
           </div>

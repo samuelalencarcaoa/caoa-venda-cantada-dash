@@ -21,13 +21,13 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   BrandDetailsAnalyticsSection,
   BrandDetailsAnalyticsSkeleton,
 } from "@/components/bandeira-details/brand-details-analytics-section";
 import { ReportErrorCard } from "@/components/report-error-card";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
+import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
 import {
   FilterDateInput,
   FilterSelectCard,
@@ -74,7 +74,7 @@ type BrandDetailsClientProps = {
 };
 
 const brandStatusChipClass =
-  "rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium";
+  "rounded-full bg-white/10 px-3 py-1 text-[11px] font-normal";
 
 const heroOutlineButtonClass =
   "border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white";
@@ -285,7 +285,7 @@ function QuickAccessCard({
         className,
       )}
     >
-      <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-cyan-100/75 sm:text-[10px] sm:tracking-[0.42em]">
+      <p className="text-[9px] font-normal uppercase tracking-[0.3em] text-cyan-100/75 sm:text-[10px] sm:tracking-[0.42em]">
         Acesso rápido
       </p>
 
@@ -356,10 +356,10 @@ function BrandIdentityCard({
     >
       <div className="relative flex h-full min-h-[124px] flex-1 flex-col gap-2 sm:min-h-[184px] sm:gap-0.5">
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          <span className="border-white/12 inline-flex items-center gap-2 rounded-full border bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
+          <span className="border-white/12 inline-flex items-center gap-2 rounded-full border bg-white/10 px-2.5 py-1 text-[9px] font-normal uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
             Bandeira
           </span>
-          <span className="border-white/12 inline-flex max-w-full items-center rounded-full border bg-white/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
+          <span className="border-white/12 inline-flex max-w-full items-center rounded-full border bg-white/10 px-2.5 py-1 text-[9px] font-normal uppercase tracking-[0.2em] text-cyan-50/90 shadow-none sm:text-[10px] sm:tracking-[0.24em]">
             {brandName}
           </span>
         </div>
@@ -584,16 +584,16 @@ function HeroSection({
   const summaryChipsDrag = useHorizontalDragScroll<HTMLDivElement>();
 
   return (
-    <section className={cn(themedHeroClass, "px-4 py-4 sm:px-5 sm:py-5")}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between lg:gap-5">
-        <div className="min-w-0 flex-1 basis-0 space-y-3 lg:self-stretch">
-          <p className="text-[9px] font-medium uppercase tracking-[0.26em] text-sky-100/80 sm:text-[10px] sm:tracking-[0.34em] dark:text-cyan-200/80">
+    <section className={cn(themedHeroClass, "px-4 py-3 sm:px-5 sm:py-4")}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:justify-between lg:gap-4">
+        <div className="min-w-0 flex-1 basis-0 space-y-2 lg:self-stretch">
+          <p className="text-[10px] font-normal uppercase tracking-[0.12em] text-sky-100/80 dark:text-cyan-200/80">
             Detalhes da Bandeira
             <TooltipIcon text="Os filtros abaixo preservam o contexto da bandeira e atualizam os Big Numbers e a tabela detalhada no mesmo recorte de dados." />
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Flag className="h-5 w-5 text-cyan-300" />
-            <h1 className="text-xl font-medium tracking-[-0.03em] sm:text-3xl">
+            <h1 className="text-xl font-normal tracking-[-0.02em] sm:text-2xl">
               {brandName}
             </h1>
           </div>
@@ -603,7 +603,7 @@ function HeroSection({
             onPointerMove={statusChipsDrag.onPointerMove}
             onPointerUp={statusChipsDrag.onPointerUp}
             onPointerCancel={statusChipsDrag.onPointerCancel}
-            className="tablet:flex-wrap tablet:overflow-visible tablet:pb-0 flex max-w-full cursor-grab select-none items-center gap-2 overflow-x-auto pb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-100/80 [scrollbar-width:none] active:cursor-grabbing sm:text-[11px] sm:tracking-[0.24em] dark:text-cyan-200/80 [&::-webkit-scrollbar]:hidden"
+            className="tablet:flex-wrap tablet:overflow-visible tablet:pb-0 flex max-w-full cursor-grab select-none items-center gap-2 overflow-x-auto pb-1 text-[10px] font-normal uppercase tracking-[0.16em] text-sky-100/80 [scrollbar-width:none] active:cursor-grabbing sm:text-[11px] sm:tracking-[0.24em] dark:text-cyan-200/80 [&::-webkit-scrollbar]:hidden"
             title="Arraste para ver mais informações"
           >
             <span className={brandStatusChipClass}>
@@ -619,7 +619,7 @@ function HeroSection({
             onPointerMove={summaryChipsDrag.onPointerMove}
             onPointerUp={summaryChipsDrag.onPointerUp}
             onPointerCancel={summaryChipsDrag.onPointerCancel}
-            className="tablet:flex-wrap tablet:overflow-visible tablet:pb-0 flex max-w-full cursor-grab select-none items-center gap-2 overflow-x-auto pb-1 text-[10px] font-medium text-sky-50/90 [scrollbar-width:none] active:cursor-grabbing sm:text-[11px] dark:text-cyan-50/90 [&::-webkit-scrollbar]:hidden"
+            className="tablet:flex-wrap tablet:overflow-visible tablet:pb-0 flex max-w-full cursor-grab select-none items-center gap-2 overflow-x-auto pb-1 text-[10px] font-normal text-sky-50/90 [scrollbar-width:none] active:cursor-grabbing sm:text-[11px] dark:text-cyan-50/90 [&::-webkit-scrollbar]:hidden"
             title="Arraste para ver mais informações"
           >
             <span className={brandStatusChipClass}>{periodLabel}</span>
@@ -650,7 +650,7 @@ function HeroSection({
               asChild
               variant="outline"
               className={cn(
-                "h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium",
+                "h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-normal",
                 heroOutlineButtonClass,
               )}
             >
@@ -664,7 +664,7 @@ function HeroSection({
               onClick={onRefresh}
               disabled={isRefreshing}
               className={cn(
-                "h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-medium",
+                "h-10 w-[116px] shrink-0 justify-center rounded-full px-3 text-xs font-normal",
                 heroPrimaryButtonClass,
               )}
             >
@@ -834,6 +834,7 @@ export function BrandDetailsClient({
   );
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] =
     useState(false);
+  const closeDetailedTableModal = useCallback(() => setIsDetailedTableModalOpen(false), []);
   const [comparePreviousPeriod, setComparePreviousPeriod] = useState(false);
   const [comparisonItems, setComparisonItems] = useState<
     SalesIntentionReportRow[] | null
@@ -1131,7 +1132,7 @@ export function BrandDetailsClient({
           <div className="flex items-center gap-1.5">
             <h2
               className={cn(
-                "text-base font-medium tracking-[-0.02em]",
+                "text-base font-normal tracking-[-0.02em]",
                 themedTextTitleClass,
               )}
             >
@@ -1151,7 +1152,7 @@ export function BrandDetailsClient({
             variant="outline"
             onClick={clearFilters}
             className={cn(
-              "h-8 shrink-0 rounded-full px-3 text-xs font-medium",
+              "h-8 shrink-0 rounded-full px-3 text-xs font-normal",
               themedOutlineButtonClass,
             )}
           >
@@ -1161,7 +1162,7 @@ export function BrandDetailsClient({
             type="button"
             onClick={applyFilters}
             disabled={!hasPendingFilterChanges}
-            className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-8 shrink-0 rounded-full bg-cyan-400 px-3 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Aplicar filtros
           </Button>
@@ -1296,7 +1297,7 @@ export function BrandDetailsClient({
               variant="outline"
               onClick={clearFilters}
               className={cn(
-                "h-10 rounded-full px-3 text-xs font-medium",
+                "h-10 rounded-full px-3 text-xs font-normal",
                 themedOutlineButtonClass,
               )}
             >
@@ -1306,7 +1307,7 @@ export function BrandDetailsClient({
               type="button"
               onClick={applyFilters}
               disabled={!hasPendingFilterChanges}
-              className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-medium text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 rounded-full bg-cyan-400 px-3 text-xs font-normal text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Aplicar filtros
             </Button>
@@ -1315,48 +1316,6 @@ export function BrandDetailsClient({
       </div>
     </section>
   );
-
-  function DetailedTableModal() {
-    if (!isDetailedTableModalOpen) {
-      return null;
-    }
-
-    return createPortal(
-      <div
-        className="fixed inset-0 z-[9999] overflow-hidden bg-slate-950/90 backdrop-blur-md"
-        onClick={() => setIsDetailedTableModalOpen(false)}
-        role="presentation"
-      >
-        <div
-          className="relative flex h-[100dvh] w-full flex-col overflow-hidden"
-          onClick={(event) => event.stopPropagation()}
-          role="presentation"
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => setIsDetailedTableModalOpen(false)}
-            className="absolute right-3 top-3 z-20 shrink-0 border-white/10 bg-slate-950/85 text-white shadow-lg backdrop-blur hover:bg-slate-900 dark:border-white/10 dark:bg-slate-950/85 dark:text-white dark:hover:bg-slate-900"
-            aria-label="Fechar tabela detalhada"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-
-          <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3 pt-14">
-            <div className="mx-auto flex h-full min-h-0 w-full max-w-[920px]">
-              <SalesIntentionDataList
-                items={filteredItems}
-                exportFilePrefix={`${exportFilePrefix}-mobile`}
-                className="h-full min-h-0"
-              />
-            </div>
-          </div>
-        </div>
-      </div>,
-      document.body,
-    );
-  }
 
   if (error) {
     return (
@@ -1445,7 +1404,7 @@ export function BrandDetailsClient({
             aria-expanded={isMobileFiltersOpen}
             aria-controls="brand-filters-panel-mobile"
             className={cn(
-              "h-12 w-full rounded-full px-4 text-sm font-medium shadow-sm",
+              "h-12 w-full rounded-full px-4 text-sm font-normal shadow-sm",
               themedOutlineButtonClass,
             )}
           >
@@ -1465,7 +1424,7 @@ export function BrandDetailsClient({
               isDesktopFiltersOpen ? "Ocultar filtros" : "Abrir filtro"
             }
             className={cn(
-              "tablet:right-6 fixed right-3 top-16 z-40 inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-xs font-medium shadow-md sm:right-4",
+              "tablet:right-6 fixed right-3 top-16 z-40 inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-xs font-normal shadow-md sm:right-4",
               themedOutlineButtonClass,
             )}
           >
@@ -1524,7 +1483,7 @@ export function BrandDetailsClient({
             variant="default"
             size="lg"
             onClick={() => setIsDetailedTableModalOpen(true)}
-            className="mt-1 h-12 w-full rounded-full text-sm font-semibold shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
+            className="mt-1 h-12 w-full rounded-full text-sm font-normal shadow-[0_18px_40px_-22px_rgba(14,165,233,0.75)]"
           >
             <NotebookText className="h-4 w-4" />
             Abrir tabela detalhada
@@ -1539,7 +1498,12 @@ export function BrandDetailsClient({
           />
         </section>
       </div>
-      <DetailedTableModal />
+      <MobileDetailedTableModal
+        open={isDetailedTableModalOpen}
+        items={filteredItems}
+        exportFilePrefix={`${exportFilePrefix}-mobile`}
+        onClose={closeDetailedTableModal}
+      />
     </main>
   );
 }

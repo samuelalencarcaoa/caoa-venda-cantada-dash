@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
 import { ReportErrorCard } from "@/components/report-error-card";
+import { themedCardClass, themedPageBackgroundClass, themedPageTextClass } from "@/lib/theme-classes";
+import { cn } from "@/lib/utils";
 
 export default function TestRelatoriosPage() {
   const { items, isLoading, error, refresh, isRefreshing } = useSalesIntentions();
 
   if (isLoading) {
     return (
-      <div className="min-h-[70vh] p-8">
+      <div className={cn("min-h-[70vh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <div className="mb-6 h-10 w-72 animate-pulse rounded-xl bg-slate-200" />
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 h-5 w-40 animate-pulse rounded bg-slate-200" />
@@ -33,7 +35,7 @@ export default function TestRelatoriosPage() {
 
   if (error) {
     return (
-      <section className="mx-auto flex min-h-[70vh] w-full max-w-[900px] items-center p-8">
+      <section className={cn("mx-auto flex min-h-[70vh] w-full max-w-[900px] items-center p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
         <ReportErrorCard
           label="Falha ao carregar os dados"
           title="Não conseguimos mostrar a prévia dos relatórios agora"
@@ -51,40 +53,41 @@ export default function TestRelatoriosPage() {
   const uniqueVendors = new Set(items.map((item) => item.Proprietario)).size;
 
   return (
-    <div className="p-8">
-      <div className="mb-6 rounded border border-green-200 bg-green-50 p-4">
-        <p className="text-green-800">
-          <strong>Integração bem-sucedida.</strong> Dados carregados da API.
+    <div className={cn("min-h-[100dvh] p-3 sm:p-5", themedPageBackgroundClass, themedPageTextClass)}>
+      <div className="mb-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
+        <p className="text-emerald-800 dark:text-emerald-200">
+          <strong className="font-normal">Integração bem-sucedida.</strong> Dados carregados da API.
         </p>
-        <p className="mt-2 text-sm text-green-700">
-          Total de registros: <strong>{items.length}</strong>
+        <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
+          Total de registros: <strong className="font-normal">{items.length}</strong>
         </p>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <div className="rounded border border-slate-200 bg-white p-4">
+      <div className="mb-3 grid gap-3 phone:grid-cols-2 xl:grid-cols-4">
+        <div className={cn(themedCardClass, "p-3")}>
           <p className="text-sm text-slate-500">Registros</p>
-          <p className="text-2xl font-semibold">{items.length}</p>
+          <p className="text-2xl font-normal">{items.length}</p>
         </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
+        <div className={cn(themedCardClass, "p-3")}>
           <p className="text-sm text-slate-500">Regiões</p>
-          <p className="text-2xl font-semibold">{uniqueRegions}</p>
+          <p className="text-2xl font-normal">{uniqueRegions}</p>
         </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
+        <div className={cn(themedCardClass, "p-3")}>
           <p className="text-sm text-slate-500">Lojas</p>
-          <p className="text-2xl font-semibold">{uniqueStores}</p>
+          <p className="text-2xl font-normal">{uniqueStores}</p>
         </div>
-        <div className="rounded border border-slate-200 bg-white p-4">
+        <div className={cn(themedCardClass, "p-3")}>
           <p className="text-sm text-slate-500">Vendedores</p>
-          <p className="text-2xl font-semibold">{uniqueVendors}</p>
+          <p className="text-2xl font-normal">{uniqueVendors}</p>
         </div>
       </div>
 
-      <div className="mb-4 rounded border border-slate-200 bg-slate-100 p-4">
-        <h2 className="mb-2 font-bold">Primeiros 5 registros</h2>
-        <table className="w-full text-sm">
+      <div className={cn(themedCardClass, "mb-3 p-3")}>
+        <h2 className="mb-2 font-normal">Primeiros 5 registros</h2>
+        <div className="overflow-x-auto">
+        <table className="min-w-[680px] w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-200">
+            <tr className="border-b bg-slate-100 dark:bg-slate-800">
               <th className="p-2 text-left">ID</th>
               <th className="p-2 text-left">Proprietário</th>
               <th className="p-2 text-left">Tipo</th>
@@ -95,7 +98,7 @@ export default function TestRelatoriosPage() {
           </thead>
           <tbody>
             {previewRows.map((item) => (
-              <tr key={item.ID} className="border-b hover:bg-slate-50">
+              <tr key={item.ID} className="border-b hover:bg-slate-50 dark:hover:bg-white/5">
                 <td className="p-2">{item.ID}</td>
                 <td className="p-2">{item.Proprietario}</td>
                 <td className="p-2">{item.Tipo_Venda}</td>
@@ -106,14 +109,15 @@ export default function TestRelatoriosPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
-      <div className="mt-4 flex gap-4">
-        <Link href="/test-relatorios/marca" className="text-blue-600 hover:underline">
-          → Teste Marcas
+      <div className="mt-3 flex flex-wrap gap-3 text-sm">
+        <Link href="/relatorios/marca" className="text-sky-700 hover:underline dark:text-cyan-300">
+          → Relatório de Marcas
         </Link>
-        <Link href="/test-relatorios/vendedor" className="text-blue-600 hover:underline">
-          → Teste Vendedores
+        <Link href="/relatorios/vendedor" className="text-sky-700 hover:underline dark:text-cyan-300">
+          → Relatório de Vendedores
         </Link>
       </div>
     </div>
