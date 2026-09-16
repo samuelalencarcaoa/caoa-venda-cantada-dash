@@ -20,10 +20,6 @@ export default function Navigation({ onNavigate }: NavigationProps) {
       label: "Análises",
       items: navigations.filter((item) => item.group === "Análises"),
     },
-    {
-      label: "Recursos",
-      items: navigations.filter((item) => item.group === "Recursos"),
-    },
   ];
   return (
     <nav

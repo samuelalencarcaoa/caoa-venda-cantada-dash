@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { LogOut, UserRound } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -53,12 +51,7 @@ function getAvatarColor(seed: string) {
   return `hsl(${hue}, 65%, 45%)`;
 }
 
-type UserProps = {
-  onNavigate?: () => void;
-  onLogout?: () => void;
-};
-
-export default function User({ onNavigate, onLogout }: UserProps) {
+export default function User() {
   const { data: session } = useSession();
   const [username, setUsername] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<{ displayName?: string; imageUrl?: string }>({});
@@ -104,7 +97,7 @@ export default function User({ onNavigate, onLogout }: UserProps) {
 
   return (
     <div className="border-b border-border px-2 py-3">
-      <div className="space-y-2 rounded-xl bg-white p-3 dark:bg-slate-950">
+      <div className="rounded-xl bg-white p-3 dark:bg-slate-950">
         <div className="flex items-center gap-3">
           {imageSrc ? (
             <Image
@@ -132,18 +125,6 @@ export default function User({ onNavigate, onLogout }: UserProps) {
               {session?.user?.email || "Conta vinculada"}
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/perfil" onClick={onNavigate} className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-sky-200 px-2 text-xs font-normal text-sky-700 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-cyan-400/20 dark:text-cyan-300 dark:hover:bg-cyan-400/10">
-            <UserRound className="h-3.5 w-3.5 shrink-0" />
-            Ver perfil
-          </Link>
-          {onLogout ? (
-            <button type="button" onClick={onLogout} className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 text-xs font-normal text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10">
-              <LogOut className="h-3.5 w-3.5 shrink-0" />
-              Sair
-            </button>
-          ) : null}
         </div>
       </div>
     </div>

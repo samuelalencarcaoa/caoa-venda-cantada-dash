@@ -12,7 +12,7 @@ export type Navigation = {
   icon: LucideIcon;
   name: string;
   href: string;
-  group: "Operação" | "Análises" | "Recursos";
+  group: "Operação" | "Análises";
   target?: "_blank" | "_self" | "_parent" | "_top";
   rel?: string;
 };
@@ -33,7 +33,7 @@ export const navigations: Navigation[] = [
     icon: LayoutDashboard,
     name: "Dashboard",
     href: "/dashboard",
-    group: "Operação",
+    group: "Análises",
   },
   {
     icon: Tag,
@@ -51,7 +51,7 @@ export const navigations: Navigation[] = [
     icon: ExternalLink,
     name: "Fluxo de loja",
     href: "https://formulariosbi.caoa.com.br/fluxo-loja",
-    group: "Recursos",
+    group: "Operação",
     target: "_blank",
     rel: "noreferrer noopener",
   },
