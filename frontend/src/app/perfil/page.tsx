@@ -3,16 +3,11 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import {
   ArrowLeft,
-  BadgeInfo,
   BriefcaseBusiness,
-  Building2,
   ContactRound,
-  Globe2,
   IdCard,
-  Mail,
   MapPin,
   Phone,
-  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -67,7 +62,6 @@ function formatDateTime(value?: string | null) {
 }
 
 type ProfileField = {
-  icon: LucideIcon;
   label: string;
   value: string;
 };
@@ -78,9 +72,9 @@ type ProfileSection = {
   fields: ProfileField[];
 };
 
-function profileField(label: string, value: string | string[] | null | undefined, icon: LucideIcon): ProfileField | null {
+function profileField(label: string, value: string | string[] | null | undefined): ProfileField | null {
   const formatted = Array.isArray(value) ? value.filter(Boolean).join(" • ") : value?.trim();
-  return formatted ? { label, value: formatted, icon } : null;
+  return formatted ? { label, value: formatted } : null;
 }
 
 function availableFields(fields: Array<ProfileField | null>): ProfileField[] {
@@ -136,53 +130,53 @@ export default async function PerfilPage() {
       title: "Dados pessoais",
       icon: ContactRound,
       fields: availableFields([
-        profileField("Nome de exibição", graph?.displayName, ContactRound),
-        profileField("Nome", graph?.givenName || readRecordString(claims, "given_name"), ContactRound),
-        profileField("Sobrenome", graph?.surname || readRecordString(claims, "family_name"), ContactRound),
-        profileField("Idioma preferido", graph?.preferredLanguage || readRecordString(claims, "locale"), Globe2),
+        profileField("Nome de exibição", graph?.displayName),
+        profileField("Nome", graph?.givenName || readRecordString(claims, "given_name")),
+        profileField("Sobrenome", graph?.surname || readRecordString(claims, "family_name")),
+        profileField("Idioma preferido", graph?.preferredLanguage || readRecordString(claims, "locale")),
       ]),
     },
     {
       title: "Informações profissionais",
       icon: BriefcaseBusiness,
       fields: availableFields([
-        profileField("Cargo", graph?.jobTitle, BriefcaseBusiness),
-        profileField("Empresa", graph?.companyName, Building2),
-        profileField("Departamento", graph?.department, BadgeInfo),
-        profileField("Matrícula", graph?.employeeId, IdCard),
-        profileField("Tipo de colaborador", graph?.employeeType, IdCard),
-        profileField("Gestor direto (export AD)", adExportManager?.displayName, Users),
+        profileField("Cargo", graph?.jobTitle),
+        profileField("Empresa", graph?.companyName),
+        profileField("Departamento", graph?.department),
+        profileField("Matrícula", graph?.employeeId),
+        profileField("Tipo de colaborador", graph?.employeeType),
+        profileField("Gestor direto (export AD)", adExportManager?.displayName),
       ]),
     },
     {
       title: "Contato",
       icon: Phone,
       fields: availableFields([
-        profileField("Email", graph?.mail, Mail),
-        profileField("Celular", graph?.mobilePhone, Phone),
-        profileField("Telefones comerciais", graph?.businessPhones, Phone),
+        profileField("Email", graph?.mail),
+        profileField("Celular", graph?.mobilePhone),
+        profileField("Telefones comerciais", graph?.businessPhones),
       ]),
     },
     {
       title: "Endereço e localização",
       icon: MapPin,
       fields: availableFields([
-        profileField("Local do escritório", graph?.officeLocation, Building2),
-        profileField("Endereço", graph?.streetAddress, MapPin),
-        profileField("Cidade", graph?.city, MapPin),
-        profileField("Estado", graph?.state, MapPin),
-        profileField("País", graph?.country, MapPin),
-        profileField("CEP", graph?.postalCode, MapPin),
-        profileField("País/região de uso", graph?.usageLocation, Globe2),
+        profileField("Local do escritório", graph?.officeLocation),
+        profileField("Endereço", graph?.streetAddress),
+        profileField("Cidade", graph?.city),
+        profileField("Estado", graph?.state),
+        profileField("País", graph?.country),
+        profileField("CEP", graph?.postalCode),
+        profileField("País/região de uso", graph?.usageLocation),
       ]),
     },
     {
       title: "Conta Microsoft Entra",
       icon: IdCard,
       fields: availableFields([
-        profileField("Nome principal do usuário (UPN)", graph?.userPrincipalName || readRecordString(claims, "upn") || readRecordString(claims, "preferred_username"), IdCard),
-        profileField("ID do usuário", graph?.id || directory?.stableId, IdCard),
-        profileField("ID do tenant", readRecordString(claims, "tid"), IdCard),
+        profileField("Nome principal do usuário (UPN)", graph?.userPrincipalName || readRecordString(claims, "upn") || readRecordString(claims, "preferred_username")),
+        profileField("ID do usuário", graph?.id || directory?.stableId),
+        profileField("ID do tenant", readRecordString(claims, "tid")),
       ]),
     },
   ].filter((section) => section.fields.length > 0);
@@ -195,7 +189,7 @@ export default async function PerfilPage() {
         "min-h-[100dvh] px-4 py-4 sm:px-6 sm:py-6",
       )}
     >
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <Button asChild variant="outline" className={themedOutlineButtonClass}>
             <Link href="/dashboard">
@@ -276,17 +270,15 @@ export default async function PerfilPage() {
                   {profileSections.map((section) => {
                     const SectionIcon = section.icon;
                     return (
-                      <section key={section.title} className="min-w-0 overflow-hidden rounded-xl bg-slate-50/80 dark:bg-white/5">
-                        <h3 className={cn("flex items-center gap-2 border-b border-slate-200 px-3 py-2.5 text-sm font-normal dark:border-white/10", themedTextTitleClass)}>
+                        <section key={section.title} className="min-w-0 overflow-hidden rounded-2xl bg-slate-50/80 dark:bg-white/5">
+                        <h3 className={cn("flex items-center gap-2 border-b border-slate-200 px-4 py-3 text-base font-normal dark:border-white/10", themedTextTitleClass)}>
                           <SectionIcon className="h-4 w-4 text-sky-700 dark:text-cyan-300" />
                           {section.title}
                         </h3>
                         <dl className="divide-y divide-slate-200 dark:divide-white/10">
                           {section.fields.map((field) => {
-                            const Icon = field.icon;
                             return (
-                              <div key={field.label} className="flex min-w-0 items-start gap-2.5 px-3 py-2.5">
-                                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-sky-700 dark:text-cyan-300" />
+                              <div key={field.label} className="min-w-0 px-4 py-3">
                                 <div className="min-w-0">
                                   <dt className={themedTinyLabelClass}>{field.label}</dt>
                                   <dd className={cn("mt-1 break-words text-sm font-normal", themedTextTitleClass)}>{field.value}</dd>
