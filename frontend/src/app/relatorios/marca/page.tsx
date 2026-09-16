@@ -2060,19 +2060,7 @@ export default function MarcaVeiculoRelatorioPage() {
           </div>
         </section>
 
-        <section aria-labelledby="charts-section-title" className="space-y-4">
-          <div className="px-1">
-            <p className={cn(themedTinyLabelClass, "tracking-[0.28em]")}>Análise executiva</p>
-            <h2
-              id="charts-section-title"
-              className={cn("mt-1 text-lg font-normal tracking-[-0.02em]", themedTextTitleClass)}
-            >
-              Monitoramento das vendas cantadas
-            </h2>
-            <p className={cn("mt-1 text-xs", themedTextBodyClass)}>
-              Acompanhe ritmo, concentração e composição usando as visões interativas.
-            </p>
-          </div>
+        <section aria-label="Gráficos de vendas cantadas" className="space-y-4">
 
           <MonitoringTrendChartCard
             spec={trendChartSpec}
