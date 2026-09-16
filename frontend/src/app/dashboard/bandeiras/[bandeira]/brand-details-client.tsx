@@ -25,6 +25,7 @@ import {
   BrandDetailsAnalyticsSection,
   BrandDetailsAnalyticsSkeleton,
 } from "@/components/bandeira-details/brand-details-analytics-section";
+import { DrillDownModal, type DrillDownSelection } from "@/components/drill-down-modal";
 import { ReportErrorCard } from "@/components/report-error-card";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
@@ -48,6 +49,7 @@ import {
 } from "@/lib/brand-routing";
 import {
   type SalesIntentionReportRow,
+  type SalesIntentionDrillDownFilters,
   fetchSalesIntentions,
   formatSalesIntentionApiError,
 } from "@/lib/salesIntentionApi";
@@ -98,28 +100,29 @@ function areStringSelectionsEqual(left: string[], right: string[]) {
 }
 
 function formatPeriodSelectionLabel(start?: string, end?: string) {
+  const formatInputDate = (value: string) => {
+    const date = buildLocalDateFromInput(value);
+    return date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : value;
+  };
+
   if (!start && !end) {
     return "Todos";
   }
 
   if (start && end && start === end) {
-    return format(start, "dd/MM/yyyy", { locale: ptBR });
+    return formatInputDate(start);
   }
 
   if (start && end) {
-    return `${format(start, "dd/MM/yyyy", { locale: ptBR })} → ${format(
-      end,
-      "dd/MM/yyyy",
-      { locale: ptBR },
-    )}`;
+    return `${formatInputDate(start)} → ${formatInputDate(end)}`;
   }
 
   if (start) {
-    return `A partir de ${format(start, "dd/MM/yyyy", { locale: ptBR })}`;
+    return `A partir de ${formatInputDate(start)}`;
   }
 
   if (end) {
-    return `Até ${format(end, "dd/MM/yyyy", { locale: ptBR })}`;
+    return `Até ${formatInputDate(end)}`;
   }
 
   return "Todos";
@@ -834,6 +837,7 @@ export function BrandDetailsClient({
   );
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] =
     useState(false);
+  const [drillDownSelection, setDrillDownSelection] = useState<DrillDownSelection | null>(null);
   const closeDetailedTableModal = useCallback(() => setIsDetailedTableModalOpen(false), []);
   const [comparePreviousPeriod, setComparePreviousPeriod] = useState(false);
   const [comparisonItems, setComparisonItems] = useState<
@@ -948,6 +952,46 @@ export function BrandDetailsClient({
       appliedTipoVenda,
       appliedVersao,
     ],
+  );
+  const drillDownBaseFilters = useMemo<SalesIntentionDrillDownFilters>(
+    () => ({
+      startDate: appliedStartDate,
+      endDate: appliedEndDate,
+      bandeira: brandDetailQuery.bandeira,
+      tipoVenda: appliedTipoVenda,
+      regional: appliedRegional,
+      lojaVenda: appliedLojaVenda,
+      marcaVeiculo: appliedMarcaVeiculo,
+      versao: appliedVersao,
+      classificacao: appliedClassificacao,
+    }),
+    [
+      appliedClassificacao,
+      appliedEndDate,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedRegional,
+      appliedStartDate,
+      appliedTipoVenda,
+      appliedVersao,
+      brandDetailQuery.bandeira,
+    ],
+  );
+  const openChartDrillDown = useCallback(
+    (
+      chartTitle: string,
+      dimensionLabel: string,
+      field: "regional" | "versao" | "lojaVenda" | "classificacao",
+      value: string,
+    ) => {
+      setDrillDownSelection({
+        chartTitle,
+        dimensionLabel,
+        value,
+        filters: { ...drillDownBaseFilters, [field]: value },
+      });
+    },
+    [drillDownBaseFilters],
   );
   const filterAppliedItems = useCallback(
     (rows: SalesIntentionReportRow[]) =>
@@ -1475,6 +1519,7 @@ export function BrandDetailsClient({
           comparisonRange={comparisonRange?.previous ?? null}
           isComparisonLoading={isComparisonLoading}
           comparisonError={comparisonError}
+          onDrillDown={openChartDrillDown}
         />
 
         <section className="tablet:hidden space-y-3">
@@ -1498,12 +1543,17 @@ export function BrandDetailsClient({
           />
         </section>
       </div>
-      <MobileDetailedTableModal
+        <MobileDetailedTableModal
         open={isDetailedTableModalOpen}
         items={filteredItems}
         exportFilePrefix={`${exportFilePrefix}-mobile`}
-        onClose={closeDetailedTableModal}
-      />
+          onClose={closeDetailedTableModal}
+        />
+
+        <DrillDownModal
+          selection={drillDownSelection}
+          onClose={() => setDrillDownSelection(null)}
+        />
     </main>
   );
 }

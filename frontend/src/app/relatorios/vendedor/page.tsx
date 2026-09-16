@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { VChart } from "@visactor/react-vchart";
 import type { ILineChartSpec } from "@visactor/vchart";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ReportErrorCard } from "@/components/report-error-card";
 import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
+import { DrillDownModal, type DrillDownSelection } from "@/components/drill-down-modal";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import {
   FilterDateInput,
@@ -81,6 +82,7 @@ import type {
   SalesIntentionModelosDealerRecord,
   SalesIntentionModelosDealerResponse,
   SalesIntentionModelosDealerSources,
+  SalesIntentionDrillDownFilters,
 } from "@/lib/salesIntentionApi";
 
 const trendPalette = [
@@ -97,7 +99,6 @@ const trendPalette = [
 ] as const;
 
 const MAX_TREND_SERIES = 5;
-const TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT = 5;
 const trendOptions = [
   { value: "volume", label: "Volume" },
   { value: "acumulado", label: "Acumulado" },
@@ -458,33 +459,6 @@ function buildTrendTooltipContent(
       },
     ];
   });
-}
-
-function getTrendTooltipTrailingNonZeroTimes(points: TrendPoint[]) {
-  const orderedTimes = Array.from(
-    new Set(points.filter((point) => point.quantity > 0).map((point) => point.time)),
-  ).sort((a, b) => a - b);
-
-  return new Set(orderedTimes.slice(-TREND_TOOLTIP_TRAILING_NON_ZERO_LIMIT));
-}
-
-function getTrendTooltipDimensionPosition(
-  data: TrendTooltipDataItem[] | undefined,
-  trailingNonZeroTimes: Set<number>,
-) {
-  const referencePoint = getTrendTooltipReferencePoint(data);
-
-  if (referencePoint && trailingNonZeroTimes.has(referencePoint.time)) {
-    return {
-      right: 12,
-      top: 12,
-    };
-  }
-
-  return {
-    left: (event: MouseEvent) => event.offsetX,
-    top: 12,
-  };
 }
 
 function buildSparklineGeometry(
@@ -861,6 +835,7 @@ function ChartCard({
   hasData,
   className,
   headerRight,
+  headerBelow,
   contentClassName,
 }: {
   title: string;
@@ -869,6 +844,7 @@ function ChartCard({
   hasData: boolean;
   className?: string;
   headerRight?: ReactNode;
+  headerBelow?: ReactNode;
   contentClassName?: string;
 }) {
   return (
@@ -881,6 +857,7 @@ function ChartCard({
             </h2>
             <TooltipIcon text={tooltip} />
           </div>
+          {headerBelow ? <div className="mt-3">{headerBelow}</div> : null}
         </div>
         {headerRight ? <div className="min-w-0 lg:max-w-[560px]">{headerRight}</div> : null}
       </div>
@@ -904,6 +881,7 @@ function RankingCard({
   visibleCount,
   onVisibleCountChange,
   onExport,
+  onRowClick,
   className,
 }: {
   items: Array<{ vendor: string; proposals: number; quantity: number; avgPerProposal: number }>;
@@ -911,6 +889,7 @@ function RankingCard({
   visibleCount: RankingDisplayCount;
   onVisibleCountChange: (value: RankingDisplayCount) => void;
   onExport: () => void;
+  onRowClick?: (item: { vendor: string; proposals: number; quantity: number; avgPerProposal: number }) => void;
   className?: string;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -1017,8 +996,16 @@ function RankingCard({
                   return (
                     <tr key={`${row.vendor}-${position}`} className="odd:bg-card">
                       <td className={cn("px-3 py-2", themedTextStrongClass)}>
-                        {medal}
-                        {row.vendor}
+                        <button
+                          type="button"
+                          onClick={() => onRowClick?.(row)}
+                          className="inline-flex items-center rounded-md text-left transition hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/45 disabled:cursor-default disabled:hover:text-inherit"
+                          disabled={!onRowClick}
+                          aria-label={onRowClick ? `Ver registros de ${row.vendor}` : undefined}
+                        >
+                          {medal}
+                          {row.vendor}
+                        </button>
                       </td>
                       <td className="px-3 py-2 text-right">{row.proposals}</td>
                       <td className="px-3 py-2 text-right font-normal">
@@ -1403,7 +1390,6 @@ function TrendFullscreenModal({
   hiddenSeries,
   onToggleSeriesVisibility,
   trendMetric,
-  tooltipParentElementId,
   chartKey,
   chartSpec,
   series,
@@ -1421,7 +1407,6 @@ function TrendFullscreenModal({
   hiddenSeries: string[];
   onToggleSeriesVisibility: (vendor: string) => void;
   trendMetric: TrendMetric;
-  tooltipParentElementId: string;
   chartKey: string;
   chartSpec: ILineChartSpec;
   series: TrendSeriesSummary[];
@@ -1461,11 +1446,11 @@ function TrendFullscreenModal({
       ...chartSpec,
       tooltip: {
         ...(chartSpec.tooltip ?? {}),
-        parentElement: tooltipParentElementId,
+        confine: false,
         offset: { x: 12, y: 0 },
       },
     }),
-    [chartSpec, tooltipParentElementId],
+    [chartSpec],
   );
 
   if (!open) {
@@ -1565,7 +1550,7 @@ function TrendFullscreenModal({
             </div>
 
             <div className="min-w-0 space-y-1.5 px-2">
-              <p className={themedTinyLabelClass}>Agrupamento · {trendGrainLabel}</p>
+              <p className={themedTinyLabelClass}>{trendGrainLabel}</p>
               <ChartToggle
                 options={trendGroupingOptions}
                 value={trendGrouping}
@@ -1575,7 +1560,6 @@ function TrendFullscreenModal({
             </div>
 
             <div
-              id={tooltipParentElementId}
               className="relative w-full overflow-hidden rounded-[24px] border border-slate-200/70 bg-slate-50/70 h-[320px] phone:h-[360px] tablet:h-[420px] desktop:flex-1 desktop:h-auto desktop:min-h-0 desktop:overflow-hidden dark:border-white/10 dark:bg-white/5"
             >
               <VChart
@@ -1875,12 +1859,10 @@ export default function VendedorRelatorioPage() {
     appliedMarcaVeiculo, appliedModelo, appliedVersao, appliedClassificacao,
   ].filter((values) => values.length > 0).length;
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
+  const [drillDownSelection, setDrillDownSelection] = useState<DrillDownSelection | null>(null);
   const appliedFilterChipsDrag = useHorizontalDragScroll<HTMLDivElement>();
 
   const todayInput = useMemo(() => getTodayInputValue(), []);
-  const chartTooltipRootId = useId().replace(/:/g, "");
-  const inlineTrendTooltipParentElementId = `${chartTooltipRootId}-trend-inline`;
-  const fullscreenTrendTooltipParentElementId = `${chartTooltipRootId}-trend-fullscreen`;
 
   useEffect(() => {
     let active = true;
@@ -2119,6 +2101,41 @@ export default function VendedorRelatorioPage() {
     appliedTipoVenda,
     appliedVersao,
   ]);
+
+  const reportDrillDownFilters = useMemo<SalesIntentionDrillDownFilters>(
+    () => ({
+      startDate: appliedStartDate,
+      endDate: appliedEndDate,
+      tipoVenda: appliedTipoVenda,
+      bandeira: appliedBandeira,
+      regional: appliedRegional,
+      lojaVenda: appliedLojaVenda,
+      marcaVeiculo: appliedMarcaVeiculo,
+      versao: appliedVersao,
+      classificacao: appliedClassificacao,
+    }),
+    [
+      appliedBandeira,
+      appliedClassificacao,
+      appliedEndDate,
+      appliedLojaVenda,
+      appliedMarcaVeiculo,
+      appliedRegional,
+      appliedStartDate,
+      appliedTipoVenda,
+      appliedVersao,
+    ],
+  );
+
+  const openVendorDrillDown = (vendor: string) => {
+    setDrillDownSelection({
+      chartTitle: "Ranking de Vendedores",
+      dimensionLabel: "Vendedor",
+      value: vendor,
+      aggregateValue: vendorRanking.find((item) => item.vendor === vendor)?.quantity,
+      filters: { ...reportDrillDownFilters, proprietario: vendor },
+    });
+  };
 
   const lastUpdatedText = lastUpdatedAt ? format(lastUpdatedAt, "dd/MM/yyyy HH:mm:ss") : "Carregando...";
 
@@ -2433,11 +2450,6 @@ export default function VendedorRelatorioPage() {
     [trendSeriesSummaries],
   );
 
-  const trendTooltipTrailingNonZeroTimes = useMemo(
-    () => getTrendTooltipTrailingNonZeroTimes(visibleTrendChartData),
-    [visibleTrendChartData],
-  );
-
   const visibleTrendSeriesSummaries = useMemo(
     () => trendSeriesSummaries.filter((series) => !hiddenTrendSeries.includes(series.vendor)),
     [hiddenTrendSeries, trendSeriesSummaries],
@@ -2537,8 +2549,7 @@ export default function VendedorRelatorioPage() {
       ],
       tooltip: {
         trigger: ["hover", "click"],
-        confine: true,
-        parentElement: inlineTrendTooltipParentElementId,
+        confine: false,
         activeType: "dimension",
         style: {
           titleLabel: { fontWeight: 400 },
@@ -2546,15 +2557,13 @@ export default function VendedorRelatorioPage() {
         },
         offset: { x: 0, y: 0 },
         dimension: {
+          // A fixed safe position keeps the DOM tooltip above the plot and
+          // prevents it from being cut off below the horizontal axis.
+          position: { top: 12, right: 12 },
           title: {
             visible: true,
             value: (datum) => formatTrendTooltipTitle(datum as TrendPoint | undefined),
           },
-          position: (data) =>
-            getTrendTooltipDimensionPosition(
-              data as TrendTooltipDataItem[] | undefined,
-              trendTooltipTrailingNonZeroTimes,
-            ),
           updateContent: (_prev, data) =>
             buildTrendTooltipContent(
               data as TrendTooltipDataItem[],
@@ -2585,12 +2594,10 @@ export default function VendedorRelatorioPage() {
       area: { visible: false },
     }),
     [
-      inlineTrendTooltipParentElementId,
       isSingleDayHourlyTrend,
       trendHourRange,
       trendSeriesColors,
       trendSeriesSummaries,
-      trendTooltipTrailingNonZeroTimes,
       visibleTrendSeriesSummaries,
       visibleTrendChartData,
     ],
@@ -2620,8 +2627,7 @@ export default function VendedorRelatorioPage() {
       tooltip: {
         ...(trendChartSpec.tooltip ?? {}),
         activeType: "dimension",
-        confine: true,
-        parentElement: fullscreenTrendTooltipParentElementId,
+        confine: false,
         offset: { x: 0, y: 0 },
       },
       legends: {
@@ -2655,7 +2661,7 @@ export default function VendedorRelatorioPage() {
         },
       },
     }),
-    [fullscreenTrendTooltipParentElementId, isSingleDayPeriod, trendChartSpec],
+    [isSingleDayPeriod, trendChartSpec],
   );
 
   const totalQuantity = useMemo(
@@ -3219,62 +3225,65 @@ export default function VendedorRelatorioPage() {
           ) : null}
 
           <div className="flex flex-col gap-4 xl:grid xl:grid-cols-2 xl:items-stretch">
-            <div className="min-w-0 space-y-2">
-              <div className="min-w-0 space-y-1.5 px-1">
-                <p className={themedTinyLabelClass}>Agrupamento · {trendGrainLabel}</p>
-                <ChartToggle
-                  options={trendGroupingOptions}
-                  value={trendGrouping}
-                  onChange={(value) => setTrendGrouping(value as TrendGrouping)}
-                  ariaLabel="Agrupamento do comparativo"
-                />
-              </div>
-            <ChartCard
-              title="Comparativo"
-              tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
-              hasData={trendChartData.length > 0}
-              className="h-full w-full flex flex-col xl:h-[520px]"
-              headerRight={
-                <TrendVendorSelector
-                  value={selectedComparisonVendors}
-                  options={comparisonVendorOptions}
-                  onChange={setSelectedComparisonVendors}
-                  trendView={trendView}
-                  onTrendViewChange={setTrendView}
-                  trendMetric={trendMetric}
-                  onTrendMetricChange={setTrendMetric}
-                  onOpenFullscreen={
-                    trendChartData.length > 0 ? () => setIsTrendFullscreenOpen(true) : undefined
-                  }
-                  disabled={comparisonVendorOptions.length === 0}
-                />
-              }
-              contentClassName="h-[280px] min-h-0 tablet:h-[340px] xl:flex-1"
-            >
-              <div className="tablet:hidden">
-                <TrendComparisonRail
-                  series={trendSeriesSummaries}
-                  trendView={trendView}
-                  trendMetric={trendMetric}
-                  hiddenSeries={hiddenTrendSeries}
-                  onToggleSeriesVisibility={toggleTrendSeriesVisibility}
-                />
-              </div>
-              <div
-                id={inlineTrendTooltipParentElementId}
-                className="hidden h-full min-h-0 tablet:block"
+            <div className="min-w-0">
+              <ChartCard
+                title="Comparativo"
+                tooltip="Compare os vendedores selecionados em volume ou acumulado. Sem seleção, o gráfico usa os 5 maiores do recorte."
+                hasData={trendChartData.length > 0}
+                className="flex h-full w-full flex-col xl:h-[520px]"
+                headerRight={
+                  <TrendVendorSelector
+                    value={selectedComparisonVendors}
+                    options={comparisonVendorOptions}
+                    onChange={setSelectedComparisonVendors}
+                    trendView={trendView}
+                    onTrendViewChange={setTrendView}
+                    trendMetric={trendMetric}
+                    onTrendMetricChange={setTrendMetric}
+                    onOpenFullscreen={
+                      trendChartData.length > 0 ? () => setIsTrendFullscreenOpen(true) : undefined
+                    }
+                    disabled={comparisonVendorOptions.length === 0}
+                  />
+                }
+                headerBelow={
+                  <div className="min-w-0 space-y-1.5">
+                    <p className={themedTinyLabelClass}>{trendGrainLabel}</p>
+                    <ChartToggle
+                      options={trendGroupingOptions}
+                      value={trendGrouping}
+                      onChange={(value) => setTrendGrouping(value as TrendGrouping)}
+                      ariaLabel="Agrupamento do comparativo"
+                    />
+                  </div>
+                }
+                contentClassName="flex h-[330px] min-h-0 flex-col tablet:h-[390px] xl:flex-1"
               >
-                <VChart
-                  key={trendChartKey}
-                  spec={inlineTrendChartSpec}
-                  className="h-full w-full"
-                  style={{ height: "100%" }}
-                  onError={(err) =>
-                    setChartError(err ? String(err) : "Não foi possível renderizar este gráfico.")
-                  }
-                />
+              <div className="min-h-0 flex-1">
+                <div className="tablet:hidden">
+                  <TrendComparisonRail
+                    series={trendSeriesSummaries}
+                    trendView={trendView}
+                    trendMetric={trendMetric}
+                    hiddenSeries={hiddenTrendSeries}
+                    onToggleSeriesVisibility={toggleTrendSeriesVisibility}
+                  />
+                </div>
+                <div
+                  className="relative hidden h-full min-h-0 overflow-visible tablet:block"
+                >
+                  <VChart
+                    key={trendChartKey}
+                    spec={inlineTrendChartSpec}
+                    className="h-full w-full"
+                    style={{ height: "100%" }}
+                    onError={(err) =>
+                      setChartError(err ? String(err) : "Não foi possível renderizar este gráfico.")
+                    }
+                  />
+                </div>
               </div>
-            </ChartCard>
+              </ChartCard>
             </div>
 
             <RankingCard
@@ -3283,6 +3292,7 @@ export default function VendedorRelatorioPage() {
               visibleCount={rankingVisibleCount}
               onVisibleCountChange={setRankingVisibleCount}
               onExport={exportToExcel}
+              onRowClick={(row) => openVendorDrillDown(row.vendor)}
               className="h-full w-full xl:h-[520px]"
             />
           </div>
@@ -3295,7 +3305,6 @@ export default function VendedorRelatorioPage() {
           subtitle={`Visualização expandida em ${trendGrainLabel.toLowerCase()} com os filtros atuais.`}
           periodText={displayActivePeriodText}
           filterChips={appliedFilterChips.slice(0, -1)}
-          tooltipParentElementId={fullscreenTrendTooltipParentElementId}
           chartKey={trendChartKey}
           chartSpec={fullscreenTrendChartSpec}
           series={trendSeriesSummaries}
@@ -3333,6 +3342,11 @@ export default function VendedorRelatorioPage() {
           items={filteredItems}
           exportFilePrefix="relatorio-vendedores-mobile"
           onClose={() => setIsDetailedTableModalOpen(false)}
+        />
+
+        <DrillDownModal
+          selection={drillDownSelection}
+          onClose={() => setDrillDownSelection(null)}
         />
       </div>
     </main>

@@ -41,19 +41,35 @@ const inFlightQueries = new Map<string, Promise<SalesIntentionListRecord[]>>();
 export type SalesIntentionSearchFilters = {
   startDate?: Date;
   endDate?: Date;
-  tipoVenda?: string;
-  proprietario?: string;
-  bandeira?: string;
-  lojaVenda?: string;
-  marcaVeiculo?: string;
-  versao?: string;
-  classificacao?: string;
+  tipoVenda?: string | string[];
+  proprietario?: string | string[];
+  bandeira?: string | string[];
+  lojaVenda?: string | string[];
+  marcaVeiculo?: string | string[];
+  versao?: string | string[];
+  classificacao?: string | string[];
   quantidade?: number;
   ano_fabricacao?: number;
   ano_modelo?: number;
-  placa?: string;
-  regional?: string;
+  placa?: string | string[];
+  regional?: string | string[];
 };
+
+function buildStringFilter(value?: string | string[]): Prisma.StringFilter | undefined {
+  const values = (Array.isArray(value) ? value : [value]).filter(
+    (item): item is string => Boolean(item?.trim()),
+  );
+  if (!values.length) return undefined;
+  return values.length === 1 ? { contains: values[0] } : { in: values };
+}
+
+function buildExactStringFilter(value?: string | string[]): Prisma.StringFilter | undefined {
+  const values = (Array.isArray(value) ? value : [value]).filter(
+    (item): item is string => Boolean(item?.trim()),
+  );
+  if (!values.length) return undefined;
+  return values.length === 1 ? { equals: values[0] } : { in: values };
+}
 
 function buildSalesIntentionWhere(filters: SalesIntentionSearchFilters): Prisma.SalesIntentionWhereInput {
   const where: Prisma.SalesIntentionWhereInput = {};
@@ -65,33 +81,25 @@ function buildSalesIntentionWhere(filters: SalesIntentionSearchFilters): Prisma.
     };
   }
 
-  if (filters.tipoVenda) {
-    where.tipoVenda = { contains: filters.tipoVenda };
-  }
+  // "NOVOS" is contained in "SEMINOVOS". This dimension must be an exact
+  // match so a drill-down preserves the same context as its chart bar.
+  const tipoVenda = buildExactStringFilter(filters.tipoVenda);
+  const proprietario = buildStringFilter(filters.proprietario);
+  const bandeira = buildStringFilter(filters.bandeira);
+  const lojaVenda = buildStringFilter(filters.lojaVenda);
+  const marcaVeiculo = buildStringFilter(filters.marcaVeiculo);
+  const versao = buildStringFilter(filters.versao);
+  const classificacao = buildStringFilter(filters.classificacao);
+  const placa = buildStringFilter(filters.placa);
+  const regional = buildStringFilter(filters.regional);
 
-  if (filters.proprietario) {
-    where.proprietario = { contains: filters.proprietario };
-  }
-
-  if (filters.bandeira) {
-    where.bandeira = { contains: filters.bandeira };
-  }
-
-  if (filters.lojaVenda) {
-    where.lojaVenda = { contains: filters.lojaVenda };
-  }
-
-  if (filters.marcaVeiculo) {
-    where.marcaVeiculo = { contains: filters.marcaVeiculo };
-  }
-
-  if (filters.versao) {
-    where.versao = { contains: filters.versao };
-  }
-
-  if (filters.classificacao) {
-    where.classificacao = { contains: filters.classificacao };
-  }
+  if (tipoVenda) where.tipoVenda = tipoVenda;
+  if (proprietario) where.proprietario = proprietario;
+  if (bandeira) where.bandeira = bandeira;
+  if (lojaVenda) where.lojaVenda = lojaVenda;
+  if (marcaVeiculo) where.marcaVeiculo = marcaVeiculo;
+  if (versao) where.versao = versao;
+  if (classificacao) where.classificacao = classificacao;
 
   if (filters.quantidade !== undefined) {
     where.quantidade = filters.quantidade;
@@ -105,13 +113,8 @@ function buildSalesIntentionWhere(filters: SalesIntentionSearchFilters): Prisma.
     where.ano_modelo = filters.ano_modelo;
   }
 
-  if (filters.placa) {
-    where.placa = { contains: filters.placa };
-  }
-
-  if (filters.regional) {
-    where.regional = { contains: filters.regional };
-  }
+  if (placa) where.placa = placa;
+  if (regional) where.regional = regional;
 
   return where;
 }
@@ -257,7 +260,7 @@ export function invalidateSalesIntentionQueryCache() {
 }
 
 export class SalesIntentionRepository {
-  public async findAll(dateRange = getCurrentMonthDateRange(), tipoVenda?: string) {
+  public async findAll(dateRange = getCurrentMonthDateRange(), tipoVenda?: string | string[]) {
     const key = buildSalesIntentionQueryCacheKey('list', {
       dateRange: { gte: dateRange.gte, lt: dateRange.lt },
       tipoVenda

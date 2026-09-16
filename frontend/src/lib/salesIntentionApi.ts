@@ -215,8 +215,22 @@ async function fetchApi<T>(path: string, options?: RequestInit) {
 export type SalesIntentionDateRange = {
   startDate?: string;
   endDate?: string;
+  proprietario?: string | string[];
   tipoVenda?: 'NOVOS' | 'SEMINOVOS';
   bandeira?: string;
+};
+
+export type SalesIntentionDrillDownFilters = {
+  startDate?: string;
+  endDate?: string;
+  proprietario?: string | string[];
+  tipoVenda?: string | string[];
+  bandeira?: string | string[];
+  lojaVenda?: string | string[];
+  marcaVeiculo?: string | string[];
+  versao?: string | string[];
+  classificacao?: string | string[];
+  regional?: string | string[];
 };
 
 export async function fetchSalesIntentions(
@@ -241,6 +255,26 @@ export async function fetchSalesIntentions(
 
 export async function fetchAllSalesIntentions(): Promise<SalesIntentionReportRow[]> {
   const data = await fetchApi<SalesIntentionApiRecord[]>('/api/sales-intentions/search');
+  return data.map(transformApiRecord);
+}
+
+/** Fetches the source records for a chart segment using the same server filters. */
+export async function fetchSalesIntentionDrillDown(
+  filters: SalesIntentionDrillDownFilters,
+  signal?: AbortSignal,
+): Promise<SalesIntentionReportRow[]> {
+  const searchParams = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    values.forEach((item) => {
+      if (item?.trim()) searchParams.append(key, item);
+    });
+  });
+
+  const query = searchParams.size ? `?${searchParams.toString()}` : "";
+  const data = await fetchApi<SalesIntentionApiRecord[]>(`/api/sales-intentions/search${query}`, {
+    signal,
+  });
   return data.map(transformApiRecord);
 }
 

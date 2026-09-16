@@ -45,6 +45,12 @@ type BrandDetailsAnalyticsSectionProps = {
   comparisonRange?: { startDate: string; endDate: string } | null;
   isComparisonLoading?: boolean;
   comparisonError?: string | null;
+  onDrillDown?: (
+    chartTitle: string,
+    dimensionLabel: string,
+    field: "regional" | "versao" | "lojaVenda" | "classificacao",
+    value: string,
+  ) => void;
   className?: string;
 };
 
@@ -366,6 +372,7 @@ function ChartCard({
   contentClassName,
   chartHeight,
   footer,
+  onDataClick,
 }: {
   title: string;
   tooltip: string;
@@ -379,6 +386,7 @@ function ChartCard({
   contentClassName?: string;
   chartHeight?: number;
   footer?: string;
+  onDataClick?: (label: string) => void;
 }) {
   return (
     <article className={cn(themedCardClass, "w-full min-w-0 overflow-hidden px-4 py-4 sm:px-5 sm:py-5", className)}>
@@ -413,8 +421,24 @@ function ChartCard({
             <VChart
               key={chartKey}
               spec={spec}
-              className="block h-full w-full max-w-full min-w-0"
+              className={cn("block h-full w-full max-w-full min-w-0", onDataClick && "cursor-pointer")}
               style={{ height: "100%", width: "100%", maxWidth: "100%", minWidth: 0 }}
+              onClick={(event) => {
+                const chartEvent = event as {
+                  datum?: unknown;
+                  data?: { datum?: unknown } | Array<{ datum?: unknown }>;
+                };
+                const candidate = chartEvent.datum ?? (
+                  Array.isArray(chartEvent.data)
+                    ? chartEvent.data[0]?.datum
+                    : chartEvent.data?.datum
+                );
+                const datum = (Array.isArray(candidate) ? candidate[0] : candidate) as
+                  | { label?: unknown }
+                  | undefined;
+                const label = typeof datum?.label === "string" ? datum.label.trim() : "";
+                if (label) onDataClick?.(label);
+              }}
             />
           </div>
         ) : (
@@ -619,6 +643,7 @@ export function BrandDetailsAnalyticsSection({
   comparisonRange = null,
   isComparisonLoading = false,
   comparisonError = null,
+  onDrillDown,
   className,
 }: BrandDetailsAnalyticsSectionProps) {
   const { resolvedTheme, theme } = useTheme();
@@ -850,7 +875,7 @@ export function BrandDetailsAnalyticsSection({
         { orient: "left", label: { formatMethod: formatCompactAxisValue, style: { fill: chartMutedColor, fontSize: isCompactChartLayout ? 10 : 11 } }, grid: { style: { stroke: chartGridColor, lineDash: [4, 4] } } },
       ],
       tooltip: {
-        trigger: ["hover", "click"], confine: true, parentElement: "brand-comparison-trend-chart", activeType: "dimension",
+        trigger: ["hover", "click"], confine: false, activeType: "dimension",
         style: {
           panel: {
             padding: { top: 7, right: 9, bottom: 7, left: 9 },
@@ -1024,21 +1049,7 @@ export function BrandDetailsAnalyticsSection({
           },
         },
       ],
-      tooltip: {
-        trigger: ["hover", "click"],
-        confine: true,
-        mark: {
-          title: {
-            value: (datum) => String(datum?.label ?? "Modelo"),
-          },
-          content: [
-            {
-              key: "Quantidade",
-              value: (datum) => formatNumber(Number(datum?.value || 0)),
-            },
-          ],
-        },
-      },
+      tooltip: { visible: false },
     }),
     [
       barAxisFontSize,
@@ -1139,21 +1150,7 @@ export function BrandDetailsAnalyticsSection({
           },
         },
       ],
-      tooltip: {
-        trigger: ["hover", "click"],
-        confine: true,
-        mark: {
-          title: {
-            value: (datum) => String(datum?.label ?? "Loja"),
-          },
-          content: [
-            {
-              key: "Quantidade",
-              value: (datum) => formatNumber(Number(datum?.value || 0)),
-            },
-          ],
-        },
-      },
+      tooltip: { visible: false },
     }),
     [
       barAxisFontSize,
@@ -1254,21 +1251,7 @@ export function BrandDetailsAnalyticsSection({
           },
         },
       ],
-      tooltip: {
-        trigger: ["hover", "click"],
-        confine: true,
-        mark: {
-          title: {
-            value: (datum) => String(datum?.label ?? "Classificação"),
-          },
-          content: [
-            {
-              key: "Quantidade",
-              value: (datum) => formatNumber(Number(datum?.value || 0)),
-            },
-          ],
-        },
-      },
+      tooltip: { visible: false },
     }),
     [
       barAxisFontSize,
@@ -1369,21 +1352,7 @@ export function BrandDetailsAnalyticsSection({
           },
         },
       ],
-      tooltip: {
-        trigger: ["hover", "click"],
-        confine: true,
-        mark: {
-          title: {
-            value: (datum) => String(datum?.label ?? "Regional"),
-          },
-          content: [
-            {
-              key: "Quantidade",
-              value: (datum) => formatNumber(Number(datum?.value || 0)),
-            },
-          ],
-        },
-      },
+      tooltip: { visible: false },
     }),
     [
       barAxisFontSize,
@@ -1467,6 +1436,7 @@ export function BrandDetailsAnalyticsSection({
             className={horizontalBarChartCardClassName}
             contentClassName={barChartContentClassName}
             chartHeight={regionalChartHeight}
+            onDataClick={(value) => onDrillDown?.("Vendas Cantadas por Regional", "Regional", "regional", value)}
           />
 
           <ChartCard
@@ -1480,6 +1450,7 @@ export function BrandDetailsAnalyticsSection({
             className={horizontalBarChartCardClassName}
             contentClassName={barChartContentClassName}
             chartHeight={modelChartHeight}
+            onDataClick={(value) => onDrillDown?.("Vendas Cantadas por Modelo", "Versão", "versao", value)}
           />
 
           <ChartCard
@@ -1493,6 +1464,7 @@ export function BrandDetailsAnalyticsSection({
             className={horizontalBarChartCardClassName}
             contentClassName={barChartContentClassName}
             chartHeight={storeChartHeight}
+            onDataClick={(value) => onDrillDown?.("Vendas Cantadas por Loja", "Loja", "lojaVenda", value)}
           />
 
           <ChartCard
@@ -1506,6 +1478,7 @@ export function BrandDetailsAnalyticsSection({
             className={horizontalBarChartCardClassName}
             contentClassName={barChartContentClassName}
             chartHeight={classificationChartHeight}
+            onDataClick={(value) => onDrillDown?.("Vendas Cantadas por Classificação", "Classificação", "classificacao", value)}
           />
         </div>
       ) : (

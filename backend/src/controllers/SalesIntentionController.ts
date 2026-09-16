@@ -39,6 +39,16 @@ function readQueryText(value: unknown): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function readQueryTexts(value: unknown): string | string[] | undefined {
+  const values = (Array.isArray(value) ? value : [value])
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (!values.length) return undefined;
+  return values.length === 1 ? values[0] : [...new Set(values)];
+}
+
 function parseIsoDate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) {
@@ -105,17 +115,15 @@ function parseOptionalPositiveIntegerQueryParam(value: unknown, fieldName: strin
 }
 
 function normalizeTipoVendaQueryParam(value: unknown) {
-  const text = readQueryText(value);
-  if (!text) {
+  const texts = readQueryTexts(value);
+  if (!texts) {
     return undefined;
   }
-
-  const normalized = text.toUpperCase();
-  if (normalized !== 'NOVOS' && normalized !== 'SEMINOVOS') {
+  const values = (Array.isArray(texts) ? texts : [texts]).map((text) => text.toUpperCase());
+  if (values.some((item) => item !== 'NOVOS' && item !== 'SEMINOVOS')) {
     throw badRequest('tipoVenda deve ser NOVOS ou SEMINOVOS.');
   }
-
-  return normalized;
+  return values.length === 1 ? values[0] : values;
 }
 
 function buildNextDay(date: Date) {
@@ -168,14 +176,14 @@ function parseSearchQuery(query: Request['query']): SalesIntentionSearchFilters 
     'ano_fabricacao'
   );
   const anoModelo = parseOptionalPositiveIntegerQueryParam(query.ano_modelo, 'ano_modelo');
-  const proprietario = readQueryText(query.proprietario);
-  const bandeira = readQueryText(query.bandeira);
-  const lojaVenda = readQueryText(query.lojaVenda);
-  const marcaVeiculo = readQueryText(query.marcaVeiculo);
-  const versao = readQueryText(query.versao);
-  const classificacao = readQueryText(query.classificacao);
-  const placa = readQueryText(query.placa);
-  const regional = readQueryText(query.regional);
+  const proprietario = readQueryTexts(query.proprietario);
+  const bandeira = readQueryTexts(query.bandeira);
+  const lojaVenda = readQueryTexts(query.lojaVenda);
+  const marcaVeiculo = readQueryTexts(query.marcaVeiculo);
+  const versao = readQueryTexts(query.versao);
+  const classificacao = readQueryTexts(query.classificacao);
+  const placa = readQueryTexts(query.placa);
+  const regional = readQueryTexts(query.regional);
 
   return {
     ...(startDate ? { startDate } : {}),

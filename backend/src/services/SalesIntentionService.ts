@@ -8,7 +8,7 @@ import { isPrismaErrorCode } from '../utils/prismaResilience';
 export class SalesIntentionService {
   private repository = new SalesIntentionRepository();
 
-  public async listAll(dateRange?: { gte: Date; lt: Date }, tipoVenda?: string) {
+  public async listAll(dateRange?: { gte: Date; lt: Date }, tipoVenda?: string | string[]) {
     return this.repository.findAll(dateRange, tipoVenda);
   }
 

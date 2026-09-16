@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DrillDownModal, type DrillDownSelection } from "@/components/drill-down-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { useSalesIntentions } from "@/hooks/useSalesIntentions";
@@ -44,7 +45,7 @@ import {
   dashboardBrandNames,
   type DashboardPeriod,
 } from "@/lib/brand-routing";
-import type { SalesIntentionReportRow } from "@/lib/salesIntentionApi";
+import type { SalesIntentionDrillDownFilters, SalesIntentionReportRow } from "@/lib/salesIntentionApi";
 import {
   themedBadgeClass,
   themedCardClass,
@@ -659,12 +660,14 @@ function RankingCard({
   data,
   contextLabel,
   tooltip,
+  onItemClick,
   className = "",
 }: {
   title: string;
   data: CountItem[];
   contextLabel?: string;
   tooltip?: string;
+  onItemClick?: (item: CountItem) => void;
   className?: string;
 }) {
   const max = data[0]?.value || 1;
@@ -693,7 +696,14 @@ function RankingCard({
       <div className="max-h-[210px] space-y-3 overflow-y-auto pr-1">
         {data.length ? (
           data.map((item) => (
-            <div key={item.label}>
+            <button
+              key={item.label}
+              type="button"
+              disabled={!onItemClick || item.label === "Outros"}
+              onClick={() => onItemClick?.(item)}
+              className="group/drill block w-full text-left disabled:cursor-default"
+              aria-label={onItemClick && item.label !== "Outros" ? `Ver registros de ${item.label}` : undefined}
+            >
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
                 <span
                   className={cn("truncate font-normal", themedTextStrongClass)}
@@ -707,11 +717,11 @@ function RankingCard({
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400"
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-opacity group-hover/drill:opacity-80"
                   style={{ width: `${Math.max(5, (item.value / max) * 100)}%` }}
                 />
               </div>
-            </div>
+            </button>
           ))
         ) : (
           <p className={cn("py-12 text-center text-sm", themedTextMutedClass)}>
@@ -886,9 +896,17 @@ function MobileBrandCard({
 function TabletBrandSection({
   summary,
   active = false,
+  onDrillDown,
 }: {
   summary: BrandInsightSummary;
   active?: boolean;
+  onDrillDown?: (
+    brand: string,
+    chartTitle: string,
+    dimensionLabel: string,
+    field: "regional" | "bandeira" | "versao" | "lojaVenda",
+    value: string,
+  ) => void;
 }) {
   return (
     <DashboardCard
@@ -950,6 +968,7 @@ function TabletBrandSection({
             data={summary.regionData}
             contextLabel={summary.brand}
             tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+            onItemClick={(item) => onDrillDown?.(summary.brand, "Venda Cantada x Região", "Região", "regional", item.label)}
           />
           <RankingCard
             title={summary.brand === "SEMINOVOS" ? "Venda Cantada x Bandeira" : "Venda Cantada x Modelo"}
@@ -960,12 +979,20 @@ function TabletBrandSection({
                 ? "Quantidade Total de Vendas Cantadas por bandeira no período selecionado."
                 : "Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
             }
+            onItemClick={(item) => onDrillDown?.(
+              summary.brand,
+              summary.brand === "SEMINOVOS" ? "Venda Cantada x Bandeira" : "Venda Cantada x Modelo",
+              summary.brand === "SEMINOVOS" ? "Bandeira" : "Versão",
+              summary.brand === "SEMINOVOS" ? "bandeira" : "versao",
+              item.label,
+            )}
           />
           <RankingCard
             title="Venda Cantada x Lojas"
             data={summary.storeData}
             contextLabel={summary.brand}
             tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
+            onItemClick={(item) => onDrillDown?.(summary.brand, "Venda Cantada x Lojas", "Loja", "lojaVenda", item.label)}
           />
         </div>
       </div>
@@ -1041,6 +1068,7 @@ export default function DashboardV2Page() {
   const [appliedEndDate, setAppliedEndDate] = useState("");
   const [isNoDataModalOpen, setIsNoDataModalOpen] = useState(false);
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
+  const [drillDownSelection, setDrillDownSelection] = useState<DrillDownSelection | null>(null);
   const [lastAutoOpenedNoticeKey, setLastAutoOpenedNoticeKey] = useState<string | null>(null);
   const mobileBrandRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const brandRailDrag = useHorizontalDragScroll<HTMLDivElement>();
@@ -1168,6 +1196,28 @@ export default function DashboardV2Page() {
       endDate: format(range.end, "yyyy-MM-dd")
     };
   }, [appliedEndDate, appliedStartDate, period, range.end, range.start]);
+
+  const openDrillDown = (
+    chartTitle: string,
+    dimensionLabel: string,
+    field: keyof Pick<SalesIntentionDrillDownFilters, "bandeira" | "lojaVenda" | "marcaVeiculo" | "versao" | "regional" | "tipoVenda">,
+    value: string,
+    baseFilters: SalesIntentionDrillDownFilters = {},
+  ) => {
+    if (value === "Outros") return;
+    setDrillDownSelection({
+      chartTitle,
+      dimensionLabel,
+      value,
+      filters: { ...salesQuery, ...baseFilters, [field]: value },
+    });
+  };
+
+  const getBrandDrillDownFilters = (brand: string): SalesIntentionDrillDownFilters => (
+    brand === "SEMINOVOS"
+      ? { tipoVenda: "SEMINOVOS" }
+      : { tipoVenda: "NOVOS", bandeira: brand }
+  );
 
   const brandDetailDateRange = useMemo(() => {
     if (period === "intervalo") {
@@ -1918,6 +1968,7 @@ export default function DashboardV2Page() {
               data={selectedMobileBrandRegionData}
               contextLabel={selectedMobileBrand}
               tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+              onItemClick={(item) => openDrillDown("Venda Cantada x Região", "Região", "regional", item.label, getBrandDrillDownFilters(selectedMobileBrand))}
             />
             <RankingCard
               title={selectedMobileBrand === "SEMINOVOS" ? "Venda Cantada x Bandeira" : "Venda Cantada x Modelo"}
@@ -1928,12 +1979,14 @@ export default function DashboardV2Page() {
                   ? "Quantidade Total de Vendas Cantadas por bandeira no período selecionado."
                   : "Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
               }
+              onItemClick={(item) => openDrillDown(selectedMobileBrand === "SEMINOVOS" ? "Venda Cantada x Bandeira" : "Venda Cantada x Modelo", selectedMobileBrand === "SEMINOVOS" ? "Bandeira" : "Versão", selectedMobileBrand === "SEMINOVOS" ? "bandeira" : "versao", item.label, getBrandDrillDownFilters(selectedMobileBrand))}
             />
             <RankingCard
               title="Venda Cantada x Lojas"
               data={selectedMobileBrandStoreData}
               contextLabel={selectedMobileBrand}
               tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
+              onItemClick={(item) => openDrillDown("Venda Cantada x Lojas", "Loja", "lojaVenda", item.label, getBrandDrillDownFilters(selectedMobileBrand))}
             />
           </div>
         </section>
@@ -2227,6 +2280,9 @@ export default function DashboardV2Page() {
                   <TabletBrandSection
                     summary={summary}
                     active={selectedMobileBrand === summary.brand}
+                    onDrillDown={(brand, chartTitle, dimensionLabel, field, value) =>
+                      openDrillDown(chartTitle, dimensionLabel, field, value, getBrandDrillDownFilters(brand))
+                    }
                   />
                 </div>
               </div>
@@ -2466,6 +2522,7 @@ export default function DashboardV2Page() {
                 )}
                 contextLabel={brand}
                 tooltip="Quantidade Total de Vendas Cantadas por região da marca selecionada no período."
+                onItemClick={(item) => openDrillDown("Venda Cantada x Região", "Região", "regional", item.label, getBrandDrillDownFilters(brand))}
               />
             ))}
 
@@ -2473,6 +2530,7 @@ export default function DashboardV2Page() {
               title="Venda Cantada x Região"
               data={regionData}
               tooltip="Quantidade Total de Vendas Cantadas por região no período selecionado."
+              onItemClick={(item) => openDrillDown("Venda Cantada x Região", "Região", "regional", item.label, { tipoVenda: "SEMINOVOS" })}
             />
           </div>
 
@@ -2484,12 +2542,14 @@ export default function DashboardV2Page() {
                 data={data}
                 contextLabel={brand}
                 tooltip="Quantidade Total de Vendas Cantadas por modelo da marca selecionada no período."
+                onItemClick={(item) => openDrillDown("Venda Cantada x Modelo", "Versão", "versao", item.label, getBrandDrillDownFilters(brand))}
               />
             ))}
             <RankingCard
               title="Venda Cantada x Bandeira"
               data={flagData}
               tooltip="Quantidade Total de Vendas Cantadas por bandeira no período selecionado."
+              onItemClick={(item) => openDrillDown("Venda Cantada x Bandeira", "Bandeira", "bandeira", item.label, { tipoVenda: "SEMINOVOS" })}
             />
           </div>
 
@@ -2501,6 +2561,7 @@ export default function DashboardV2Page() {
                 data={data}
                 contextLabel={brand}
                 tooltip="Quantidade Total de Vendas Cantadas por loja da marca selecionada no período."
+                onItemClick={(item) => openDrillDown("Venda Cantada x Lojas", "Loja", "lojaVenda", item.label, getBrandDrillDownFilters(brand))}
               />
             ))}
 
@@ -2508,6 +2569,7 @@ export default function DashboardV2Page() {
               title="Venda Cantada x Lojas"
               data={storeData}
               tooltip="Quantidade Total de Vendas Cantadas por loja no período selecionado."
+              onItemClick={(item) => openDrillDown("Venda Cantada x Lojas", "Loja", "lojaVenda", item.label, { tipoVenda: "SEMINOVOS" })}
             />
           </div>
 
@@ -2538,6 +2600,7 @@ export default function DashboardV2Page() {
         />
       ) : null}
       <DetailedTableModal />
+      <DrillDownModal selection={drillDownSelection} onClose={() => setDrillDownSelection(null)} />
     </main>
   );
 }

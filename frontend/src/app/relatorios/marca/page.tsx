@@ -14,6 +14,7 @@ import {
 } from "@/components/sales-intention-filter-select-card";
 import { SalesIntentionDataList } from "@/components/sales-intention-data-list";
 import { MobileDetailedTableModal } from "@/components/mobile-detailed-table-modal";
+import { DrillDownModal, type DrillDownSelection } from "@/components/drill-down-modal";
 import { addDays, addYears, differenceInCalendarDays, format, subYears } from "date-fns";
 import { ChevronDown, NotebookText, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import {
@@ -61,6 +62,7 @@ import type {
   SalesIntentionModelosDealerRecord,
   SalesIntentionModelosDealerResponse,
   SalesIntentionModelosDealerSources,
+  SalesIntentionDrillDownFilters,
   SalesIntentionReportRow,
 } from "@/lib/salesIntentionApi";
 
@@ -258,7 +260,7 @@ const trendMetricOptions = [
 type TrendGrouping = "auto" | SalesCantadasTrendGranularity;
 
 const trendGroupingOptions = [
-  { value: "auto", label: "Automático" },
+  { value: "auto", label: "Auto" },
   { value: "hour", label: "Hora" },
   { value: "day", label: "Dia" },
   { value: "week", label: "Semana" },
@@ -501,13 +503,12 @@ function MonitoringTrendChartCard({
             <h2 className={cn("text-sm font-normal tracking-[-0.01em]", themedTextTitleClass)}>
               Ritmo das vendas cantadas
             </h2>
-            <TooltipIcon text="Escolha o agrupamento do gráfico nos botões abaixo. No modo Automático, o intervalo é definido conforme o período selecionado. Alterne entre o volume de cada intervalo e a visão acumulada." />
+            <TooltipIcon text="Escolha o agrupamento do gráfico nos botões abaixo. No modo auto, o intervalo é definido conforme o período selecionado. Alterne entre o volume de cada intervalo e a visão acumulada." />
           </div>
           <span className={cn("mt-1 inline-flex max-w-full items-center px-2.5 py-1", themedChipClass)}>
             {grainLabel}
           </span>
-          <div className="mt-3 space-y-1.5">
-            <p className={themedTinyLabelClass}>Agrupamento</p>
+          <div className="mt-3">
             <ChartToggle
               options={trendGroupingOptions}
               value={trendGrouping}
@@ -557,11 +558,13 @@ function MonitoringBreakdownCard({
   data,
   contextLabel,
   tooltip,
+  onItemClick,
 }: {
   title: string;
   data: RankingChartItem[];
   contextLabel: string;
   tooltip: string;
+  onItemClick: (item: RankingChartItem) => void;
 }) {
   const max = data[0]?.value || 1;
 
@@ -582,8 +585,12 @@ function MonitoringBreakdownCard({
       <div className="h-[332px] space-y-3 overflow-y-auto pr-2">
         {data.length ? (
           data.map((item) => (
-            <div
+            <button
               key={item.label}
+              type="button"
+              onClick={() => onItemClick(item)}
+              className="group/drill block w-full text-left"
+              aria-label={`Ver registros de ${item.label}`}
               title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}
             >
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
@@ -596,7 +603,7 @@ function MonitoringBreakdownCard({
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400"
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-opacity group-hover/drill:opacity-80"
                   style={{
                     width: item.value > 0
                       ? `${Math.max(5, (item.value / max) * 100)}%`
@@ -604,7 +611,7 @@ function MonitoringBreakdownCard({
                   }}
                 />
               </div>
-            </div>
+            </button>
           ))
         ) : (
           <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>
@@ -620,10 +627,12 @@ function MonitoringRankingChartCard({
   data,
   dimension,
   onDimensionChange,
+  onItemClick,
 }: {
   data: RankingChartItem[];
   dimension: RankingDimension;
   onDimensionChange: (value: RankingDimension) => void;
+  onItemClick: (item: RankingChartItem) => void;
 }) {
   const max = data[0]?.value || 1;
   const dimensionLabel = rankingOptions.find((option) => option.value === dimension)?.label;
@@ -658,7 +667,7 @@ function MonitoringRankingChartCard({
       <div className="max-h-[286px] space-y-3 overflow-y-auto pr-1">
         {data.length ? (
           data.map((item) => (
-            <div key={item.label} title={`${item.label}: ${item.value.toLocaleString("pt-BR")}`}>
+            <button key={item.label} type="button" onClick={() => onItemClick(item)} className="group/drill block w-full text-left" aria-label={`Ver registros de ${item.label}`}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
                 <span className={cn("truncate font-normal", themedTextStrongClass)}>{item.label}</span>
                 <span className={cn("rounded-full px-2 py-0.5 font-normal", themedBadgeClass)}>
@@ -667,11 +676,11 @@ function MonitoringRankingChartCard({
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400"
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-opacity group-hover/drill:opacity-80"
                   style={{ width: item.value > 0 ? `${Math.max(5, (item.value / max) * 100)}%` : "0%" }}
                 />
               </div>
-            </div>
+            </button>
           ))
         ) : (
           <p className={cn("py-24 text-center text-sm", themedTextMutedClass)}>
@@ -688,11 +697,13 @@ function MonitoringCompositionChartCard({
   total,
   dimension,
   onDimensionChange,
+  onItemClick,
 }: {
   data: CompositionChartItem[];
   total: number;
   dimension: CompositionDimension;
   onDimensionChange: (value: CompositionDimension) => void;
+  onItemClick: (item: CompositionChartItem) => void;
 }) {
   let offset = 0;
   const donutBackground = data.length
@@ -750,9 +761,11 @@ function MonitoringCompositionChartCard({
                 const color = monitoringPalette[index % monitoringPalette.length];
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={item.label}
-                    className="rounded-xl border border-slate-100 px-3 py-2 dark:border-white/[0.06]"
+                    onClick={() => onItemClick(item)}
+                    className="group/drill w-full rounded-xl border border-slate-100 px-3 py-2 text-left transition-colors hover:border-sky-200 dark:border-white/[0.06] dark:hover:border-cyan-400/30"
                     title={`${item.label}: ${item.value.toLocaleString("pt-BR")} (${item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%)`}
                   >
                     <div className="flex items-center justify-between gap-3 text-xs">
@@ -775,7 +788,7 @@ function MonitoringCompositionChartCard({
                         {item.value.toLocaleString("pt-BR")}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -836,6 +849,7 @@ export default function MarcaVeiculoRelatorioPage() {
     appliedMarcaVeiculo, appliedModelo, appliedVersao, appliedClassificacao,
   ].filter((values) => values.length > 0).length;
   const [isDetailedTableModalOpen, setIsDetailedTableModalOpen] = useState(false);
+  const [drillDownSelection, setDrillDownSelection] = useState<DrillDownSelection | null>(null);
   const [trendView, setTrendView] = useState<TrendView>(DEFAULT_TREND_VIEW);
   const [trendMetric, setTrendMetric] = useState<TrendMetric>(DEFAULT_TREND_METRIC);
   const [trendGrouping, setTrendGrouping] = useState<TrendGrouping>("auto");
@@ -845,6 +859,41 @@ export default function MarcaVeiculoRelatorioPage() {
   const [compositionDimension, setCompositionDimension] =
     useState<CompositionDimension>("tipoVenda");
   const todayInput = useMemo(() => getTodayInputValue(), []);
+
+  const reportDrillDownFilters = useMemo<SalesIntentionDrillDownFilters>(() => ({
+    startDate: appliedStartDate,
+    endDate: appliedEndDate,
+    tipoVenda: appliedTipoVenda,
+    bandeira: appliedBandeira,
+    lojaVenda: appliedLojaVenda,
+    marcaVeiculo: appliedMarcaVeiculo,
+    versao: appliedVersao,
+    classificacao: appliedClassificacao,
+    regional: appliedRegional,
+  }), [
+    appliedBandeira, appliedClassificacao, appliedEndDate, appliedLojaVenda,
+    appliedMarcaVeiculo, appliedRegional, appliedStartDate, appliedTipoVenda,
+    appliedVersao,
+  ]);
+
+  const openReportDrillDown = (
+    chartTitle: string,
+    dimensionLabel: string,
+    field: keyof Pick<SalesIntentionDrillDownFilters, "bandeira" | "marcaVeiculo" | "tipoVenda" | "classificacao" | "lojaVenda" | "versao">,
+    value: string,
+    aggregateValue: number,
+  ) => {
+    const normalizedValue = field === "tipoVenda"
+      ? normalizeValue(value) === "NOVOS" ? "NOVOS" : "SEMINOVOS"
+      : value;
+    setDrillDownSelection({
+      chartTitle,
+      dimensionLabel,
+      value,
+      aggregateValue,
+      filters: { ...reportDrillDownFilters, [field]: normalizedValue },
+    });
+  };
 
   // Move all hooks BEFORE conditional returns
   useEffect(() => {
@@ -1407,8 +1456,7 @@ export default function MarcaVeiculoRelatorioPage() {
       ],
       tooltip: {
         trigger: ["hover", "click"],
-        confine: true,
-        parentElement: "monitoring-trend-chart",
+        confine: false,
         activeType: "dimension",
         style: {
           titleLabel: { fontWeight: 400 },
@@ -2054,6 +2102,7 @@ export default function MarcaVeiculoRelatorioPage() {
               data={storeBreakdownData}
               contextLabel={breakdownContextLabel}
               tooltip="Lista todas as lojas com vendas cantadas no recorte atual, sem limitar aos dez primeiros resultados."
+              onItemClick={(item) => openReportDrillDown("Venda Cantada x Lojas", "Loja", "lojaVenda", item.label, item.value)}
             />
 
             <MonitoringBreakdownCard
@@ -2061,6 +2110,7 @@ export default function MarcaVeiculoRelatorioPage() {
               data={versionBreakdownData}
               contextLabel={breakdownContextLabel}
               tooltip="Soma as vendas pela versão informada em cada registro, unificando diferenças de espaços, acentos e capitalização. Registros sem versão aparecem como Sem versão."
+              onItemClick={(item) => openReportDrillDown("Venda Cantada x Versão", "Versão", "versao", item.label, item.value)}
             />
           </div>
 
@@ -2069,6 +2119,13 @@ export default function MarcaVeiculoRelatorioPage() {
               data={rankingChartData}
               dimension={rankingDimension}
               onDimensionChange={setRankingDimension}
+              onItemClick={(item) => openReportDrillDown(
+                "Ranking operacional",
+                rankingDimension === "bandeira" ? "Bandeira" : "Marca",
+                rankingDimension === "bandeira" ? "bandeira" : "marcaVeiculo",
+                item.label,
+                item.value,
+              )}
             />
 
             <MonitoringCompositionChartCard
@@ -2076,6 +2133,13 @@ export default function MarcaVeiculoRelatorioPage() {
               total={totalQuantity}
               dimension={compositionDimension}
               onDimensionChange={setCompositionDimension}
+              onItemClick={(item) => openReportDrillDown(
+                "Composição comercial",
+                compositionDimension === "tipoVenda" ? "Tipo de venda" : "Classificação",
+                compositionDimension === "tipoVenda" ? "tipoVenda" : "classificacao",
+                item.label,
+                item.value,
+              )}
             />
           </div>
         </section>
@@ -2105,6 +2169,7 @@ export default function MarcaVeiculoRelatorioPage() {
           exportFilePrefix="relatorio-marca-mobile"
           onClose={() => setIsDetailedTableModalOpen(false)}
         />
+        <DrillDownModal selection={drillDownSelection} onClose={() => setDrillDownSelection(null)} />
       </div>
     </main>
   );
