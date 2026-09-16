@@ -389,7 +389,7 @@ function ChartCard({
   onDataClick?: (label: string) => void;
 }) {
   return (
-    <article className={cn(themedCardClass, "w-full min-w-0 overflow-hidden px-4 py-4 sm:px-5 sm:py-5", className)}>
+    <article data-chart-key={chartKey} className={cn(themedCardClass, "w-full min-w-0 overflow-hidden px-4 py-4 sm:px-5 sm:py-5", className)}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 space-y-1 sm:min-h-[64px]">
           <div className="flex items-center gap-1.5">
@@ -419,7 +419,6 @@ function ChartCard({
             style={{ height: chartHeight ? `${chartHeight}px` : "100%" }}
           >
             <VChart
-              key={chartKey}
               spec={spec}
               className={cn("block h-full w-full max-w-full min-w-0", onDataClick && "cursor-pointer")}
               style={{ height: "100%", width: "100%", maxWidth: "100%", minWidth: 0 }}
@@ -572,8 +571,8 @@ function BrandComparisonTrendCard({
               </span>
             ))}
           </div>
-          <div id="brand-comparison-trend-chart" className="relative h-[300px] min-w-0 sm:h-[330px]">
-            {hasData ? <VChart key={chartKey} spec={spec} /> : <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>Nenhum dado no período.</p>}
+          <div id="brand-comparison-trend-chart" data-chart-key={chartKey} className="relative h-[300px] min-w-0 sm:h-[330px]">
+            {hasData ? <VChart spec={spec} /> : <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>Nenhum dado no período.</p>}
           </div>
         </div>
       </div>

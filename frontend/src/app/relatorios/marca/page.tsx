@@ -538,9 +538,9 @@ function MonitoringTrendChartCard({
             <MonitoringSeriesLegend items={legendItems} />
           </div>
 
-          <div id="monitoring-trend-chart" className="relative h-[300px] min-w-0 sm:h-[330px]">
+          <div id="monitoring-trend-chart" data-chart-key={chartKey} className="relative h-[300px] min-w-0 sm:h-[330px]">
             {hasData ? (
-              <VChart key={chartKey} spec={spec} />
+              <VChart spec={spec} />
             ) : (
               <p className={cn("flex h-full items-center justify-center text-sm", themedTextMutedClass)}>
                 Nenhum dado no período.
